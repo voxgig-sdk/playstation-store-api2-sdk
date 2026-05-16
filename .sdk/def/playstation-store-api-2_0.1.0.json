@@ -1,0 +1,790 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PlayStation Store API",
+    "description": "The PlayStation Store API provides access to a wide array of PlayStation games and downloadable content. Users can retrieve detailed information on game types, pricing, release dates, and platform availability. This API is essential for developers looking to integrate PlayStation content into their applications or services.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "PlayStation Store",
+      "url": "https://store.playstation.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://store.playstation.com/store/api/chihiro/00_09_000",
+      "description": "PlayStation Store API Server"
+    }
+  ],
+  "paths": {
+    "/container/{country}/{language}/{age_limit}/{container_id}": {
+      "get": {
+        "summary": "Get container content",
+        "description": "Retrieves a list of games and downloadable content from the PlayStation Store based on the specified container and filters.",
+        "operationId": "getContainer",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "path",
+            "description": "Country code (e.g., 'ch' for Switzerland)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "ch"
+            }
+          },
+          {
+            "name": "language",
+            "in": "path",
+            "description": "Language code (e.g., 'de' for German)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "de"
+            }
+          },
+          {
+            "name": "age_limit",
+            "in": "path",
+            "description": "Age limit for content filtering",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "999"
+            }
+          },
+          {
+            "name": "container_id",
+            "in": "path",
+            "description": "Container identifier (e.g., 'STORE-MSF75508-FULLGAMES' for full games)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "STORE-MSF75508-FULLGAMES"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Number of items to return per page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "description": "Offset for pagination (starting index)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sort order for results",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "release_date",
+                "name",
+                "price"
+              ],
+              "default": "release_date"
+            }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "description": "Filter by platform (ps4, ps5, ps3, vita, psp)",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ps4",
+                "ps5",
+                "ps3",
+                "vita",
+                "psp"
+              ]
+            }
+          },
+          {
+            "name": "price",
+            "in": "query",
+            "description": "Filter by price range",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "0-249",
+                "250-499",
+                "500-999",
+                "1000-1999",
+                "2000-2999",
+                "3000-3999",
+                "4000-4999",
+                "5000-5999",
+                "6000-7999",
+                "8000-*"
+              ]
+            }
+          },
+          {
+            "name": "genre",
+            "in": "query",
+            "description": "Filter by game genre",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "action",
+                "adventure",
+                "arcade",
+                "racing",
+                "shooter",
+                "sports",
+                "rpg",
+                "puzzle",
+                "strategy",
+                "simulation"
+              ]
+            }
+          },
+          {
+            "name": "game_content_type",
+            "in": "query",
+            "description": "Filter by game content type",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bundles",
+                "games",
+                "timed_trials"
+              ]
+            }
+          },
+          {
+            "name": "release_date",
+            "in": "query",
+            "description": "Filter by release date range",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "coming_soon",
+                "last_7_days",
+                "last_30_days"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with container content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContainerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Container not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Container"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ContainerResponse": {
+        "type": "object",
+        "properties": {
+          "age_limit": {
+            "type": "integer",
+            "description": "Age limit for the content"
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "facets": {
+                "$ref": "#/components/schemas/Facets"
+              },
+              "next": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Next page token for pagination"
+              }
+            }
+          },
+          "container_type": {
+            "type": "string",
+            "description": "Type of container"
+          },
+          "content_origin": {
+            "type": "integer",
+            "description": "Content origin identifier"
+          },
+          "dob_required": {
+            "type": "boolean",
+            "description": "Whether date of birth is required"
+          },
+          "id": {
+            "type": "string",
+            "description": "Container unique identifier"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Image"
+            }
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            },
+            "description": "List of products in the container"
+          }
+        }
+      },
+      "Facets": {
+        "type": "object",
+        "properties": {
+          "game_content_type": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            }
+          },
+          "subtitle_lang": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            }
+          },
+          "release_date": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            }
+          },
+          "game_demo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            }
+          },
+          "price": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            }
+          },
+          "genre": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            }
+          },
+          "top_category": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            }
+          },
+          "voice_lang": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            }
+          },
+          "game_type": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            }
+          },
+          "relationship": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            }
+          },
+          "platform": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Facet"
+            }
+          }
+        }
+      },
+      "Facet": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Display name of the facet"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of items matching this facet"
+          },
+          "key": {
+            "type": "string",
+            "description": "Unique key for the facet"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "description": "Product bucket category"
+          },
+          "container_type": {
+            "type": "string",
+            "description": "Type of container"
+          },
+          "content_type": {
+            "type": "string",
+            "description": "Content type identifier"
+          },
+          "default_sku": {
+            "$ref": "#/components/schemas/SKU"
+          },
+          "gameContentTypesList": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "game_contentType": {
+            "type": "string",
+            "description": "Game content type"
+          },
+          "id": {
+            "type": "string",
+            "description": "Product unique identifier"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Image"
+            }
+          },
+          "name": {
+            "type": "string",
+            "description": "Product name"
+          },
+          "playable_platform": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Platforms where the product can be played"
+          },
+          "provider_name": {
+            "type": "string",
+            "description": "Name of the content provider"
+          },
+          "release_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Release date in ISO 8601 format"
+          },
+          "restricted": {
+            "type": "boolean",
+            "description": "Whether the product has restrictions"
+          },
+          "revision": {
+            "type": "integer",
+            "description": "Product revision number"
+          },
+          "short_name": {
+            "type": "string",
+            "description": "Short name of the product"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unix timestamp in milliseconds"
+          },
+          "top_category": {
+            "type": "string",
+            "description": "Top category classification"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to product details"
+          },
+          "cloud_only_platform": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Cloud-only platforms"
+          }
+        }
+      },
+      "SKU": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "SKU unique identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "SKU name"
+          },
+          "display_price": {
+            "type": "string",
+            "description": "Formatted display price"
+          },
+          "price": {
+            "type": "integer",
+            "description": "Price in smallest currency unit (e.g., cents)"
+          },
+          "type": {
+            "type": "string",
+            "description": "SKU type"
+          },
+          "sku_type": {
+            "type": "integer",
+            "description": "SKU type identifier"
+          },
+          "platforms": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Platform identifiers"
+          },
+          "defaultSku": {
+            "type": "boolean",
+            "description": "Whether this is the default SKU"
+          },
+          "amortizeFlag": {
+            "type": "boolean",
+            "description": "Amortization flag"
+          },
+          "bundleExclusiveFlag": {
+            "type": "boolean",
+            "description": "Bundle exclusive flag"
+          },
+          "chargeImmediatelyFlag": {
+            "type": "boolean",
+            "description": "Charge immediately flag"
+          },
+          "charge_type_id": {
+            "type": "integer",
+            "description": "Charge type identifier"
+          },
+          "credit_card_required_flag": {
+            "type": "integer",
+            "description": "Credit card required flag"
+          },
+          "is_original": {
+            "type": "boolean",
+            "description": "Whether this is the original SKU"
+          },
+          "offerOnlyFlag": {
+            "type": "boolean",
+            "description": "Offer only flag"
+          },
+          "seasonPassExclusiveFlag": {
+            "type": "boolean",
+            "description": "Season pass exclusive flag"
+          },
+          "skuAvailabilityOverrideFlag": {
+            "type": "boolean",
+            "description": "SKU availability override flag"
+          },
+          "eligibilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Eligibility"
+            }
+          },
+          "entitlements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Entitlement"
+            }
+          },
+          "rewards": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "Eligibility": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Eligibility identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Eligibility name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Eligibility description"
+          },
+          "operand": {
+            "type": "string",
+            "description": "Operand for eligibility check"
+          },
+          "operator": {
+            "type": "string",
+            "description": "Operator for eligibility check"
+          },
+          "rightOperand": {
+            "type": "string",
+            "nullable": true,
+            "description": "Right operand for eligibility check"
+          },
+          "unionIndex": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Union index"
+          },
+          "entitlement_type": {
+            "type": "string",
+            "nullable": true,
+            "description": "Entitlement type"
+          },
+          "drms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "libraryPath": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Entitlement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Entitlement identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Entitlement name"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Entitlement description"
+          },
+          "type": {
+            "type": "integer",
+            "description": "Entitlement type"
+          },
+          "license_type": {
+            "type": "integer",
+            "description": "License type"
+          },
+          "size": {
+            "type": "integer",
+            "description": "Size in bytes"
+          },
+          "subType": {
+            "type": "integer",
+            "description": "Entitlement subtype"
+          },
+          "feature_type_id": {
+            "type": "integer",
+            "description": "Feature type identifier"
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Duration"
+          },
+          "exp_after_first_use": {
+            "type": "integer",
+            "description": "Expiration after first use"
+          },
+          "use_count": {
+            "type": "integer",
+            "description": "Use count"
+          },
+          "preorder_placeholder_flag": {
+            "type": "boolean",
+            "description": "Preorder placeholder flag"
+          },
+          "drms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DRM"
+            }
+          },
+          "packages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "nullable": true
+          },
+          "packageType": {
+            "type": "string",
+            "nullable": true
+          },
+          "durationOverrideTypeId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "subtitle_language_codes": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "voice_language_codes": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "DRM": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "DRM identifier"
+          },
+          "type": {
+            "type": "integer",
+            "description": "DRM type"
+          },
+          "drm_category_type": {
+            "type": "integer",
+            "description": "DRM category type"
+          },
+          "size": {
+            "type": "integer",
+            "description": "Size in bytes"
+          },
+          "is_streamable": {
+            "type": "integer",
+            "description": "Whether content is streamable"
+          },
+          "media_prop": {
+            "type": "object",
+            "description": "Media properties"
+          }
+        }
+      },
+      "Image": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "integer",
+            "description": "Image type identifier"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Image URL"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "code": {
+            "type": "string",
+            "description": "Error code"
+          },
+          "message": {
+            "type": "string",
+            "description": "Detailed error message"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Container",
+      "description": "Operations for retrieving PlayStation Store container content including games and downloadable content"
+    }
+  ]
+}

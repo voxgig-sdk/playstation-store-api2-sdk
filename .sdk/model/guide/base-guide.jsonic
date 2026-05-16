@@ -1,0 +1,14 @@
+# Guide
+
+guide: {
+  metrics: count: entity: 1
+  metrics: count: path: 1
+  metrics: count: method: 1
+
+  entity: container: {
+    path: "/container/{country}/{language}/{age_limit}/{container_id}": {
+      op: list: method: *GET
+    }
+  }
+
+}

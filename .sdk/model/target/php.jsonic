@@ -1,0 +1,21 @@
+
+main: kit: target: php: {
+
+  title: PHP
+  ext: php
+  comment: line: "//"
+  module: name: 'playstation-store-api2'
+  srcfeature: false
+
+  deps: &: {
+    kind: *'prod' | string
+  }
+
+  # struct utility is vendored under tm/php/utility/struct - no manifest dep needed
+  deps: {}
+}
+
+
+main: kit: feature: &: target: php: deps: &: {
+  kind: *'prod' | string
+}

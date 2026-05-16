@@ -1,0 +1,29 @@
+# BasicContainerFlow
+
+main: kit: flow: BasicContainerFlow:
+{
+  entity: "container",
+  kind: "basic",
+  name: "BasicContainerFlow",
+  step: [
+    {
+      match: {
+        age_limit: "age_limit01",
+        container_id: "container01",
+        country: "country01",
+        language: "language01"
+      }
+
+      op: "list",
+      valid: [
+        {
+          apply: "ItemExists",
+          def: {
+            ref: "container_ref01"
+          }
+        }
+      ]
+    }
+  ],
+  "key$": "BasicContainerFlow"
+}

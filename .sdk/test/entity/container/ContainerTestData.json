@@ -1,0 +1,58 @@
+{
+  "existing": {
+    "container": {
+      "CONTAINER00": {
+        "age_limit": "s50",
+        "attribute": {},
+        "container_type": "s52",
+        "content_origin": "s53",
+        "dob_required": true,
+        "id": "CONTAINER00",
+        "image": [],
+        "link": [],
+        "container_id": "CONTAINER01",
+        "country": "COUNTRY01",
+        "language": "LANGUAGE01"
+      },
+      "CONTAINER01": {
+        "age_limit": "sa0",
+        "attribute": {},
+        "container_type": "sa2",
+        "content_origin": "sa3",
+        "dob_required": true,
+        "id": "CONTAINER01",
+        "image": [],
+        "link": [],
+        "container_id": "CONTAINER01",
+        "country": "COUNTRY01",
+        "language": "LANGUAGE01"
+      },
+      "CONTAINER02": {
+        "age_limit": "sf0",
+        "attribute": {},
+        "container_type": "sf2",
+        "content_origin": "sf3",
+        "dob_required": true,
+        "id": "CONTAINER02",
+        "image": [],
+        "link": [],
+        "container_id": "CONTAINER01",
+        "country": "COUNTRY01",
+        "language": "LANGUAGE01"
+      }
+    }
+  },
+  "new": {
+    "container": {
+      "container_ref01": {
+        "age_limit": "s140",
+        "attribute": {},
+        "container_type": "s142",
+        "content_origin": "s143",
+        "dob_required": true,
+        "image": [],
+        "link": []
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+
+main: kit: target: py: {
+
+  title: Python
+  ext: py
+  comment: line: "#"
+  module: name: 'playstation-store-api2'
+  srcfeature: false
+
+  deps: &: {
+    kind: *'prod' | string
+  }
+
+  # struct utility is vendored under tm/py/utility/voxgig_struct - no manifest dep needed
+  deps: {
+    'requests': { active: true, version: '2.33' }
+  }
+}
+
+
+main: kit: feature: &: target: py: deps: &: {
+  kind: *'prod' | string
+}
