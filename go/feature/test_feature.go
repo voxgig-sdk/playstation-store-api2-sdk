@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math/rand"
 
-	vs "github.com/voxgig/struct"
+	vs "github.com/voxgig-sdk/playstation-store-api2-sdk/go/utility/struct"
 
-	"github.com/voxgig-sdk/playstation-store-api2-sdk/core"
+	"github.com/voxgig-sdk/playstation-store-api2-sdk/go/core"
 )
 
 type TestFeature struct {

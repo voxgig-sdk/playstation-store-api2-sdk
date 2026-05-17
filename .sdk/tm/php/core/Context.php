@@ -100,16 +100,22 @@ class PlaystationStoreApi2Context
 
     public function resolve_op(string $opname): PlaystationStoreApi2Operation
     {
-        if (isset($this->opmap[$opname])) {
-            return $this->opmap[$opname];
+        // Cache key is `<entity>:<opname>` so two entities with the same op
+        // (e.g. both have a "list") get distinct cached Operations. Keying
+        // on opname alone caused the first-resolved entity's points to be
+        // served to every subsequent entity's call.
+        $entname = (is_object($this->entity) && method_exists($this->entity, 'get_name'))
+            ? $this->entity->get_name()
+            : '_';
+        $cacheKey = $entname . ':' . $opname;
+
+        if (isset($this->opmap[$cacheKey])) {
+            return $this->opmap[$cacheKey];
         }
         if ($opname === '') {
             return new PlaystationStoreApi2Operation([]);
         }
 
-        $entname = (is_object($this->entity) && method_exists($this->entity, 'get_name'))
-            ? $this->entity->get_name()
-            : '_';
         $opcfg = \Voxgig\Struct\Struct::getpath($this->config, "entity.{$entname}.op.{$opname}");
 
         $input = ($opname === 'update' || $opname === 'create') ? 'data' : 'match';
@@ -128,7 +134,7 @@ class PlaystationStoreApi2Context
             'input' => $input,
             'points' => $points,
         ]);
-        $this->opmap[$opname] = $op;
+        $this->opmap[$cacheKey] = $op;
         return $op;
     }
 

@@ -3,7 +3,7 @@ package utility
 import (
 	"reflect"
 
-	"github.com/voxgig-sdk/playstation-store-api2-sdk/core"
+	"github.com/voxgig-sdk/playstation-store-api2-sdk/go/core"
 )
 
 func featureHookUtil(ctx *core.Context, name string) {

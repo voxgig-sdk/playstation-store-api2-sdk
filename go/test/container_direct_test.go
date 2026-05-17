@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	sdk "github.com/voxgig-sdk/playstation-store-api2-sdk"
-	"github.com/voxgig-sdk/playstation-store-api2-sdk/core"
+	sdk "github.com/voxgig-sdk/playstation-store-api2-sdk/go"
+	"github.com/voxgig-sdk/playstation-store-api2-sdk/go/core"
 )
 
 func TestContainerDirect(t *testing.T) {

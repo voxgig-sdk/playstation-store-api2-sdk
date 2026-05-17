@@ -3,7 +3,7 @@ package sdktest
 import (
 	"testing"
 
-	sdk "github.com/voxgig-sdk/playstation-store-api2-sdk"
+	sdk "github.com/voxgig-sdk/playstation-store-api2-sdk/go"
 )
 
 func TestCustomUtility(t *testing.T) {

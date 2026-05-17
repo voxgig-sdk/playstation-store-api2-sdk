@@ -1,6 +1,6 @@
 package utility
 
-import "github.com/voxgig-sdk/playstation-store-api2-sdk/core"
+import "github.com/voxgig-sdk/playstation-store-api2-sdk/go/core"
 
 func makeResponseUtil(ctx *core.Context) (*core.Response, error) {
 	if ctx.Out["response"] != nil {
