@@ -97,14 +97,12 @@ function container_direct_setup($mockres)
     $env = Runner::env_override([
         "PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID" => [],
         "PLAYSTATIONSTOREAPI__TEST_LIVE" => "FALSE",
-        "PLAYSTATIONSTOREAPI__APIKEY" => "NONE",
     ]);
 
     $live = $env["PLAYSTATIONSTOREAPI__TEST_LIVE"] === "TRUE";
 
     if ($live) {
         $merged_opts = [
-            "apikey" => $env["PLAYSTATIONSTOREAPI__APIKEY"],
         ];
         $client = new PlaystationStoreApi2SDK($merged_opts);
         return [

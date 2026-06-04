@@ -85,14 +85,12 @@ def _container_direct_setup(mockres):
     env = runner.env_override({
         "PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID": {},
         "PLAYSTATIONSTOREAPI__TEST_LIVE": "FALSE",
-        "PLAYSTATIONSTOREAPI__APIKEY": "NONE",
     })
 
     live = env.get("PLAYSTATIONSTOREAPI__TEST_LIVE") == "TRUE"
 
     if live:
         merged_opts = {
-            "apikey": env.get("PLAYSTATIONSTOREAPI__APIKEY"),
         }
         client = PlaystationStoreApi2SDK(merged_opts)
         return {

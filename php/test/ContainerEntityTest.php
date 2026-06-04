@@ -91,7 +91,6 @@ function container_basic_setup($extra)
         "PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID" => $idmap,
         "PLAYSTATIONSTOREAPI__TEST_LIVE" => "FALSE",
         "PLAYSTATIONSTOREAPI__TEST_EXPLAIN" => "FALSE",
-        "PLAYSTATIONSTOREAPI__APIKEY" => "NONE",
     ]);
 
     $idmap_resolved = Helpers::to_map(
@@ -103,7 +102,6 @@ function container_basic_setup($extra)
     if ($env["PLAYSTATIONSTOREAPI__TEST_LIVE"] === "TRUE") {
         $merged_opts = Vs::merge([
             [
-                "apikey" => $env["PLAYSTATIONSTOREAPI__APIKEY"],
             ],
             $extra ?? [],
         ]);

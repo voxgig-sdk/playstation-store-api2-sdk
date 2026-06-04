@@ -142,14 +142,12 @@ func containerDirectSetup(mockres any) *containerDirectSetupResult {
 	env := envOverride(map[string]any{
 		"PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID": map[string]any{},
 		"PLAYSTATIONSTOREAPI__TEST_LIVE":    "FALSE",
-		"PLAYSTATIONSTOREAPI__APIKEY":       "NONE",
 	})
 
 	live := env["PLAYSTATIONSTOREAPI__TEST_LIVE"] == "TRUE"
 
 	if live {
 		mergedOpts := map[string]any{
-			"apikey": env["PLAYSTATIONSTOREAPI__APIKEY"],
 		}
 		client := sdk.NewPlaystationStoreApi2SDK(mergedOpts)
 

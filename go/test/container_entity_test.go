@@ -124,7 +124,6 @@ func containerBasicSetup(extra map[string]any) *entityTestSetup {
 		"PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID": idmap,
 		"PLAYSTATIONSTOREAPI__TEST_LIVE":      "FALSE",
 		"PLAYSTATIONSTOREAPI__TEST_EXPLAIN":   "FALSE",
-		"PLAYSTATIONSTOREAPI__APIKEY":         "NONE",
 	})
 
 	idmapResolved := core.ToMapAny(env["PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID"])
@@ -135,7 +134,6 @@ func containerBasicSetup(extra map[string]any) *entityTestSetup {
 	if env["PLAYSTATIONSTOREAPI__TEST_LIVE"] == "TRUE" {
 		mergedOpts := vs.Merge([]any{
 			map[string]any{
-				"apikey": env["PLAYSTATIONSTOREAPI__APIKEY"],
 			},
 			extra,
 		})

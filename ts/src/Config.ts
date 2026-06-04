@@ -38,10 +38,6 @@ class Config {
   options = {
     base: 'https://store.playstation.com/store/api/chihiro/00_09_000',
 
-    auth: {
-      prefix: 'Bearer',
-    },
-
     headers: {
       "content-type": "application/json"
     },
