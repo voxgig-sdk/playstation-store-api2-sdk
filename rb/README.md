@@ -10,13 +10,13 @@ The Ruby SDK for the PlaystationStoreApi2 API — an entity-oriented client usin
 
 ## Install
 ```bash
-gem install playstation-store-api2-sdk
+gem install voxgig-sdk-playstation-store-api2
 ```
 
 Or add to your `Gemfile`:
 
 ```ruby
-gem "playstation-store-api2-sdk"
+gem "voxgig-sdk-playstation-store-api2"
 ```
 
 Then run:

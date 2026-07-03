@@ -10,7 +10,7 @@ The TypeScript SDK for the PlaystationStoreApi2 API — a type-safe, entity-orie
 
 ## Install
 ```bash
-npm install playstation-store-api2
+npm install @voxgig-sdk/playstation-store-api2
 ```
 ## Tutorial: your first API call
 

@@ -10,7 +10,7 @@ The PHP SDK for the PlaystationStoreApi2 API — an entity-oriented client using
 
 ## Install
 ```bash
-composer require voxgig/playstation-store-api2-sdk
+composer require voxgig-sdk/playstation-store-api2
 ```
 
 

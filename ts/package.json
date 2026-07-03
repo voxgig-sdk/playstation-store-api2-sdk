@@ -1,7 +1,23 @@
 {
   "name": "@voxgig-sdk/playstation-store-api2",
   "version": "0.0.1",
-  "description": "DESCRIPTION",
+  "description": "Unofficial generated TypeScript SDK for the PlayStation Store public API. Not affiliated with or endorsed by the upstream API provider.",
+  "keywords": [
+    "voxgig",
+    "sdk",
+    "generated-sdk",
+    "openapi",
+    "api-client",
+    "playstation-store-api2"
+  ],
+  "homepage": "https://github.com/voxgig-sdk/playstation-store-api2-sdk#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/voxgig-sdk/playstation-store-api2-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/voxgig-sdk/playstation-store-api2-sdk/issues"
+  },
   "main": "dist/PlaystationStoreApi2SDK.js",
   "type": "commonjs",
   "types": "dist/PlaystationStoreApi2SDK.d.ts",
@@ -14,7 +30,10 @@
     "clean": "rm -rf node_modules yarn.lock package-lock.json",
     "reset": "npm run clean && npm i && npm run build && npm test"
   },
-  "author": "PlaystationStoreApi2",
+  "author": {
+    "name": "Voxgig",
+    "url": "https://voxgig.com"
+  },
   "license": "MIT",
   "dependencies": {},
   "peerDependencies": {},

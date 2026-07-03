@@ -8,12 +8,14 @@ source = {
   dir = "playstation-store-api2-sdk/lua"
 }
 description = {
-  summary = "PlaystationStoreApi2 SDK for Lua",
-  license = "MIT"
+  summary = "Unofficial generated Lua SDK for the PlayStation Store public API. Not affiliated with or endorsed by the upstream API provider.",
+  homepage = "https://github.com/voxgig-sdk/playstation-store-api2-sdk",
+  issues_url = "https://github.com/voxgig-sdk/playstation-store-api2-sdk/issues",
+  license = "MIT",
+  labels = { "voxgig", "sdk", "generated-sdk", "openapi", "api-client", "playstation-store-api2" }
 }
 dependencies = {
   "lua >= 5.3",
-  "dkjson >= 2.5",
   "dkjson >= 2.5",
 }
 build = {

@@ -10,7 +10,7 @@ The Python SDK for the PlaystationStoreApi2 API — an entity-oriented client fo
 
 ## Install
 ```bash
-pip install playstation-store-api2-sdk
+pip install voxgig-sdk-playstation-store-api2
 ```
 
 Or install from source:
