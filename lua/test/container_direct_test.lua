@@ -92,12 +92,14 @@ function container_direct_setup(mockres)
   local env = runner.env_override({
     ["PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID"] = {},
     ["PLAYSTATIONSTOREAPI__TEST_LIVE"] = "FALSE",
+    ["PLAYSTATIONSTOREAPI__APIKEY"] = "NONE",
   })
 
   local live = env["PLAYSTATIONSTOREAPI__TEST_LIVE"] == "TRUE"
 
   if live then
     local merged_opts = {
+      apikey = env["PLAYSTATIONSTOREAPI__APIKEY"],
     }
     local client = sdk.new(merged_opts)
     return {

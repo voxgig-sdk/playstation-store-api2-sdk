@@ -29,12 +29,20 @@ Create a new SDK client instance.
 
 ### Static Methods
 
-#### `TestSDK(testopts, sdkopts map[string]any) *PlaystationStoreApi2SDK`
+#### `Test() *PlaystationStoreApi2SDK`
 
-Create a test client with mock features active. Both arguments may be `nil`.
+No-arg convenience constructor for the common no-options test case.
 
 ```go
-client := sdk.TestSDK(nil, nil)
+client := sdk.Test()
+```
+
+#### `TestSDK(testopts, sdkopts map[string]any) *PlaystationStoreApi2SDK`
+
+Test client with options. Both arguments may be `nil`.
+
+```go
+client := sdk.TestSDK(testopts, sdkopts)
 ```
 
 

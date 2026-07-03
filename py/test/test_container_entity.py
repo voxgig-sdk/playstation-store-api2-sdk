@@ -97,6 +97,7 @@ def _container_basic_setup(extra):
         "PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID": idmap,
         "PLAYSTATIONSTOREAPI__TEST_LIVE": "FALSE",
         "PLAYSTATIONSTOREAPI__TEST_EXPLAIN": "FALSE",
+        "PLAYSTATIONSTOREAPI__APIKEY": "NONE",
     })
 
     idmap_resolved = helpers.to_map(
@@ -107,6 +108,7 @@ def _container_basic_setup(extra):
     if env.get("PLAYSTATIONSTOREAPI__TEST_LIVE") == "TRUE":
         merged_opts = vs.merge([
             {
+                "apikey": env.get("PLAYSTATIONSTOREAPI__APIKEY"),
             },
             extra or {},
         ])

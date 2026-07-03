@@ -1,18 +1,8 @@
 # PlaystationStoreApi2 SDK
 
-Legacy PlayStation Store catalogue lookup for games, DLC, and bundles (chihiro endpoint, no longer supported)
+PlayStation Store API client, generated from the OpenAPI spec.
 
 > TypeScript, Python, PHP, Golang, Ruby, Lua SDKs, a CLI, an interactive REPL, and an MCP server for AI agents — all generated from one OpenAPI spec by [@voxgig/sdkgen](https://github.com/voxgig/sdkgen).
-
-## About PlayStation Store API
-
-The PlayStation Store API (`chihiro`) was an undocumented internal endpoint used by older PlayStation Store clients to fetch product metadata — game titles, DLC, bundles, pricing, regional availability, and media assets — from the storefront operated by [Sony Interactive Entertainment](https://store.playstation.com).
-
-**Status: deprecated.** The path `/store/api/chihiro/00_09_000` no longer responds (HTTP 404 at the time of writing). Sony has migrated PlayStation Store data to newer backends used by the modern web store and PS4/PS5 consoles, and the chihiro tree was retired during that transition. This SDK is preserved for reference and for users working with archived responses; live calls against the documented server URL will fail.
-
-Historically the endpoint exposed a tree of *container* resources — each container being a storefront category, region, or product grouping — which clients walked to enumerate products and reach individual SKU detail pages. Because the service was never officially documented, response shapes, query parameters, and rate limits were never published by Sony, and any prior knowledge comes from community reverse-engineering.
-
-If you need current PlayStation Store data, look at Sony's modern web storefront URLs (`https://store.playstation.com/en-us/...`) or community projects that track the newer GraphQL-backed catalogue; do not rely on chihiro.
 
 ## Try it
 
@@ -46,29 +36,31 @@ gem install playstation-store-api2-sdk
 luarocks install playstation-store-api2-sdk
 ```
 
-## 30-second quickstart
+## Quickstart
 
 ### TypeScript
 
 ```ts
 import { PlaystationStoreApi2SDK } from 'playstation-store-api2'
 
-const client = new PlaystationStoreApi2SDK({})
+const client = new PlaystationStoreApi2SDK({
+  apikey: process.env.PLAYSTATION-STORE-API2_APIKEY,
+})
 
 // List all containers
 const containers = await client.Container().list()
+console.log(containers.data)
 ```
 
-See the [TypeScript README](ts/README.md) for the
-full guide, or scroll down for the same example in other languages.
+See the [TypeScript README](ts/README.md) for the full guide.
 
-## What's in the box
+## Surfaces
 
-| Surface | Use it for | Path |
-| --- | --- | --- |
-| **SDK** (TypeScript, Python, PHP, Golang, Ruby, Lua) | App integration | `ts/` `py/` `php/` `go/` `rb/` `lua/` |
-| **CLI** | Scripts, CI, ops, one-off API calls | `go-cli/` |
-| **MCP server** | AI agents (Claude, Cursor, Cline) | `go-mcp/` |
+| Surface | Path |
+| --- | --- |
+| **SDK** (TypeScript, Python, PHP, Golang, Ruby, Lua) | `ts/` `py/` `php/` `go/` `rb/` `lua/` |
+| **CLI** | `go-cli/` |
+| **MCP server** | `go-mcp/` |
 
 ## Use it from an AI agent (MCP)
 
@@ -98,7 +90,7 @@ The API exposes one entity:
 
 | Entity | Description | API path |
 | --- | --- | --- |
-| **Container** | A node in the PlayStation Store catalogue tree — historically a category, region, or product grouping reachable under `/store/api/chihiro/00_09_000/container/{id}`, returning child containers and product entries; endpoint is deprecated and no longer reachable. | `/container/{country}/{language}/{age_limit}/{container_id}` |
+| **Container** |  | `/container/{country}/{language}/{age_limit}/{container_id}` |
 
 Each entity supports the following operations where available: **load**,
 **list**, **create**, **update**, and **remove**.
@@ -108,12 +100,16 @@ Each entity supports the following operations where available: **load**,
 ### Python
 
 ```python
+import os
 from playstationstoreapi2_sdk import PlaystationStoreApi2SDK
 
-client = PlaystationStoreApi2SDK({})
+client = PlaystationStoreApi2SDK({
+    "apikey": os.environ.get("PLAYSTATION-STORE-API2_APIKEY"),
+})
 
 # List all containers
-containers, err = client.Container(None).list(None, None)
+containers, err = client.Container().list()
+print(containers)
 ```
 
 ### PHP
@@ -122,10 +118,13 @@ containers, err = client.Container(None).list(None, None)
 <?php
 require_once 'playstationstoreapi2_sdk.php';
 
-$client = new PlaystationStoreApi2SDK([]);
+$client = new PlaystationStoreApi2SDK([
+    "apikey" => getenv("PLAYSTATION-STORE-API2_APIKEY"),
+]);
 
 // List all containers
-[$containers, $err] = $client->Container(null)->list(null, null);
+[$containers, $err] = $client->Container()->list();
+print_r($containers);
 ```
 
 ### Golang
@@ -133,10 +132,13 @@ $client = new PlaystationStoreApi2SDK([]);
 ```go
 import sdk "github.com/voxgig-sdk/playstation-store-api2-sdk/go"
 
-client := sdk.NewPlaystationStoreApi2SDK(map[string]any{})
+client := sdk.NewPlaystationStoreApi2SDK(map[string]any{
+    "apikey": os.Getenv("PLAYSTATION-STORE-API2_APIKEY"),
+})
 
 // List all containers
 containers, err := client.Container(nil).List(nil, nil)
+fmt.Println(containers)
 ```
 
 ### Ruby
@@ -144,10 +146,13 @@ containers, err := client.Container(nil).List(nil, nil)
 ```ruby
 require_relative "PlaystationStoreApi2_sdk"
 
-client = PlaystationStoreApi2SDK.new({})
+client = PlaystationStoreApi2SDK.new({
+  "apikey" => ENV["PLAYSTATION-STORE-API2_APIKEY"],
+})
 
 # List all containers
-containers, err = client.Container(nil).list(nil, nil)
+containers, err = client.Container().list
+puts containers
 ```
 
 ### Lua
@@ -155,10 +160,13 @@ containers, err = client.Container(nil).list(nil, nil)
 ```lua
 local sdk = require("playstation-store-api2_sdk")
 
-local client = sdk.new({})
+local client = sdk.new({
+  apikey = os.getenv("PLAYSTATION-STORE-API2_APIKEY"),
+})
 
 -- List all containers
-local containers, err = client:Container(nil):list(nil, nil)
+local containers, err = client:Container():list()
+print(containers)
 ```
 
 ## Unit testing in offline mode
@@ -177,25 +185,21 @@ const result = await client.Container().load({ id: 'test01' })
 ### Python
 
 ```python
-client = PlaystationStoreApi2SDK.test(None, None)
-result, err = client.Container(None).load(
-    {"id": "test01"}, None
-)
+client = PlaystationStoreApi2SDK.test()
+result, err = client.Container().load({"id": "test01"})
 ```
 
 ### PHP
 
 ```php
-$client = PlaystationStoreApi2SDK::test(null, null);
-[$result, $err] = $client->Container(null)->load(
-    ["id" => "test01"], null
-);
+$client = PlaystationStoreApi2SDK::test();
+[$result, $err] = $client->Container()->load(["id" => "test01"]);
 ```
 
 ### Golang
 
 ```go
-client := sdk.TestSDK(nil, nil)
+client := sdk.Test()
 result, err := client.Container(nil).Load(
     map[string]any{"id": "test01"}, nil,
 )
@@ -204,19 +208,15 @@ result, err := client.Container(nil).Load(
 ### Ruby
 
 ```ruby
-client = PlaystationStoreApi2SDK.test(nil, nil)
-result, err = client.Container(nil).load(
-  { "id" => "test01" }, nil
-)
+client = PlaystationStoreApi2SDK.test
+result, err = client.Container().load({ "id" => "test01" })
 ```
 
 ### Lua
 
 ```lua
-local client = sdk.test(nil, nil)
-local result, err = client:Container(nil):load(
-  { id = "test01" }, nil
-)
+local client = sdk.test()
+local result, err = client:Container():load({ id = "test01" })
 ```
 
 ## How it works
@@ -320,15 +320,6 @@ local result, err = client:direct({
 - [Golang](go/README.md)
 - [Ruby](rb/README.md)
 - [Lua](lua/README.md)
-
-## Using the PlayStation Store API
-
-- Upstream: [https://store.playstation.com](https://store.playstation.com)
-
-- The `chihiro` endpoint was an internal/undocumented Sony Interactive Entertainment service; there is no published licence or terms permitting third-party use.
-- The endpoint at `https://store.playstation.com/store/api/chihiro/00_09_000` is **deprecated** and currently returns HTTP 404; it has been superseded by newer PlayStation Store backends.
-- Any data returned about games, DLC, prices, or artwork remains the property of Sony Interactive Entertainment and the respective publishers.
-- This SDK is community-generated from an OpenAPI description of the historical endpoint; it is not affiliated with or endorsed by Sony.
 
 ---
 

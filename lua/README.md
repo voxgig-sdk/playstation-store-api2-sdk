@@ -1,6 +1,11 @@
 # PlaystationStoreApi2 Lua SDK
 
-The Lua SDK for the PlaystationStoreApi2 API. Provides an entity-oriented interface using Lua conventions.
+
+
+The Lua SDK for the PlaystationStoreApi2 API — an entity-oriented client using Lua conventions.
+
+> Other languages, the CLI, and MCP server live alongside this one — see
+> the [top-level README](../README.md).
 
 
 ## Install
@@ -26,13 +31,15 @@ loading a specific record.
 ```lua
 local sdk = require("playstation-store-api2_sdk")
 
-local client = sdk.new({})
+local client = sdk.new({
+  apikey = os.getenv("PLAYSTATION-STORE-API2_APIKEY"),
+})
 ```
 
 ### 2. List containers
 
 ```lua
-local result, err = client:Container(nil):list(nil, nil)
+local result, err = client:Container():list()
 if err then error(err) end
 
 if type(result) == "table" then
@@ -84,11 +91,9 @@ print(fetchdef["headers"])
 Create a mock client for unit testing — no server required:
 
 ```lua
-local client = sdk.test(nil, nil)
+local client = sdk.test()
 
-local result, err = client:PlaystationStoreApi2(nil):load(
-  { id = "test01" }, nil
-)
+local result, err = client:PlaystationStoreApi2():load({ id = "test01" })
 -- result contains mock response data
 ```
 
@@ -122,6 +127,7 @@ Create a `.env.local` file at the project root:
 
 ```
 PLAYSTATION-STORE-API2_TEST_LIVE=TRUE
+PLAYSTATION-STORE-API2_APIKEY=<your-key>
 ```
 
 Then run:
@@ -144,6 +150,7 @@ Creates a new SDK client.
 
 | Option | Type | Description |
 | --- | --- | --- |
+| `apikey` | `string` | API key for authentication. |
 | `base` | `string` | Base URL of the API server. |
 | `prefix` | `string` | URL path prefix prepended to all requests. |
 | `suffix` | `string` | URL path suffix appended to all requests. |

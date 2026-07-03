@@ -17,24 +17,7 @@ main: {
       ]
       title: "PlayStation Store API"
       version: "1.0.0"
-      tagline: "Legacy PlayStation Store catalogue lookup for games, DLC, and bundles (chihiro endpoint, no longer supported)"
-      homepage: "https://store.playstation.com"
-      license_short: "Proprietary, undocumented — unofficial use of an internal Sony endpoint"
-      license_md: `- The \`chihiro\` endpoint was an internal/undocumented Sony Interactive Entertainment service; there is no published licence or terms permitting third-party use.
-- The endpoint at \`https://store.playstation.com/store/api/chihiro/00_09_000\` is **deprecated** and currently returns HTTP 404; it has been superseded by newer PlayStation Store backends.
-- Any data returned about games, DLC, prices, or artwork remains the property of Sony Interactive Entertainment and the respective publishers.
-- This SDK is community-generated from an OpenAPI description of the historical endpoint; it is not affiliated with or endorsed by Sony.`
-      about_md: `The PlayStation Store API (\`chihiro\`) was an undocumented internal endpoint used by older PlayStation Store clients to fetch product metadata — game titles, DLC, bundles, pricing, regional availability, and media assets — from the storefront operated by [Sony Interactive Entertainment](https://store.playstation.com).
-
-**Status: deprecated.** The path \`/store/api/chihiro/00_09_000\` no longer responds (HTTP 404 at the time of writing). Sony has migrated PlayStation Store data to newer backends used by the modern web store and PS4/PS5 consoles, and the chihiro tree was retired during that transition. This SDK is preserved for reference and for users working with archived responses; live calls against the documented server URL will fail.
-
-Historically the endpoint exposed a tree of *container* resources — each container being a storefront category, region, or product grouping — which clients walked to enumerate products and reach individual SKU detail pages. Because the service was never officially documented, response shapes, query parameters, and rate limits were never published by Sony, and any prior knowledge comes from community reverse-engineering.
-
-If you need current PlayStation Store data, look at Sony's modern web storefront URLs (\`https://store.playstation.com/en-us/...\`) or community projects that track the newer GraphQL-backed catalogue; do not rely on chihiro.`
-      entity_desc: {
-        container: "A node in the PlayStation Store catalogue tree — historically a category, region, or product grouping reachable under `/store/api/chihiro/00_09_000/container/{id}`, returning child containers and product entries; endpoint is deprecated and no longer reachable."
-      }
-      auth: false
     }
   }
 }
+
