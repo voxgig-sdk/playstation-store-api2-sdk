@@ -14,9 +14,6 @@ local function make_config()
     },
     options = {
       base = "https://store.playstation.com/store/api/chihiro/00_09_000",
-      auth = {
-        prefix = "Bearer",
-      },
       headers = {
         ["content-type"] = "application/json",
       },
@@ -102,6 +99,7 @@ local function make_config()
                       ["orig"] = "age_limit",
                       ["reqd"] = true,
                       ["type"] = "`$STRING`",
+                      ["index$"] = 0,
                     },
                     {
                       ["active"] = true,
@@ -111,6 +109,7 @@ local function make_config()
                       ["orig"] = "container_id",
                       ["reqd"] = true,
                       ["type"] = "`$STRING`",
+                      ["index$"] = 1,
                     },
                     {
                       ["active"] = true,
@@ -120,6 +119,7 @@ local function make_config()
                       ["orig"] = "country",
                       ["reqd"] = true,
                       ["type"] = "`$STRING`",
+                      ["index$"] = 2,
                     },
                     {
                       ["active"] = true,
@@ -129,6 +129,7 @@ local function make_config()
                       ["orig"] = "language",
                       ["reqd"] = true,
                       ["type"] = "`$STRING`",
+                      ["index$"] = 3,
                     },
                   },
                   ["query"] = {

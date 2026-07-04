@@ -14,9 +14,13 @@ import type {
   Control,
 } from '../types'
 
+import type {
+  Container,
+  ContainerListMatch,
+} from '../PlaystationStoreApi2Types'
 
 // TODO: needs Entity superclass
-class ContainerEntity extends PlaystationStoreApi2EntityBase {
+class ContainerEntity extends PlaystationStoreApi2EntityBase<Container> {
 
   constructor(client: PlaystationStoreApi2SDK, entopts: any) {
     super(client, entopts)
@@ -33,7 +37,7 @@ class ContainerEntity extends PlaystationStoreApi2EntityBase {
 
 
 
-  async list(this: any, reqmatch?: any, ctrl?: Control) {
+  async list(this: any, reqmatch?: ContainerListMatch, ctrl?: Control): Promise<Container[]> {
 
     const utility = this._utility
 
@@ -133,7 +137,9 @@ class ContainerEntity extends PlaystationStoreApi2EntityBase {
         throw err
       }
       else {
-        return undefined
+        // Off-happy-path (throw disabled): typed as any so the method's
+        // Promise<Container[]> return stays clean under strict null checks.
+        return undefined as any
       }
     }
   }

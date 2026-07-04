@@ -18,7 +18,6 @@ Create a new SDK client instance.
 | Name | Type | Description |
 | --- | --- | --- |
 | `options` | `object` | SDK configuration options. |
-| `options.apikey` | `string` | API key for authentication. |
 | `options.base` | `string` | Base URL for API requests. |
 | `options.prefix` | `string` | URL prefix appended after base. |
 | `options.suffix` | `string` | URL suffix appended after path. |
@@ -110,7 +109,7 @@ Alias for `PlaystationStoreApi2SDK.test()`.
 ## ContainerEntity
 
 ```ts
-const container = client.Container()
+const container = client.container
 ```
 
 ### Fields
@@ -133,7 +132,7 @@ const container = client.Container()
 List entities matching the given criteria. Returns an array.
 
 ```ts
-const results = await client.Container().list()
+const results = await client.container.list()
 ```
 
 ### Common Methods

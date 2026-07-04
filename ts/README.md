@@ -9,9 +9,12 @@ The TypeScript SDK for the PlaystationStoreApi2 API — a type-safe, entity-orie
 
 
 ## Install
-```bash
-npm install @voxgig-sdk/playstation-store-api2
-```
+This package is not yet published to npm. Install it from the GitHub
+release tag (`ts/vX.Y.Z`):
+
+- Releases: [https://github.com/voxgig-sdk/playstation-store-api2-sdk/releases](https://github.com/voxgig-sdk/playstation-store-api2-sdk/releases)
+
+
 ## Tutorial: your first API call
 
 This tutorial walks through creating a client, listing entities, and
@@ -20,17 +23,15 @@ loading a specific record.
 ### 1. Create a client
 
 ```ts
-import { PlaystationStoreApi2SDK } from 'playstation-store-api2'
+import { PlaystationStoreApi2SDK } from '@voxgig-sdk/playstation-store-api2'
 
-const client = new PlaystationStoreApi2SDK({
-  apikey: process.env.PLAYSTATION-STORE-API2_APIKEY,
-})
+const client = new PlaystationStoreApi2SDK()
 ```
 
 ### 2. List containers
 
 ```ts
-const result = await client.Container().list()
+const result = await client.container.list()
 
 if (result.ok) {
   for (const item of result.data) {
@@ -81,7 +82,7 @@ Create a mock client for unit testing — no server required:
 ```ts
 const client = PlaystationStoreApi2SDK.test()
 
-const result = await client.Planet().load({ id: 'test01' })
+const result = await client.container.load({ id: 'test01' })
 // result.ok === true
 // result.data contains mock response data
 ```
@@ -89,7 +90,7 @@ const result = await client.Planet().load({ id: 'test01' })
 You can also use the instance method:
 
 ```ts
-const client = new PlaystationStoreApi2SDK({ apikey: '...' })
+const client = new PlaystationStoreApi2SDK()
 const testClient = client.tester()
 ```
 
@@ -98,7 +99,7 @@ const testClient = client.tester()
 Entity instances remember their last match and data:
 
 ```ts
-const entity = client.Planet()
+const entity = client.container
 
 // First call sets internal match
 await entity.load({ id: 'example' })
@@ -125,7 +126,6 @@ const logger = {
 }
 
 const client = new PlaystationStoreApi2SDK({
-  apikey: '...',
   extend: [logger],
 })
 ```
@@ -135,8 +135,7 @@ const client = new PlaystationStoreApi2SDK({
 Create a `.env.local` file at the project root:
 
 ```
-PLAYSTATION-STORE-API2_TEST_LIVE=TRUE
-PLAYSTATION-STORE-API2_APIKEY=<your-key>
+PLAYSTATION_STORE_API2_TEST_LIVE=TRUE
 ```
 
 Then run:
@@ -154,7 +153,6 @@ cd ts && npm test
 
 ```ts
 new PlaystationStoreApi2SDK(options?: {
-  apikey?: string
   base?: string
   prefix?: string
   suffix?: string
@@ -165,7 +163,6 @@ new PlaystationStoreApi2SDK(options?: {
 
 | Option | Type | Description |
 | --- | --- | --- |
-| `apikey` | `string` | API key for authentication. |
 | `base` | `string` | Base URL of the API server. |
 | `prefix` | `string` | URL path prefix prepended to all requests. |
 | `suffix` | `string` | URL path suffix appended to all requests. |
@@ -275,7 +272,7 @@ API path: `/container/{country}/{language}/{age_limit}/{container_id}`
 
 ### Container
 
-Create an instance: `const container = client.Container()`
+Create an instance: `const container = client.container`
 
 #### Operations
 
@@ -299,7 +296,7 @@ Create an instance: `const container = client.Container()`
 #### Example: List
 
 ```ts
-const containers = await client.Container().list()
+const containers = await client.container.list()
 ```
 
 
@@ -360,7 +357,7 @@ playstation-store-api2/
 Import the SDK from the package root:
 
 ```ts
-import { PlaystationStoreApi2SDK } from 'playstation-store-api2'
+import { PlaystationStoreApi2SDK } from '@voxgig-sdk/playstation-store-api2'
 ```
 
 ### Entity state
@@ -370,11 +367,11 @@ stores the returned data and match criteria internally. Subsequent
 calls on the same instance can rely on this state.
 
 ```ts
-const moon = client.Moon()
-await moon.load({ planet_id: 'earth', id: 'luna' })
+const container = client.container
+await container.load({ id: "example_id" })
 
-// moon.data() now returns the loaded moon data
-// moon.match() returns { planet_id: 'earth', id: 'luna' }
+// container.data() now returns the loaded container data
+// container.match() returns { id: "example_id" }
 ```
 
 Call `make()` to create a fresh instance with the same configuration

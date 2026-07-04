@@ -20,9 +20,6 @@ class PlaystationStoreApi2Config
             ],
             "options" => [
                 "base" => "https://store.playstation.com/store/api/chihiro/00_09_000",
-                "auth" => [
-                    "prefix" => "Bearer",
-                ],
                 "headers" => [
           'content-type' => 'application/json',
         ],
@@ -108,6 +105,7 @@ class PlaystationStoreApi2Config
                         'orig' => 'age_limit',
                         'reqd' => true,
                         'type' => '`$STRING`',
+                        'index$' => 0,
                       ],
                       [
                         'active' => true,
@@ -117,6 +115,7 @@ class PlaystationStoreApi2Config
                         'orig' => 'container_id',
                         'reqd' => true,
                         'type' => '`$STRING`',
+                        'index$' => 1,
                       ],
                       [
                         'active' => true,
@@ -126,6 +125,7 @@ class PlaystationStoreApi2Config
                         'orig' => 'country',
                         'reqd' => true,
                         'type' => '`$STRING`',
+                        'index$' => 2,
                       ],
                       [
                         'active' => true,
@@ -135,6 +135,7 @@ class PlaystationStoreApi2Config
                         'orig' => 'language',
                         'reqd' => true,
                         'type' => '`$STRING`',
+                        'index$' => 3,
                       ],
                     ],
                     'query' => [

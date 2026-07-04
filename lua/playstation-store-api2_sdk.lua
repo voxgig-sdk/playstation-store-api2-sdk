@@ -244,6 +244,19 @@ end
 
 
 
+-- Idiomatic facade: client:container():list() / client:container():load({ id = ... })
+function PlaystationStoreApi2SDK:container(data)
+  local EntityMod = require("entity.container_entity")
+  if data == nil then
+    if self._container == nil then
+      self._container = EntityMod.new(self, nil)
+    end
+    return self._container
+  end
+  return EntityMod.new(self, data)
+end
+
+-- Deprecated: use client:container() instead.
 function PlaystationStoreApi2SDK:Container(data)
   local EntityMod = require("entity.container_entity")
   return EntityMod.new(self, data)

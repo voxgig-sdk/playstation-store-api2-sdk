@@ -81,6 +81,10 @@ end
 
 
 
+---@param reqmatch ContainerListMatch
+---@param ctrl? table
+---@return Container[]
+---@return string? err
 function ContainerEntity:list(reqmatch, ctrl)
   local utility = self._utility
   local ctx = utility.make_context({

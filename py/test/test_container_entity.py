@@ -55,8 +55,7 @@ class TestContainerEntity:
             "language": setup["idmap"]["language01"],
         }
 
-        container_ref01_list_result, err = container_ref01_ent.list(container_ref01_match, None)
-        assert err is None
+        container_ref01_list_result = container_ref01_ent.list(container_ref01_match, None)
         assert isinstance(container_ref01_list_result, list)
 
 
@@ -97,7 +96,6 @@ def _container_basic_setup(extra):
         "PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID": idmap,
         "PLAYSTATIONSTOREAPI__TEST_LIVE": "FALSE",
         "PLAYSTATIONSTOREAPI__TEST_EXPLAIN": "FALSE",
-        "PLAYSTATIONSTOREAPI__APIKEY": "NONE",
     })
 
     idmap_resolved = helpers.to_map(
@@ -108,7 +106,6 @@ def _container_basic_setup(extra):
     if env.get("PLAYSTATIONSTOREAPI__TEST_LIVE") == "TRUE":
         merged_opts = vs.merge([
             {
-                "apikey": env.get("PLAYSTATIONSTOREAPI__APIKEY"),
             },
             extra or {},
         ])

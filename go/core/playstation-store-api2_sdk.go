@@ -245,6 +245,9 @@ func (sdk *PlaystationStoreApi2SDK) Direct(fetchargs map[string]any) (map[string
 }
 
 
+// Container returns a Container entity bound to this client.
+// Idiomatic usage: client.Container(nil).List(nil, nil) or
+// client.Container(nil).Load(map[string]any{"id": ...}, nil).
 func (sdk *PlaystationStoreApi2SDK) Container(data map[string]any) PlaystationStoreApi2Entity {
 	return NewContainerEntityFunc(sdk, data)
 }

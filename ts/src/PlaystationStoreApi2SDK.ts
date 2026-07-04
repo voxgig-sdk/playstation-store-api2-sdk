@@ -2,6 +2,8 @@
 
 import { ContainerEntity } from './entity/ContainerEntity'
 
+export type * from './PlaystationStoreApi2Types'
+
 
 import { inspect } from 'node:util'
 
@@ -202,6 +204,14 @@ class PlaystationStoreApi2SDK {
 
 
 
+  _container?: ContainerEntity
+
+  // Idiomatic facade: `client.container.list()` / `client.container.load({ id })`.
+  get container(): ContainerEntity {
+    return (this._container ??= new ContainerEntity(this, undefined))
+  }
+
+  /** @deprecated Use `client.container` instead. */
   Container(data?: any) {
     const self = this
     return new ContainerEntity(self,data)

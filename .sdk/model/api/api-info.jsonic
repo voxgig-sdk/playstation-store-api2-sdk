@@ -4,6 +4,7 @@
 main: {
   kit: {
     info: {
+      auth: false
       contact: {
         name: "PlayStation Store"
         url: "https://store.playstation.com"

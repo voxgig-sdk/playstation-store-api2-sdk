@@ -19,7 +19,17 @@ Homepage = "https://github.com/voxgig-sdk/playstation-store-api2-sdk"
 Repository = "https://github.com/voxgig-sdk/playstation-store-api2-sdk"
 Issues = "https://github.com/voxgig-sdk/playstation-store-api2-sdk/issues"
 
+# Ship the top-level single-file modules (setuptools find only discovers
+# package dirs, never these) so the documented import actually installs.
+# playstationstoreapi2_types holds the generated @dataclass models.
+[tool.setuptools]
+py-modules = ["playstationstoreapi2_sdk", "playstationstoreapi2_types", "config", "features"]
+
 # Explicit package list — setuptools auto-discovery refuses to pick when
 # multiple top-level dirs (core/entity/feature/utility) are present.
 [tool.setuptools.packages.find]
 include = ["core*", "entity*", "feature*", "utility*"]
+
+# Ship the PEP 561 py.typed marker(s) so the inline type hints reach consumers.
+[tool.setuptools.package-data]
+"*" = ["py.typed"]

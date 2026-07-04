@@ -14,9 +14,6 @@ func MakeConfig() map[string]any {
 		},
 		"options": map[string]any{
 			"base": "https://store.playstation.com/store/api/chihiro/00_09_000",
-			"auth": map[string]any{
-				"prefix": "Bearer",
-			},
 			"headers": map[string]any{
 				"content-type": "application/json",
 			},
@@ -102,6 +99,7 @@ func MakeConfig() map[string]any {
 											"orig": "age_limit",
 											"reqd": true,
 											"type": "`$STRING`",
+											"index$": 0,
 										},
 										map[string]any{
 											"active": true,
@@ -111,6 +109,7 @@ func MakeConfig() map[string]any {
 											"orig": "container_id",
 											"reqd": true,
 											"type": "`$STRING`",
+											"index$": 1,
 										},
 										map[string]any{
 											"active": true,
@@ -120,6 +119,7 @@ func MakeConfig() map[string]any {
 											"orig": "country",
 											"reqd": true,
 											"type": "`$STRING`",
+											"index$": 2,
 										},
 										map[string]any{
 											"active": true,
@@ -129,6 +129,7 @@ func MakeConfig() map[string]any {
 											"orig": "language",
 											"reqd": true,
 											"type": "`$STRING`",
+											"index$": 3,
 										},
 									},
 									"query": []any{

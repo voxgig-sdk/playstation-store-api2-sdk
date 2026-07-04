@@ -38,10 +38,6 @@ class Config {
   options = {
     base: 'https://store.playstation.com/store/api/chihiro/00_09_000',
 
-    auth: {
-      prefix: 'Bearer',
-    },
-
     headers: {
       "content-type": "application/json"
     },
@@ -132,7 +128,8 @@ class Config {
                     "name": "age_limit",
                     "orig": "age_limit",
                     "reqd": true,
-                    "type": "`$STRING`"
+                    "type": "`$STRING`",
+                    "index$": 0
                   },
                   {
                     "active": true,
@@ -141,7 +138,8 @@ class Config {
                     "name": "container_id",
                     "orig": "container_id",
                     "reqd": true,
-                    "type": "`$STRING`"
+                    "type": "`$STRING`",
+                    "index$": 1
                   },
                   {
                     "active": true,
@@ -150,7 +148,8 @@ class Config {
                     "name": "country",
                     "orig": "country",
                     "reqd": true,
-                    "type": "`$STRING`"
+                    "type": "`$STRING`",
+                    "index$": 2
                   },
                   {
                     "active": true,
@@ -159,7 +158,8 @@ class Config {
                     "name": "language",
                     "orig": "language",
                     "reqd": true,
-                    "type": "`$STRING`"
+                    "type": "`$STRING`",
+                    "index$": 3
                   }
                 ],
                 "query": [
