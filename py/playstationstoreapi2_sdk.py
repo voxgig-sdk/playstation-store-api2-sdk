@@ -220,25 +220,15 @@ class PlaystationStoreApi2SDK:
         }
 
 
-    @property
-    def container(self):
-        """Idiomatic facade: client.container.list() / client.container.load({"id": ...})."""
-        from entity.container_entity import ContainerEntity
-        cached = getattr(self, "_container", None)
-        if cached is None:
-            cached = ContainerEntity(self, None)
-            self._container = cached
-        return cached
-
-    def Container(self, data=None):
-        # Deprecated: use client.container instead.
+    def Container(self, data=None) -> "ContainerEntity":
+        """Entity factory: client.Container().list({}) / client.Container().load({"id": ...})."""
         from entity.container_entity import ContainerEntity
         return ContainerEntity(self, data)
 
 
 
     @classmethod
-    def test(cls, testopts=None, sdkopts=None):
+    def test(cls, testopts=None, sdkopts=None) -> "PlaystationStoreApi2SDK":
         if sdkopts is None:
             sdkopts = {}
         sdkopts = vs.clone(sdkopts)
@@ -258,3 +248,9 @@ class PlaystationStoreApi2SDK:
         sdk.mode = "test"
 
         return sdk
+
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from entity.container_entity import ContainerEntity

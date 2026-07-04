@@ -31,14 +31,16 @@ from playstationstoreapi2_sdk import PlaystationStoreApi2SDK
 client = PlaystationStoreApi2SDK()
 ```
 
-### 2. List containers
+### 2. List container records
+
+`list()` returns a `list` of records (each a `dict`) and raises on
+error — iterate it directly.
 
 ```python
 try:
-    result = client.container.list()
-    for item in result:
-        d = item.data_get()
-        print(d["id"], d["name"])
+    containers = client.Container().list({})
+    for container in containers:
+        print(container)
 except Exception as err:
     print(f"list failed: {err}")
 ```
@@ -86,8 +88,9 @@ Create a mock client for unit testing — no server required:
 ```python
 client = PlaystationStoreApi2SDK.test()
 
-result = client.container.load({"id": "test01"})
-# result contains mock response data
+# Entity ops return the bare record and raise on error.
+container = client.Container().load({"id": "test01"})
+# container contains the mock response record
 ```
 
 ### Use a custom fetch function
@@ -227,7 +230,7 @@ API path: `/container/{country}/{language}/{age_limit}/{container_id}`
 
 ### Container
 
-Create an instance: `const container = client.container`
+Create an instance: `container = client.Container()`
 
 #### Operations
 
@@ -250,8 +253,8 @@ Create an instance: `const container = client.container`
 
 #### Example: List
 
-```ts
-const containers = await client.container.list()
+```python
+containers = client.Container().list({})
 ```
 
 
@@ -325,7 +328,7 @@ Entity instances are stateful. After a successful `load`, the entity
 stores the returned data and match criteria internally.
 
 ```python
-container = client.container
+container = client.Container()
 container.load({"id": "example_id"})
 
 # container.data_get() now returns the loaded container data

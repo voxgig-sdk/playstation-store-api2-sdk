@@ -28,16 +28,14 @@ require_relative "PlaystationStoreApi2_sdk"
 client = PlaystationStoreApi2SDK.new
 ```
 
-### 2. List containers
+### 2. List container records
 
 ```ruby
 begin
-  result = client.container.list
-  if result.is_a?(Array)
-    result.each do |item|
-      d = item.data_get
-      puts "#{d["id"]} #{d["name"]}"
-    end
+  # list returns an Array of Container records — iterate directly.
+  containers = client.Container.list
+  containers.each do |item|
+    puts "#{item["id"]} #{item["name"]}"
   end
 rescue => err
   warn "list failed: #{err}"
@@ -85,13 +83,17 @@ end
 
 ### Use test mode
 
-Create a mock client for unit testing — no server required:
+Create a mock client for unit testing — no server required. Seed fixture
+data via the `entity` option so offline calls resolve without a live server:
 
 ```ruby
-client = PlaystationStoreApi2SDK.test
+client = PlaystationStoreApi2SDK.test({
+  "entity" => { "container" => { "test01" => { "id" => "test01" } } },
+})
 
-result = client.container.load({ "id" => "test01" })
-# result contains mock response data
+# load returns the bare mock record (raises on error).
+container = client.Container.load({ "id" => "test01" })
+puts container
 ```
 
 ### Use a custom fetch function
@@ -230,7 +232,7 @@ API path: `/container/{country}/{language}/{age_limit}/{container_id}`
 
 ### Container
 
-Create an instance: `const container = client.container`
+Create an instance: `container = client.Container`
 
 #### Operations
 
@@ -253,8 +255,9 @@ Create an instance: `const container = client.container`
 
 #### Example: List
 
-```ts
-const containers = await client.container.list()
+```ruby
+# list returns an Array of Container records (raises on error).
+containers = client.Container.list
 ```
 
 
@@ -329,7 +332,7 @@ Entity instances are stateful. After a successful `load`, the entity
 stores the returned data and match criteria internally.
 
 ```ruby
-container = client.container
+container = client.Container
 container.load({ "id" => "example_id" })
 
 # container.data_get now returns the loaded container data

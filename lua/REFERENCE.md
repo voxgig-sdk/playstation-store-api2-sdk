@@ -83,7 +83,7 @@ same parameters as `direct()`.
 ## ContainerEntity
 
 ```lua
-local container = client:container(nil)
+local container = client:Container(nil)
 ```
 
 ### Fields
@@ -106,7 +106,7 @@ local container = client:container(nil)
 List entities matching the given criteria. Returns an array.
 
 ```lua
-local results, err = client:container():list()
+local results, err = client:Container():list()
 ```
 
 ### Common Methods

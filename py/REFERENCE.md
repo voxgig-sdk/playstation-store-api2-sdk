@@ -80,7 +80,7 @@ Prepare a fetch definition without sending. Returns the `fetchdef` and raises on
 ## ContainerEntity
 
 ```python
-container = client.container
+container = client.Container()
 ```
 
 ### Fields
@@ -103,7 +103,9 @@ container = client.container
 List entities matching the given criteria. Returns a list and raises on error.
 
 ```python
-results = client.container.list({})
+results = client.Container().list({})
+for container in results:
+    print(container)
 ```
 
 ### Common Methods

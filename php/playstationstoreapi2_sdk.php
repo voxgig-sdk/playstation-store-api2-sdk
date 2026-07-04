@@ -233,10 +233,10 @@ class PlaystationStoreApi2SDK
 
     private $_container = null;
 
-    // Idiomatic facade: $client->container()->list() / ->load(["id" => ...]).
-    // Also serves the deprecated PascalCase alias Container() (PHP method
-    // names are case-insensitive).
-    public function container($data = null)
+    // Canonical facade: $client->Container()->list() / ->load(["id" => ...]).
+    // PHP method names are case-insensitive, so lowercase $client->container()
+    // resolves here too.
+    public function Container($data = null)
     {
         require_once __DIR__ . '/entity/container_entity.php';
         if ($data === null) {

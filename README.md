@@ -26,9 +26,11 @@ import { PlaystationStoreApi2SDK } from '@voxgig-sdk/playstation-store-api2'
 
 const client = new PlaystationStoreApi2SDK()
 
-// List all containers
-const containers = await client.container.list()
-console.log(containers.data)
+// List all containers (returns Container[])
+const containers = await client.Container().list()
+for (const container of containers) {
+  console.log(container)
+}
 ```
 
 See the [TypeScript README](ts/README.md) for the full guide.
@@ -83,9 +85,10 @@ from playstationstoreapi2_sdk import PlaystationStoreApi2SDK
 
 client = PlaystationStoreApi2SDK()
 
-# List all containers
-containers = client.container.list()
-print(containers)
+# List all containers (returns a list, raises on error)
+containers = client.Container().list({})
+for container in containers:
+    print(container)
 ```
 
 ### PHP
@@ -96,8 +99,8 @@ require_once 'playstationstoreapi2_sdk.php';
 
 $client = new PlaystationStoreApi2SDK();
 
-// List all containers (throws on error)
-$containers = $client->container()->list();
+// List all containers (returns an array; throws on error)
+$containers = $client->Container()->list();
 print_r($containers);
 ```
 
@@ -120,8 +123,8 @@ require_relative "PlaystationStoreApi2_sdk"
 
 client = PlaystationStoreApi2SDK.new
 
-# List all containers
-containers = client.container.list
+# List all containers (returns an Array; raises on error)
+containers = client.Container.list
 puts containers
 ```
 
@@ -133,7 +136,7 @@ local sdk = require("playstation-store-api2_sdk")
 local client = sdk.new()
 
 -- List all containers
-local containers, err = client:container():list()
+local containers, err = client:Container():list()
 print(containers)
 ```
 
@@ -146,22 +149,27 @@ in-memory mock, so unit tests run offline.
 
 ```ts
 const client = PlaystationStoreApi2SDK.test()
-const result = await client.container.load({ id: 'test01' })
-// result.ok === true, result.data contains mock data
+const container = await client.Container().load({ id: 'test01' })
+// container is a bare Container populated with mock data
+console.log(container)
 ```
 
 ### Python
 
 ```python
 client = PlaystationStoreApi2SDK.test()
-result = client.container.load({"id": "test01"})
+container = client.Container().load({"id": "test01"})
+print(container)
 ```
 
 ### PHP
 
 ```php
-$client = PlaystationStoreApi2SDK::test();
-$result = $client->container()->load(["id" => "test01"]);
+// Seed fixture data so offline calls resolve without a live server.
+$client = PlaystationStoreApi2SDK::test([
+    "entity" => ["container" => ["test01" => ["id" => "test01"]]],
+]);
+$container = $client->Container()->load(["id" => "test01"]);
 ```
 
 ### Golang
@@ -176,15 +184,18 @@ result, err := client.Container(nil).Load(
 ### Ruby
 
 ```ruby
-client = PlaystationStoreApi2SDK.test
-result = client.container.load({ "id" => "test01" })
+# Seed fixture data so offline calls resolve without a live server.
+client = PlaystationStoreApi2SDK.test({
+  "entity" => { "container" => { "test01" => { "id" => "test01" } } },
+})
+container = client.Container.load({ "id" => "test01" })
 ```
 
 ### Lua
 
 ```lua
 local client = sdk.test()
-local result, err = client:container():load({ id = "test01" })
+local result, err = client:Container():load({ id = "test01" })
 ```
 
 ## How it works
@@ -232,6 +243,9 @@ const result = await client.direct({
   method: 'GET',
   params: { id: 'example' },
 })
+if (result instanceof Error) {
+  throw result
+}
 console.log(result.data)
 ```
 

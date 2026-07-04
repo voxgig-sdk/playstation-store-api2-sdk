@@ -29,18 +29,16 @@ require_once 'playstationstoreapi2_sdk.php';
 $client = new PlaystationStoreApi2SDK();
 ```
 
-### 2. List containers
+### 2. List container records
 
 ```php
 try {
-    $result = $client->container()->list();
-    if (is_array($result)) {
-        foreach ($result as $item) {
-            $d = $item->data_get();
-            echo $d["id"] . " " . $d["name"] . "\n";
-        }
+    // list() returns an array of Container records — iterate directly.
+    $containers = $client->Container()->list();
+    foreach ($containers as $item) {
+        echo $item["id"] . " " . $item["name"] . "\n";
     }
-} catch (\Exception $err) {
+} catch (\Throwable $err) {
     echo "Error: " . $err->getMessage();
 }
 ```
@@ -86,13 +84,17 @@ print_r($fetchdef["headers"]);
 
 ### Use test mode
 
-Create a mock client for unit testing — no server required:
+Create a mock client for unit testing — no server required. Seed fixture
+data via the `entity` option so offline calls resolve without a live server:
 
 ```php
-$client = PlaystationStoreApi2SDK::test();
+$client = PlaystationStoreApi2SDK::test([
+    "entity" => ["container" => ["test01" => ["id" => "test01"]]],
+]);
 
-$result = $client->container()->load(["id" => "test01"]);
-// $result contains mock response data
+// load() returns the bare mock record (throws on error).
+$container = $client->Container()->load(["id" => "test01"]);
+print_r($container);
 ```
 
 ### Use a custom fetch function
@@ -235,7 +237,7 @@ API path: `/container/{country}/{language}/{age_limit}/{container_id}`
 
 ### Container
 
-Create an instance: `const container = client.container`
+Create an instance: `$container = $client->Container();`
 
 #### Operations
 
@@ -258,8 +260,9 @@ Create an instance: `const container = client.container`
 
 #### Example: List
 
-```ts
-const containers = await client.container.list()
+```php
+// list() returns an array of Container records (throws on error).
+$containers = $client->Container()->list();
 ```
 
 
@@ -334,7 +337,7 @@ Entity instances are stateful. After a successful `load`, the entity
 stores the returned data and match criteria internally.
 
 ```php
-$container = $client->container();
+$container = $client->Container();
 $container->load(["id" => "example_id"]);
 
 // $container->dataGet() now returns the loaded container data

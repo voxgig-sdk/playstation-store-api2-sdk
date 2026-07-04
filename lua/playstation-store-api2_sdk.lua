@@ -244,8 +244,9 @@ end
 
 
 
--- Idiomatic facade: client:container():list() / client:container():load({ id = ... })
-function PlaystationStoreApi2SDK:container(data)
+-- Idiomatic facade: client:Container():list() / client:Container():load({ id = ... })
+-- Entity access is capitalised (PascalCase) for parity with the other SDKs.
+function PlaystationStoreApi2SDK:Container(data)
   local EntityMod = require("entity.container_entity")
   if data == nil then
     if self._container == nil then
@@ -253,12 +254,6 @@ function PlaystationStoreApi2SDK:container(data)
     end
     return self._container
   end
-  return EntityMod.new(self, data)
-end
-
--- Deprecated: use client:container() instead.
-function PlaystationStoreApi2SDK:Container(data)
-  local EntityMod = require("entity.container_entity")
   return EntityMod.new(self, data)
 end
 

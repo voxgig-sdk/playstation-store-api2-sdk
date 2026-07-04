@@ -86,7 +86,7 @@ same parameters as `direct()`. Raises on error.
 ## ContainerEntity
 
 ```ruby
-container = client.container
+container = client.Container
 ```
 
 ### Fields
@@ -109,7 +109,7 @@ container = client.container
 List entities matching the given criteria. Returns an array. Raises on error.
 
 ```ruby
-results = client.container.list(nil)
+results = client.Container.list(nil)
 ```
 
 ### Common Methods

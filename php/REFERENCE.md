@@ -85,7 +85,7 @@ Prepare a fetch definition without sending the request. Returns the
 ## ContainerEntity
 
 ```php
-$container = $client->container();
+$container = $client->Container();
 ```
 
 ### Fields
@@ -108,7 +108,7 @@ $container = $client->container();
 List entities matching the given criteria. Returns an array. Throws on error.
 
 ```php
-$results = $client->container()->list([]);
+$results = $client->Container()->list([]);
 ```
 
 ### Common Methods

@@ -204,14 +204,7 @@ class PlaystationStoreApi2SDK {
 
 
 
-  _container?: ContainerEntity
-
-  // Idiomatic facade: `client.container.list()` / `client.container.load({ id })`.
-  get container(): ContainerEntity {
-    return (this._container ??= new ContainerEntity(this, undefined))
-  }
-
-  /** @deprecated Use `client.container` instead. */
+  // Entity access: `client.Container().list()` / `client.Container().load({ id })`.
   Container(data?: any) {
     const self = this
     return new ContainerEntity(self,data)

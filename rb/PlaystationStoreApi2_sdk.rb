@@ -208,13 +208,7 @@ class PlaystationStoreApi2SDK
   end
 
 
-  # Idiomatic facade: client.container.list / client.container.load({ "id" => ... })
-  def container
-    require_relative 'entity/container_entity'
-    @container ||= ContainerEntity.new(self, nil)
-  end
-
-  # Deprecated: use client.container instead.
+  # Canonical facade: client.Container.list / client.Container.load({ "id" => ... })
   def Container(data = nil)
     require_relative 'entity/container_entity'
     ContainerEntity.new(self, data)

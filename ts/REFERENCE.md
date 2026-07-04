@@ -109,7 +109,7 @@ Alias for `PlaystationStoreApi2SDK.test()`.
 ## ContainerEntity
 
 ```ts
-const container = client.container
+const container = client.Container()
 ```
 
 ### Fields
@@ -132,7 +132,7 @@ const container = client.container
 List entities matching the given criteria. Returns an array.
 
 ```ts
-const results = await client.container.list()
+const results = await client.Container().list()
 ```
 
 ### Common Methods
