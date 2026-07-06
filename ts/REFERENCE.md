@@ -116,14 +116,14 @@ const container = client.Container()
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `age_limit` | ``$INTEGER`` | No |  |
-| `attribute` | ``$OBJECT`` | No |  |
-| `container_type` | ``$STRING`` | No |  |
-| `content_origin` | ``$INTEGER`` | No |  |
-| `dob_required` | ``$BOOLEAN`` | No |  |
-| `id` | ``$STRING`` | No |  |
-| `image` | ``$ARRAY`` | No |  |
-| `link` | ``$ARRAY`` | No |  |
+| `age_limit` | `number` | No |  |
+| `attribute` | `Record<string, any>` | No |  |
+| `container_type` | `string` | No |  |
+| `content_origin` | `number` | No |  |
+| `dob_required` | `boolean` | No |  |
+| `id` | `string` | No |  |
+| `image` | `any[]` | No |  |
+| `link` | `any[]` | No |  |
 
 ### Operations
 

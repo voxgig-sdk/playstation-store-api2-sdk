@@ -8,7 +8,7 @@ Complete API reference for the PlaystationStoreApi2 Python SDK.
 ### Constructor
 
 ```python
-from playstation-store-api2_sdk import PlaystationStoreApi2SDK
+from playstationstoreapi2_sdk import PlaystationStoreApi2SDK
 
 client = PlaystationStoreApi2SDK(options)
 ```
@@ -87,23 +87,23 @@ container = client.Container()
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `age_limit` | ``$INTEGER`` | No |  |
-| `attribute` | ``$OBJECT`` | No |  |
-| `container_type` | ``$STRING`` | No |  |
-| `content_origin` | ``$INTEGER`` | No |  |
-| `dob_required` | ``$BOOLEAN`` | No |  |
-| `id` | ``$STRING`` | No |  |
-| `image` | ``$ARRAY`` | No |  |
-| `link` | ``$ARRAY`` | No |  |
+| `age_limit` | `int` | No |  |
+| `attribute` | `dict` | No |  |
+| `container_type` | `str` | No |  |
+| `content_origin` | `int` | No |  |
+| `dob_required` | `bool` | No |  |
+| `id` | `str` | No |  |
+| `image` | `list` | No |  |
+| `link` | `list` | No |  |
 
 ### Operations
 
-#### `list(reqmatch, ctrl=None) -> list`
+#### `list(reqmatch=None, ctrl=None) -> list`
 
-List entities matching the given criteria. Returns a list and raises on error.
+List entities matching the given criteria. The match is optional — call `list()` with no argument to list all records. Returns a list and raises on error.
 
 ```python
-results = client.Container().list({})
+results = client.Container().list()
 for container in results:
     print(container)
 ```

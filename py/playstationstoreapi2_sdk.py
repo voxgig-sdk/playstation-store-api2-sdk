@@ -221,7 +221,7 @@ class PlaystationStoreApi2SDK:
 
 
     def Container(self, data=None) -> "ContainerEntity":
-        """Entity factory: client.Container().list({}) / client.Container().load({"id": ...})."""
+        """Entity factory: client.Container().list() / client.Container().load({"id": ...})."""
         from entity.container_entity import ContainerEntity
         return ContainerEntity(self, data)
 

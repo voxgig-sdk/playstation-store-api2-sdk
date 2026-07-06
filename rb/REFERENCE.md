@@ -8,7 +8,7 @@ Complete API reference for the PlaystationStoreApi2 Ruby SDK.
 ### Constructor
 
 ```ruby
-require_relative 'playstation-store-api2_sdk'
+require_relative 'PlaystationStoreApi2_sdk'
 
 client = PlaystationStoreApi2SDK.new(options)
 ```
@@ -93,23 +93,23 @@ container = client.Container
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `age_limit` | ``$INTEGER`` | No |  |
-| `attribute` | ``$OBJECT`` | No |  |
-| `container_type` | ``$STRING`` | No |  |
-| `content_origin` | ``$INTEGER`` | No |  |
-| `dob_required` | ``$BOOLEAN`` | No |  |
-| `id` | ``$STRING`` | No |  |
-| `image` | ``$ARRAY`` | No |  |
-| `link` | ``$ARRAY`` | No |  |
+| `age_limit` | `Integer` | No |  |
+| `attribute` | `Hash` | No |  |
+| `container_type` | `String` | No |  |
+| `content_origin` | `Integer` | No |  |
+| `dob_required` | `Boolean` | No |  |
+| `id` | `String` | No |  |
+| `image` | `Array` | No |  |
+| `link` | `Array` | No |  |
 
 ### Operations
 
-#### `list(reqmatch, ctrl = nil) -> Array`
+#### `list(reqmatch = nil, ctrl = nil) -> Array`
 
-List entities matching the given criteria. Returns an array. Raises on error.
+List entities matching the given criteria (call with no argument to list all). Returns an array. Raises on error.
 
 ```ruby
-results = client.Container.list(nil)
+results = client.Container.list
 ```
 
 ### Common Methods
