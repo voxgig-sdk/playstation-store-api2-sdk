@@ -16,9 +16,9 @@ main: {
           url: "https://store.playstation.com/store/api/chihiro/00_09_000"
         }
       ]
+      summary: "The PlayStation Store API provides access to a wide array of PlayStation games and downloadable content."
       title: "PlayStation Store API"
       version: "1.0.0"
+      website: "https://store.playstation.com"
     }
   }
-}
-

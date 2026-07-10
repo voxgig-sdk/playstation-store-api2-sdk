@@ -91,6 +91,7 @@ same parameters as `Direct()`.
 
 ```go
 container := client.Container(nil)
+fmt.Println(container.GetName()) // "container"
 ```
 
 ### Fields
@@ -114,6 +115,10 @@ List entities matching the given criteria. Returns an array.
 
 ```go
 results, err := client.Container(nil).List(nil, nil)
+if err != nil {
+    panic(err)
+}
+fmt.Println(results)
 ```
 
 ### Common Methods

@@ -6,9 +6,6 @@
     },
     "kit": {
       "config": {
-        "auth": {
-          "prefix": "Bearer"
-        },
         "docs_order": [
           "ts",
           "py",
@@ -373,14 +370,17 @@
           "url": "https://store.playstation.com"
         },
         "description": "The PlayStation Store API provides access to a wide array of PlayStation games and downloadable content. Users can retrieve detailed information on game types, pricing, release dates, and platform availability. This API is essential for developers looking to integrate PlayStation content into their applications or services.",
+        "meta_source": "https://www.freepublicapis.com",
         "servers": [
           {
             "description": "PlayStation Store API Server",
             "url": "https://store.playstation.com/store/api/chihiro/00_09_000"
           }
         ],
+        "summary": "The PlayStation Store API provides access to a wide array of PlayStation games and downloadable content.",
         "title": "PlayStation Store API",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "website": "https://store.playstation.com"
       },
       "option": {},
       "target": {
@@ -433,6 +433,9 @@
           },
           "name": "go-cli",
           "phase": {
+            "agentguide": {
+              "active": false
+            },
             "entity": {
               "active": false
             },
@@ -483,6 +486,9 @@
           },
           "name": "go-mcp",
           "phase": {
+            "agentguide": {
+              "active": false
+            },
             "entity": {
               "active": false
             },
