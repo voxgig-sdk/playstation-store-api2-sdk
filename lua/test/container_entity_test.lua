@@ -15,6 +15,47 @@ describe("ContainerEntity", function()
     assert.is_not_nil(ent)
   end)
 
+  -- Feature #4: the entity stream(action, ...) method runs the op pipeline and
+  -- returns an iterator over result items. With the streaming feature active it
+  -- yields the feature's incremental output; otherwise it falls back to the
+  -- materialised list so stream always yields.
+  it("should stream", function()
+    local seed = {
+      entity = {
+        ["container"] = {
+          s1 = { id = "s1" },
+          s2 = { id = "s2" },
+          s3 = { id = "s3" },
+        },
+      },
+    }
+
+    -- Fallback: streaming inactive -> yields the materialised list items.
+    local base = sdk.test(seed, nil)
+    local seen = {}
+    for item in base:Container(nil):stream("list", nil, nil) do
+      table.insert(seen, item)
+    end
+    assert.are.equal(3, #seen)
+
+    -- Inbound: streaming active -> yields each item from the feature.
+    local config = require("config")()
+    if type(config.feature) == "table" and config.feature.streaming ~= nil then
+      local streamsdk = sdk.test(seed, { feature = { streaming = { active = true } } })
+      local got = {}
+      for item in streamsdk:Container(nil):stream("list", nil, nil) do
+        if vs.islist(item) then
+          for _, sub in ipairs(item) do
+            table.insert(got, sub)
+          end
+        else
+          table.insert(got, item)
+        end
+      end
+      assert.are.equal(3, #got)
+    end
+  end)
+
   it("should run basic flow", function()
     local setup = container_basic_setup(nil)
     -- Per-op sdk-test-control.json skip.

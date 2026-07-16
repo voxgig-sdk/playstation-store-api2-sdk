@@ -14,6 +14,13 @@ class PlaystationStoreApi2Result
     public mixed $resdata;
     public ?array $resmatch;
 
+    // Feature extensions: pagination info (paging feature) and a Generator
+    // factory closure (streaming feature). Null/false when the features are
+    // inactive or the operation is not a list.
+    public mixed $paging;
+    public bool $streaming;
+    public mixed $stream;
+
     public function __construct(array $resmap = [])
     {
         $this->ok = \Voxgig\Struct\Struct::getprop($resmap, 'ok') === true;
@@ -31,5 +38,8 @@ class PlaystationStoreApi2Result
         $this->resdata = ($rd === '__UNDEFINED__' || $rd === null) ? null : $rd;
         $rm = \Voxgig\Struct\Struct::getprop($resmap, 'resmatch');
         $this->resmatch = is_array($rm) ? $rm : null;
+        $this->paging = null;
+        $this->streaming = false;
+        $this->stream = null;
     }
 }
