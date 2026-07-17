@@ -104,17 +104,20 @@ const Main = cmp(function Main(props: any) {
   const firstExampleExpr =
     firstHas('list') ? `list ${firstEntity}` :
     firstHas('load') ? `load 1 ${firstEntity}` :
-    firstHas('update') ? `update '{id:1}' ${firstEntity}` : ':help'
+    firstHas('update') ? `update '{id:1}' ${firstEntity}` : '/help'
 
   // ---- Examples block (up front) -------------------------------------------
   const ex: string[] = []
   ex.push(`# 1. Build a native binary (-> dist/<os>-<arch>/${bin})`)
   ex.push('make build')
   ex.push('')
-  ex.push('# 2. Provide credentials once, via the environment')
+  ex.push('# 2. See usage (words, entities, env vars)')
+  ex.push(`./${bin} --help`)
+  ex.push('')
+  ex.push('# 3. Provide credentials once, via the environment')
   ex.push(`export ${apiKeyEnv}=sk_live_xxx`)
   ex.push('')
-  ex.push('# 3. Each command line is ONE AQL expression, run against the API:')
+  ex.push('# 4. Each command line is ONE AQL expression, run against the API:')
   if (firstHas('list')) ex.push(`./${bin} list ${firstEntity}`)
   if (firstHas('load')) {
     ex.push(`./${bin} load 1 ${firstEntity}            # {id:1} shorthand`)
@@ -125,13 +128,13 @@ const Main = cmp(function Main(props: any) {
     ex.push(`./${bin} list ${secondEntity}`)
   }
   ex.push('')
-  ex.push('# 4. Override the API base URL for a single call')
+  ex.push('# 5. Override the API base URL for a single call')
   ex.push(`${baseEnv}=https://api.example.com ./${bin} ${firstExampleExpr}`)
   ex.push('')
-  ex.push('# 5. No arguments -> interactive REPL')
+  ex.push('# 6. No arguments -> interactive REPL')
   ex.push(`./${bin}`)
   ex.push(`${model.name}> ${firstExampleExpr}`)
-  ex.push(`${model.name}> :quit`)
+  ex.push(`${model.name}> /quit`)
   const exampleBlock = ex.join('\n')
 
   // ---- How-to guides (gated) -----------------------------------------------
@@ -184,8 +187,8 @@ evaluated as its own AQL expression:
 \`\`\`text
 $ ./${bin}
 ${model.name}> ${firstExampleExpr}
-${model.name}> :help
-${model.name}> :quit
+${model.name}> /help
+${model.name}> /quit
 \`\`\``)
 
   howtos.push(`### Cross-compile release binaries
@@ -197,7 +200,7 @@ make build-all   # linux/darwin/windows x amd64/arm64, under dist/<os>-<arch>/
 
   howtos.push(`### Discover the available entities
 
-\`:help\` in the REPL prints the full entity list, or see [Entities](#entities)
+\`/help\` in the REPL prints the full entity list, or see [Entities](#entities)
 below — this SDK exposes ${entityCount} ${entityNoun}.`)
 
   const howtoBlock = howtos.join('\n\n')
@@ -242,7 +245,7 @@ ${exampleBlock}
    \`\`\`
 
 4. **Go interactive.** Run the binary with no arguments to open the REPL, then
-   type \`:help\` for the word and entity lists and \`:quit\` to leave.
+   type \`/help\` for the word and entity lists and \`/quit\` to leave.
 
 That is the whole loop: *build → set key → evaluate AQL expressions*.
 
@@ -273,10 +276,16 @@ ${verbRows}
 
 Unset variables fall back to the SDK's built-in defaults.
 
+### CLI flags
+
+- \`--help\` / \`-h\` — print usage (words, entities, env vars) and exit.
+
 ### REPL commands
 
-- \`:quit\` / \`:q\` / \`:exit\` — exit the REPL
-- \`:help\` / \`:h\` / \`:?\`     — show the word list, entity list and meta commands
+Meta-commands use the \`/\` prefix (everything else on a line is evaluated as AQL):
+
+- \`/quit\` / \`/q\` / \`/exit\` — exit the REPL
+- \`/help\` / \`/h\` / \`/?\`     — show the word list, entity list and meta commands
 
 ### Exit codes
 
