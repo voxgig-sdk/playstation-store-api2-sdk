@@ -1,4 +1,4 @@
--- ProjectName SDK configuration
+-- PlaystationStoreApi2 SDK configuration
 
 local function make_config()
   return {
