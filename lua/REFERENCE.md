@@ -91,13 +91,13 @@ local container = client:Container(nil)
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `age_limit` | `number` | No |  |
-| `attribute` | `table` | No |  |
+| `attributes` | `table` | No |  |
 | `container_type` | `string` | No |  |
 | `content_origin` | `number` | No |  |
 | `dob_required` | `boolean` | No |  |
 | `id` | `string` | No |  |
-| `image` | `table` | No |  |
-| `link` | `table` | No |  |
+| `images` | `table` | No |  |
+| `links` | `table` | No |  |
 
 ### Operations
 

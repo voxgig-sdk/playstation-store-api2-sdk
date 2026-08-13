@@ -23,6 +23,7 @@ require_once __DIR__ . '/MakeUrl.php';
 require_once __DIR__ . '/Param.php';
 require_once __DIR__ . '/PrepareAuth.php';
 require_once __DIR__ . '/PrepareBody.php';
+require_once __DIR__ . '/Graphql.php';
 require_once __DIR__ . '/PrepareHeaders.php';
 require_once __DIR__ . '/PrepareMethod.php';
 require_once __DIR__ . '/PrepareParams.php';
@@ -59,6 +60,8 @@ PlaystationStoreApi2Utility::setRegistrar(function (PlaystationStoreApi2Utility 
     $u->prepare_params = [PlaystationStoreApi2PrepareParams::class, 'call'];
     $u->prepare_path = [PlaystationStoreApi2PreparePath::class, 'call'];
     $u->prepare_query = [PlaystationStoreApi2PrepareQuery::class, 'call'];
+    $u->graphql_body = [PlaystationStoreApi2Graphql::class, 'body'];
+    $u->graphql_errors = [PlaystationStoreApi2Graphql::class, 'errors'];
     $u->result_basic = [PlaystationStoreApi2ResultBasic::class, 'call'];
     $u->result_body = [PlaystationStoreApi2ResultBody::class, 'call'];
     $u->result_headers = [PlaystationStoreApi2ResultHeaders::class, 'call'];

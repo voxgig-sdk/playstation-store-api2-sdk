@@ -218,9 +218,9 @@ data **directly** — there is no wrapper:
 
 Check `err` first (it is non-`nil` on failure), then use `value`:
 
-    local container, err = client:Container():load()
+    local container, err = client:Container():list()
     if err then error(err) end
-    -- container is the loaded record
+    -- container is the record list
 
 Only `direct()` returns a response envelope — a `table` with `ok`,
 `status`, `headers`, and `data` keys.
@@ -232,13 +232,13 @@ Only `direct()` returns a response envelope — a `table` with `ok`,
 | Field | Description |
 | --- | --- |
 | `age_limit` |  |
-| `attribute` |  |
+| `attributes` |  |
 | `container_type` |  |
 | `content_origin` |  |
 | `dob_required` |  |
 | `id` |  |
-| `image` |  |
-| `link` |  |
+| `images` |  |
+| `links` |  |
 
 Operations: List.
 
@@ -264,13 +264,13 @@ Create an instance: `local container = client:Container(nil)`
 | Field | Type | Description |
 | --- | --- | --- |
 | `age_limit` | `number` |  |
-| `attribute` | `table` |  |
+| `attributes` | `table` |  |
 | `container_type` | `string` |  |
 | `content_origin` | `number` |  |
 | `dob_required` | `boolean` |  |
 | `id` | `string` |  |
-| `image` | `table` |  |
-| `link` | `table` |  |
+| `images` | `table` |  |
+| `links` | `table` |  |
 
 #### Example: List
 

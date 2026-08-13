@@ -125,7 +125,8 @@ Create a mock client for unit testing — no server required:
 ```php
 $client = PlaystationStoreApi2SDK::test();
 
-// Entity ops return the bare mock record (throws on error).
+// Entity ops return the ENTITY (throws on error);
+// call data_get() for the mock record.
 $container = $client->Container()->list();
 print_r($container);
 ```
@@ -224,7 +225,7 @@ All entities share the same interface.
 
 ### Result shape
 
-Entity operations return the bare result data (an `array` for single-entity
+Entity operations return the ENTITY (call data_get() for the record) (an `array` for single-entity
 ops, a `list` for `list`) and throw on error. Wrap calls in
 `try`/`catch` to handle failures.
 
@@ -247,13 +248,13 @@ On error, `ok` is `false` and `$err` contains the error value.
 | Field | Description |
 | --- | --- |
 | `age_limit` |  |
-| `attribute` |  |
+| `attributes` |  |
 | `container_type` |  |
 | `content_origin` |  |
 | `dob_required` |  |
 | `id` |  |
-| `image` |  |
-| `link` |  |
+| `images` |  |
+| `links` |  |
 
 Operations: List.
 
@@ -279,13 +280,13 @@ Create an instance: `$container = $client->Container();`
 | Field | Type | Description |
 | --- | --- | --- |
 | `age_limit` | `int` |  |
-| `attribute` | `array` |  |
+| `attributes` | `array` |  |
 | `container_type` | `string` |  |
 | `content_origin` | `int` |  |
 | `dob_required` | `bool` |  |
 | `id` | `string` |  |
-| `image` | `array` |  |
-| `link` | `array` |  |
+| `images` | `array` |  |
+| `links` | `array` |  |
 
 #### Example: List
 

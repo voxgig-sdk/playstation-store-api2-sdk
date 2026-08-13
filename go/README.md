@@ -261,13 +261,13 @@ Only `Direct()` returns a response envelope — a `map[string]any` with
 | Field | Description |
 | --- | --- |
 | `"age_limit"` |  |
-| `"attribute"` |  |
+| `"attributes"` |  |
 | `"container_type"` |  |
 | `"content_origin"` |  |
 | `"dob_required"` |  |
 | `"id"` |  |
-| `"image"` |  |
-| `"link"` |  |
+| `"images"` |  |
+| `"links"` |  |
 
 Operations: List.
 
@@ -293,13 +293,13 @@ Create an instance: `container := client.Container(nil)`
 | Field | Type | Description |
 | --- | --- | --- |
 | `age_limit` | `int` |  |
-| `attribute` | `map[string]any` |  |
+| `attributes` | `map[string]any` |  |
 | `container_type` | `string` |  |
 | `content_origin` | `int` |  |
 | `dob_required` | `bool` |  |
 | `id` | `string` |  |
-| `image` | `[]any` |  |
-| `link` | `[]any` |  |
+| `images` | `[]any` |  |
+| `links` | `[]any` |  |
 
 #### Example: List
 

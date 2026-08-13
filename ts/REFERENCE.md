@@ -117,13 +117,13 @@ const container = client.Container()
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `age_limit` | `number` | No |  |
-| `attribute` | `Record<string, any>` | No |  |
+| `attributes` | `Record<string, any>` | No |  |
 | `container_type` | `string` | No |  |
 | `content_origin` | `number` | No |  |
 | `dob_required` | `boolean` | No |  |
 | `id` | `string` | No |  |
-| `image` | `any[]` | No |  |
-| `link` | `any[]` | No |  |
+| `images` | `any[]` | No |  |
+| `links` | `any[]` | No |  |
 
 ### Operations
 
@@ -132,7 +132,7 @@ const container = client.Container()
 List entities matching the given criteria. Returns an array.
 
 ```ts
-const results = await client.Container().list()
+const results = await client.Container().list({ age_limit: "example", container_id: "example", country: "example", language: "example" })
 ```
 
 ### Common Methods

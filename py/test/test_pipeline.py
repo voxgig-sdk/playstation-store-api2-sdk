@@ -16,11 +16,11 @@
 import pytest
 
 from playstationstoreapi2_sdk import PlaystationStoreApi2SDK
-from core.error import PlaystationStoreApi2Error
-from core.result import PlaystationStoreApi2Result
-from core.response import PlaystationStoreApi2Response
-from core.spec import PlaystationStoreApi2Spec
-from feature.base_feature import PlaystationStoreApi2BaseFeature
+from playstationstoreapi2_sdk.core.error import PlaystationStoreApi2Error
+from playstationstoreapi2_sdk.core.result import PlaystationStoreApi2Result
+from playstationstoreapi2_sdk.core.response import PlaystationStoreApi2Response
+from playstationstoreapi2_sdk.core.spec import PlaystationStoreApi2Spec
+from playstationstoreapi2_sdk.feature.base_feature import PlaystationStoreApi2BaseFeature
 
 
 def _client():

@@ -16,13 +16,13 @@ declare(strict_types=1);
 class Container
 {
     public ?int $age_limit = null;
-    public ?array $attribute = null;
+    public ?array $attributes = null;
     public ?string $container_type = null;
     public ?int $content_origin = null;
     public ?bool $dob_required = null;
     public ?string $id = null;
-    public ?array $image = null;
-    public ?array $link = null;
+    public ?array $images = null;
+    public ?array $links = null;
 }
 
 /** Request payload for Container#list. */

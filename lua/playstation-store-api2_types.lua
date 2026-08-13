@@ -8,13 +8,13 @@
 
 ---@class Container
 ---@field age_limit? number
----@field attribute? table
+---@field attributes? table
 ---@field container_type? string
 ---@field content_origin? number
 ---@field dob_required? boolean
 ---@field id? string
----@field image? table
----@field link? table
+---@field images? table
+---@field links? table
 
 ---@class ContainerListMatch
 ---@field age_limit string

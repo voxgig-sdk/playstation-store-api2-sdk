@@ -23,7 +23,7 @@ support (`list`):
 
 ```ts
 const client = new PlaystationStoreApi2SDK()
-const items = await client.Container().list()
+const items = await client.Container().list({ age_limit: "example", container_id: "example", country: "example", language: "example" })
 ```
 
 Thinking in entities keeps the mental model small — for people and AI agents alike —
@@ -38,9 +38,18 @@ network, and no credentials:
 ### TypeScript
 
 ```ts
-const client = PlaystationStoreApi2SDK.test()
+// The offline mock starts EMPTY — seed it with the records the test needs.
+// Shape: { entity: { <entity-name>: { <id>: <record> } } }
+const client = PlaystationStoreApi2SDK.test({
+  entity: {
+    container: {
+      test01: { id: 'test01' },
+    },
+  },
+})
 const containers = await client.Container().list()
-// containers is an array of bare Container records populated with mock data
+// containers is an array of Container entities, populated with mock data
+// — call containers[0].data() for the record itself
 console.log(containers)
 ```
 
@@ -110,8 +119,8 @@ import { PlaystationStoreApi2SDK } from '@voxgig-sdk/playstation-store-api2'
 
 const client = new PlaystationStoreApi2SDK()
 
-// List all containers (returns Container[])
-const containers = await client.Container().list()
+// List all containers (returns ContainerEntity[] — .data() for the record)
+const containers = await client.Container().list({ age_limit: "example", container_id: "example", country: "example", language: "example" })
 for (const container of containers) {
   console.log(container)
 }
@@ -170,7 +179,7 @@ from playstationstoreapi2_sdk import PlaystationStoreApi2SDK
 client = PlaystationStoreApi2SDK()
 
 # List all containers (returns a list, raises on error)
-containers = client.Container().list()
+containers = client.Container().list({"age_limit": "example", "container_id": "example", "country": "example", "language": "example"})
 for container in containers:
     print(container)
 ```
@@ -343,6 +352,9 @@ Pass custom features via the `extend` option at construction time.
 
 This SDK is generated from the upstream OpenAPI specification. It is an
 unofficial client and is not affiliated with the API provider.
+
+The OpenAPI spec(s) this SDK was generated from are kept in the
+[`.sdk/def/`](.sdk/def/) folder.
 
 - Upstream API: [https://store.playstation.com](https://store.playstation.com)
 

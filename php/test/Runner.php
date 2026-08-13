@@ -43,8 +43,8 @@ class PlaystationStoreApi2TestRunner
 
     public static function env_override(array $m): array
     {
-        $live = self::getenv('PLAYSTATIONSTOREAPI2_TEST_LIVE');
-        $override = self::getenv('PLAYSTATIONSTOREAPI2_TEST_OVERRIDE');
+        $live = self::getenv('PLAYSTATION_STORE_API2_TEST_LIVE');
+        $override = self::getenv('PLAYSTATION_STORE_API2_TEST_OVERRIDE');
 
         if ($live === 'TRUE' || $override === 'TRUE') {
             foreach (array_keys($m) as $key) {
@@ -63,9 +63,9 @@ class PlaystationStoreApi2TestRunner
             }
         }
 
-        $explain = self::getenv('PLAYSTATIONSTOREAPI2_TEST_EXPLAIN');
+        $explain = self::getenv('PLAYSTATION_STORE_API2_TEST_EXPLAIN');
         if ($explain !== null && $explain !== '') {
-            $m['PLAYSTATIONSTOREAPI2_TEST_EXPLAIN'] = $explain;
+            $m['PLAYSTATION_STORE_API2_TEST_EXPLAIN'] = $explain;
         }
 
         return $m;

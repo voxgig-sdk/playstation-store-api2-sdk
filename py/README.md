@@ -43,7 +43,7 @@ error — iterate it directly.
 
 ```python
 try:
-    containers = client.Container().list()
+    containers = client.Container().list({"age_limit": "example", "container_id": "example", "country": "example", "language": "example"})
     for container in containers:
         print(container)
 except Exception as err:
@@ -124,7 +124,8 @@ Create a mock client for unit testing — no server required:
 ```python
 client = PlaystationStoreApi2SDK.test()
 
-# Entity ops return the bare record and raise on error.
+# Entity ops return the ENTITY and raises on error;
+# call data_get() for the record.
 container = client.Container().list()
 # container contains the mock response record
 ```
@@ -220,7 +221,7 @@ All entities share the same interface.
 
 ### Result shape
 
-Entity operations return the bare result data (a `dict` for single-entity
+Entity operations return the ENTITY (call data_get() for the record) (a `dict` for single-entity
 ops, a `list` for `list`) and raise on error. Wrap calls in
 `try`/`except` to handle failures.
 
@@ -243,13 +244,13 @@ On error, `ok` is `False` and `err` contains the error value.
 | Field | Description |
 | --- | --- |
 | `age_limit` |  |
-| `attribute` |  |
+| `attributes` |  |
 | `container_type` |  |
 | `content_origin` |  |
 | `dob_required` |  |
 | `id` |  |
-| `image` |  |
-| `link` |  |
+| `images` |  |
+| `links` |  |
 
 Operations: List.
 
@@ -275,18 +276,18 @@ Create an instance: `container = client.Container()`
 | Field | Type | Description |
 | --- | --- | --- |
 | `age_limit` | `int` |  |
-| `attribute` | `dict` |  |
+| `attributes` | `dict` |  |
 | `container_type` | `str` |  |
 | `content_origin` | `int` |  |
 | `dob_required` | `bool` |  |
 | `id` | `str` |  |
-| `image` | `list` |  |
-| `link` | `list` |  |
+| `images` | `list` |  |
+| `links` | `list` |  |
 
 #### Example: List
 
 ```python
-containers = client.Container().list()
+containers = client.Container().list({"age_limit": "example", "container_id": "example", "country": "example", "language": "example"})
 ```
 
 

@@ -34,7 +34,7 @@ module PlaystationStoreApi2Config
             },
             {
               "active" => true,
-              "name" => "attribute",
+              "name" => "attributes",
               "req" => false,
               "type" => "`$OBJECT`",
               "index$" => 1,
@@ -69,14 +69,14 @@ module PlaystationStoreApi2Config
             },
             {
               "active" => true,
-              "name" => "image",
+              "name" => "images",
               "req" => false,
               "type" => "`$ARRAY`",
               "index$" => 6,
             },
             {
               "active" => true,
-              "name" => "link",
+              "name" => "links",
               "req" => false,
               "type" => "`$ARRAY`",
               "index$" => 7,
@@ -203,6 +203,7 @@ module PlaystationStoreApi2Config
                       },
                     ],
                   },
+                  "kind" => "http",
                   "method" => "GET",
                   "orig" => "/container/{country}/{language}/{age_limit}/{container_id}",
                   "parts" => [

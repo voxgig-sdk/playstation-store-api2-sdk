@@ -13,7 +13,7 @@
 # @!attribute [rw] age_limit
 #   @return [Integer, nil]
 #
-# @!attribute [rw] attribute
+# @!attribute [rw] attributes
 #   @return [Hash, nil]
 #
 # @!attribute [rw] container_type
@@ -28,20 +28,20 @@
 # @!attribute [rw] id
 #   @return [String, nil]
 #
-# @!attribute [rw] image
+# @!attribute [rw] images
 #   @return [Array, nil]
 #
-# @!attribute [rw] link
+# @!attribute [rw] links
 #   @return [Array, nil]
 Container = Struct.new(
   :age_limit,
-  :attribute,
+  :attributes,
   :container_type,
   :content_origin,
   :dob_required,
   :id,
-  :image,
-  :link,
+  :images,
+  :links,
   keyword_init: true
 )
 

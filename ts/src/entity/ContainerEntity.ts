@@ -37,7 +37,7 @@ class ContainerEntity extends PlaystationStoreApi2EntityBase<Container> {
 
 
 
-  async list(this: any, reqmatch?: ContainerListMatch, ctrl?: Control): Promise<Container[]> {
+  async list(this: any, reqmatch?: ContainerListMatch, ctrl?: Control): Promise<ContainerEntity[]> {
 
     const utility = this._utility
 

@@ -99,13 +99,13 @@ fmt.Println(container.GetName()) // "container"
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `age_limit` | `int` | No |  |
-| `attribute` | `map[string]any` | No |  |
+| `attributes` | `map[string]any` | No |  |
 | `container_type` | `string` | No |  |
 | `content_origin` | `int` | No |  |
 | `dob_required` | `bool` | No |  |
 | `id` | `string` | No |  |
-| `image` | `[]any` | No |  |
-| `link` | `[]any` | No |  |
+| `images` | `[]any` | No |  |
+| `links` | `[]any` | No |  |
 
 ### Operations
 

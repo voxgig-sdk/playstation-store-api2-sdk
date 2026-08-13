@@ -94,13 +94,13 @@ container = client.Container
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `age_limit` | `Integer` | No |  |
-| `attribute` | `Hash` | No |  |
+| `attributes` | `Hash` | No |  |
 | `container_type` | `String` | No |  |
 | `content_origin` | `Integer` | No |  |
 | `dob_required` | `Boolean` | No |  |
 | `id` | `String` | No |  |
-| `image` | `Array` | No |  |
-| `link` | `Array` | No |  |
+| `images` | `Array` | No |  |
+| `links` | `Array` | No |  |
 
 ### Operations
 

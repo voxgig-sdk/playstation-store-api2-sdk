@@ -26,8 +26,8 @@ import {
 describe('ContainerEntity', async () => {
 
   // Per-test live pacing. Delay is read from sdk-test-control.json's
-  // `test.live.delayMs`; only sleeps when PLAYSTATIONSTOREAPI2_TEST_LIVE=TRUE.
-  afterEach(liveDelay('PLAYSTATIONSTOREAPI2_TEST_LIVE'))
+  // `test.live.delayMs`; only sleeps when PLAYSTATION_STORE_API2_TEST_LIVE=TRUE.
+  afterEach(liveDelay('PLAYSTATION_STORE_API2_TEST_LIVE'))
 
   test('instance', async () => {
     const testsdk = PlaystationStoreApi2SDK.test()
@@ -38,7 +38,7 @@ describe('ContainerEntity', async () => {
 
   test('basic', async (t) => {
 
-    const live = 'TRUE' === process.env.PLAYSTATION_STORE_API__TEST_LIVE
+    const live = 'TRUE' === process.env.PLAYSTATION_STORE_API2_TEST_LIVE
     for (const op of ['list']) {
       if (maybeSkipControl(t, 'entityOp', 'container.' + op, live)) return
     }
@@ -48,7 +48,7 @@ describe('ContainerEntity', async () => {
     // fixture (entity TestData.json). Those don't exist on the live API.
     // Skip live runs unless the user provided a real ENTID env override.
     if (setup.syntheticOnly) {
-      t.skip('live entity test uses synthetic IDs from fixture — set PLAYSTATION_STORE_API__TEST_CONTAINER_ENTID JSON to run live')
+      t.skip('live entity test uses synthetic IDs from fixture — set PLAYSTATION_STORE_API2_TEST_CONTAINER_ENTID JSON to run live')
       return
     }
     const client = setup.client
@@ -67,7 +67,7 @@ describe('ContainerEntity', async () => {
     container_ref01_match['country'] = setup.idmap['country01']
     container_ref01_match['language'] = setup.idmap['language01']
 
-    const container_ref01_list = await container_ref01_ent.list(container_ref01_match)
+    const container_ref01_list = (await container_ref01_ent.list(container_ref01_match)).map((e: any) => e.data())
 
 
   })
@@ -110,18 +110,18 @@ function basicSetup(extra?: any) {
   // basic flow consumes synthetic IDs from the fixture file; without an
   // override those synthetic IDs reach the live API and 4xx. Surface this
   // to the test so it can skip rather than fail.
-  const idmapEnvVal = process.env['PLAYSTATION_STORE_API__TEST_CONTAINER_ENTID']
+  const idmapEnvVal = process.env['PLAYSTATION_STORE_API2_TEST_CONTAINER_ENTID']
   const idmapOverridden = null != idmapEnvVal && idmapEnvVal.trim().startsWith('{')
 
   const env = envOverride({
-    'PLAYSTATION_STORE_API__TEST_CONTAINER_ENTID': idmap,
-    'PLAYSTATION_STORE_API__TEST_LIVE': 'FALSE',
-    'PLAYSTATION_STORE_API__TEST_EXPLAIN': 'FALSE',
+    'PLAYSTATION_STORE_API2_TEST_CONTAINER_ENTID': idmap,
+    'PLAYSTATION_STORE_API2_TEST_LIVE': 'FALSE',
+    'PLAYSTATION_STORE_API2_TEST_EXPLAIN': 'FALSE',
   })
 
-  idmap = env['PLAYSTATION_STORE_API__TEST_CONTAINER_ENTID']
+  idmap = env['PLAYSTATION_STORE_API2_TEST_CONTAINER_ENTID']
 
-  const live = 'TRUE' === env.PLAYSTATION_STORE_API__TEST_LIVE
+  const live = 'TRUE' === env.PLAYSTATION_STORE_API2_TEST_LIVE
 
   if (live) {
     client = new PlaystationStoreApi2SDK(merge([
@@ -138,7 +138,7 @@ function basicSetup(extra?: any) {
     client,
     struct,
     data: entityData,
-    explain: 'TRUE' === env.PLAYSTATION_STORE_API__TEST_EXPLAIN,
+    explain: 'TRUE' === env.PLAYSTATION_STORE_API2_TEST_EXPLAIN,
     live,
     syntheticOnly: live && !idmapOverridden,
     now: Date.now(),

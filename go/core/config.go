@@ -33,7 +33,7 @@ func MakeConfig() map[string]any {
 					},
 					map[string]any{
 						"active": true,
-						"name": "attribute",
+						"name": "attributes",
 						"req": false,
 						"type": "`$OBJECT`",
 						"index$": 1,
@@ -68,14 +68,14 @@ func MakeConfig() map[string]any {
 					},
 					map[string]any{
 						"active": true,
-						"name": "image",
+						"name": "images",
 						"req": false,
 						"type": "`$ARRAY`",
 						"index$": 6,
 					},
 					map[string]any{
 						"active": true,
-						"name": "link",
+						"name": "links",
 						"req": false,
 						"type": "`$ARRAY`",
 						"index$": 7,
@@ -202,6 +202,7 @@ func MakeConfig() map[string]any {
 										},
 									},
 								},
+								"kind": "http",
 								"method": "GET",
 								"orig": "/container/{country}/{language}/{age_limit}/{container_id}",
 								"parts": []any{
@@ -234,7 +235,6 @@ func MakeConfig() map[string]any {
 								"index$": 0,
 							},
 						},
-						"key$": "list",
 					},
 				},
 				"relations": map[string]any{

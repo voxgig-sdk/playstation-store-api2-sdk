@@ -92,7 +92,7 @@ func TestContainerEntity(t *testing.T) {
 		// The basic flow consumes synthetic IDs from the fixture. In live mode
 		// without an *_ENTID env override, those IDs hit the live API and 4xx.
 		if setup.syntheticOnly {
-			t.Skip("live entity test uses synthetic IDs from fixture — set PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID JSON to run live")
+			t.Skip("live entity test uses synthetic IDs from fixture — set PLAYSTATION_STORE_API2_TEST_CONTAINER_ENTID JSON to run live")
 			return
 		}
 		client := setup.client
@@ -165,21 +165,21 @@ func containerBasicSetup(extra map[string]any) *entityTestSetup {
 	// Detect ENTID env override before envOverride consumes it. When live
 	// mode is on without a real override, the basic test runs against synthetic
 	// IDs from the fixture and 4xx's. Surface this so the test can skip.
-	entidEnvRaw := os.Getenv("PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID")
+	entidEnvRaw := os.Getenv("PLAYSTATION_STORE_API2_TEST_CONTAINER_ENTID")
 	idmapOverridden := entidEnvRaw != "" && strings.HasPrefix(strings.TrimSpace(entidEnvRaw), "{")
 
 	env := envOverride(map[string]any{
-		"PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID": idmap,
-		"PLAYSTATIONSTOREAPI__TEST_LIVE":      "FALSE",
-		"PLAYSTATIONSTOREAPI__TEST_EXPLAIN":   "FALSE",
+		"PLAYSTATION_STORE_API2_TEST_CONTAINER_ENTID": idmap,
+		"PLAYSTATION_STORE_API2_TEST_LIVE":      "FALSE",
+		"PLAYSTATION_STORE_API2_TEST_EXPLAIN":   "FALSE",
 	})
 
-	idmapResolved := core.ToMapAny(env["PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID"])
+	idmapResolved := core.ToMapAny(env["PLAYSTATION_STORE_API2_TEST_CONTAINER_ENTID"])
 	if idmapResolved == nil {
 		idmapResolved = core.ToMapAny(idmap)
 	}
 
-	if env["PLAYSTATIONSTOREAPI__TEST_LIVE"] == "TRUE" {
+	if env["PLAYSTATION_STORE_API2_TEST_LIVE"] == "TRUE" {
 		mergedOpts := vs.Merge([]any{
 			map[string]any{
 			},
@@ -188,13 +188,13 @@ func containerBasicSetup(extra map[string]any) *entityTestSetup {
 		client = sdk.NewPlaystationStoreApi2SDK(core.ToMapAny(mergedOpts))
 	}
 
-	live := env["PLAYSTATIONSTOREAPI__TEST_LIVE"] == "TRUE"
+	live := env["PLAYSTATION_STORE_API2_TEST_LIVE"] == "TRUE"
 	return &entityTestSetup{
 		client:        client,
 		data:          entityData,
 		idmap:         idmapResolved,
 		env:           env,
-		explain:       env["PLAYSTATIONSTOREAPI__TEST_EXPLAIN"] == "TRUE",
+		explain:       env["PLAYSTATION_STORE_API2_TEST_EXPLAIN"] == "TRUE",
 		live:          live,
 		syntheticOnly: live && !idmapOverridden,
 		now:           time.Now().UnixMilli(),

@@ -3,9 +3,9 @@
 import json
 import pytest
 
-from utility.voxgig_struct import voxgig_struct as vs
+from playstationstoreapi2_sdk.utility.voxgig_struct import voxgig_struct as vs
 from playstationstoreapi2_sdk import PlaystationStoreApi2SDK
-from core import helpers
+from playstationstoreapi2_sdk.core import helpers
 from test import runner
 
 
@@ -82,11 +82,11 @@ def _container_direct_setup(mockres):
     calls = []
 
     env = runner.env_override({
-        "PLAYSTATIONSTOREAPI__TEST_CONTAINER_ENTID": {},
-        "PLAYSTATIONSTOREAPI__TEST_LIVE": "FALSE",
+        "PLAYSTATION_STORE_API2_TEST_CONTAINER_ENTID": {},
+        "PLAYSTATION_STORE_API2_TEST_LIVE": "FALSE",
     })
 
-    live = env.get("PLAYSTATIONSTOREAPI__TEST_LIVE") == "TRUE"
+    live = env.get("PLAYSTATION_STORE_API2_TEST_LIVE") == "TRUE"
 
     if live:
         merged_opts = {

@@ -35,10 +35,12 @@ const client = new PlaystationStoreApi2SDK()
 
 ### 2. List container records
 
-`list()` resolves to an array of Container objects — iterate it directly:
+`list()` resolves to an array of Container ENTITIES — every operation
+resolves to entities, not raw records. Iterate them directly, and call
+`.data()` on one for the record it holds:
 
 ```ts
-const containers = await client.Container().list()
+const containers = await client.Container().list({ age_limit: "example", container_id: "example", country: "example", language: "example" })
 
 for (const container of containers) {
   console.log(container)
@@ -120,7 +122,8 @@ Create a mock client for unit testing — no server required:
 const client = PlaystationStoreApi2SDK.test()
 
 const container = await client.Container().list()
-// container is a bare entity populated with mock response data
+// container is the entity, populated with mock response data
+// — call container.data() for the record itself
 console.log(container)
 ```
 
@@ -285,13 +288,13 @@ The `prepare()` method returns:
 | Field | Description |
 | --- | --- |
 | `age_limit` |  |
-| `attribute` |  |
+| `attributes` |  |
 | `container_type` |  |
 | `content_origin` |  |
 | `dob_required` |  |
 | `id` |  |
-| `image` |  |
-| `link` |  |
+| `images` |  |
+| `links` |  |
 
 Operations: list.
 
@@ -317,18 +320,18 @@ Create an instance: `const container = client.Container()`
 | Field | Type | Description |
 | --- | --- | --- |
 | `age_limit` | `number` |  |
-| `attribute` | `Record<string, any>` |  |
+| `attributes` | `Record<string, any>` |  |
 | `container_type` | `string` |  |
 | `content_origin` | `number` |  |
 | `dob_required` | `boolean` |  |
 | `id` | `string` |  |
-| `image` | `any[]` |  |
-| `link` | `any[]` |  |
+| `images` | `any[]` |  |
+| `links` | `any[]` |  |
 
 #### Example: List
 
 ```ts
-const containers = await client.Container().list()
+const containers = await client.Container().list({ age_limit: "example", container_id: "example", country: "example", language: "example" })
 ```
 
 

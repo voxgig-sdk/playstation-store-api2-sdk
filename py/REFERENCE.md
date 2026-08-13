@@ -88,13 +88,13 @@ container = client.Container()
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `age_limit` | `int` | No |  |
-| `attribute` | `dict` | No |  |
+| `attributes` | `dict` | No |  |
 | `container_type` | `str` | No |  |
 | `content_origin` | `int` | No |  |
 | `dob_required` | `bool` | No |  |
 | `id` | `str` | No |  |
-| `image` | `list` | No |  |
-| `link` | `list` | No |  |
+| `images` | `list` | No |  |
+| `links` | `list` | No |  |
 
 ### Operations
 
@@ -103,7 +103,7 @@ container = client.Container()
 List entities matching the given criteria. The match is optional — call `list()` with no argument to list all records. Returns a list and raises on error.
 
 ```python
-results = client.Container().list()
+results = client.Container().list({"age_limit": "example", "container_id": "example", "country": "example", "language": "example"})
 for container in results:
     print(container)
 ```

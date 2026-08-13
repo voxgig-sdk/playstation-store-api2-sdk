@@ -23,8 +23,8 @@ module PlaystationStoreApi2TestRunner
   end
 
   def self.env_override(m)
-    live = getenv("PROJECTNAME_TEST_LIVE")
-    override = getenv("PROJECTNAME_TEST_OVERRIDE")
+    live = getenv("PROJECTENV_TEST_LIVE")
+    override = getenv("PROJECTENV_TEST_OVERRIDE")
 
     if live == "TRUE" || override == "TRUE"
       m.each_key do |key|
@@ -44,8 +44,8 @@ module PlaystationStoreApi2TestRunner
       end
     end
 
-    explain = getenv("PROJECTNAME_TEST_EXPLAIN")
-    m["PROJECTNAME_TEST_EXPLAIN"] = explain if explain && !explain.empty?
+    explain = getenv("PROJECTENV_TEST_EXPLAIN")
+    m["PROJECTENV_TEST_EXPLAIN"] = explain if explain && !explain.empty?
 
     m
   end

@@ -7,13 +7,13 @@
 
 export interface Container {
   age_limit?: number
-  attribute?: Record<string, any>
+  attributes?: Record<string, any>
   container_type?: string
   content_origin?: number
   dob_required?: boolean
   id?: string
-  image?: any[]
-  link?: any[]
+  images?: any[]
+  links?: any[]
 }
 
 export interface ContainerListMatch {

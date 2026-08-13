@@ -93,13 +93,13 @@ $container = $client->Container();
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `age_limit` | `int` | No |  |
-| `attribute` | `array` | No |  |
+| `attributes` | `array` | No |  |
 | `container_type` | `string` | No |  |
 | `content_origin` | `int` | No |  |
 | `dob_required` | `bool` | No |  |
 | `id` | `string` | No |  |
-| `image` | `array` | No |  |
-| `link` | `array` | No |  |
+| `images` | `array` | No |  |
+| `links` | `array` | No |  |
 
 ### Operations
 

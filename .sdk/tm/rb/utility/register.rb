@@ -24,6 +24,7 @@ require_relative 'prepare_method'
 require_relative 'prepare_params'
 require_relative 'prepare_path'
 require_relative 'prepare_query'
+require_relative 'graphql'
 require_relative 'result_basic'
 require_relative 'result_body'
 require_relative 'result_headers'
@@ -55,6 +56,8 @@ PlaystationStoreApi2Utility.registrar = ->(u) {
   u.prepare_params = PlaystationStoreApi2Utilities::PrepareParams
   u.prepare_path = PlaystationStoreApi2Utilities::PreparePath
   u.prepare_query = PlaystationStoreApi2Utilities::PrepareQuery
+  u.graphql_body = PlaystationStoreApi2Utilities::GraphqlBody
+  u.graphql_errors = PlaystationStoreApi2Utilities::GraphqlErrors
   u.result_basic = PlaystationStoreApi2Utilities::ResultBasic
   u.result_body = PlaystationStoreApi2Utilities::ResultBody
   u.result_headers = PlaystationStoreApi2Utilities::ResultHeaders

@@ -119,7 +119,8 @@ Create a mock client for unit testing — no server required:
 ```ruby
 client = PlaystationStoreApi2SDK.test
 
-# Entity ops return the bare mock record (raises on error).
+# Entity ops return the ENTITY (raises on error);
+# call data_get for the mock record.
 container = client.Container.list()
 puts container
 ```
@@ -237,13 +238,13 @@ returns a result `Hash` with these keys:
 | Field | Description |
 | --- | --- |
 | `age_limit` |  |
-| `attribute` |  |
+| `attributes` |  |
 | `container_type` |  |
 | `content_origin` |  |
 | `dob_required` |  |
 | `id` |  |
-| `image` |  |
-| `link` |  |
+| `images` |  |
+| `links` |  |
 
 Operations: List.
 
@@ -269,13 +270,13 @@ Create an instance: `container = client.Container`
 | Field | Type | Description |
 | --- | --- | --- |
 | `age_limit` | `Integer` |  |
-| `attribute` | `Hash` |  |
+| `attributes` | `Hash` |  |
 | `container_type` | `String` |  |
 | `content_origin` | `Integer` |  |
 | `dob_required` | `Boolean` |  |
 | `id` | `String` |  |
-| `image` | `Array` |  |
-| `link` | `Array` |  |
+| `images` | `Array` |  |
+| `links` | `Array` |  |
 
 #### Example: List
 
