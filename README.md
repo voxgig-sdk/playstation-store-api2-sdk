@@ -19,11 +19,11 @@ Metadata kindly supplied by [www.freepublicapis.com](https://www.freepublicapis.
 This SDK exposes the API as a small set of **semantic entities** — Container — that you
 call directly, instead of assembling URL paths and query strings. Entities are
 **Capitalised** to mark them as the primary surface, each with the operations they
-support (`list`):
+support (`load`):
 
 ```ts
 const client = new PlaystationStoreApi2SDK()
-const items = await client.Container().list({ age_limit: "example", container_id: "example", country: "example", language: "example" })
+const container = await client.Container().load({ age_limit: "example", container_id: "example", country: "example", language: "example" })
 ```
 
 Thinking in entities keeps the mental model small — for people and AI agents alike —
@@ -47,18 +47,18 @@ const client = PlaystationStoreApi2SDK.test({
     },
   },
 })
-const containers = await client.Container().list()
-// containers is an array of Container entities, populated with mock data
-// — call containers[0].data() for the record itself
-console.log(containers)
+const container = await client.Container().load({ age_limit: 'example_age_limit', container_id: 'example_container_id', country: 'example_country', language: 'example_language' })
+// container is the Container entity, populated with mock data
+// — call container.data() for the record itself
+console.log(container)
 ```
 
 ### Python
 
 ```python
 client = PlaystationStoreApi2SDK.test()
-containers = client.Container().list()
-print(containers)
+container = client.Container().load({"age_limit": "example", "container_id": "example", "country": "example", "language": "example"})
+print(container)
 ```
 
 ### PHP
@@ -68,14 +68,14 @@ print(containers)
 $client = PlaystationStoreApi2SDK::test([
     "entity" => ["container" => ["test01" => []]],
 ]);
-$containers = $client->Container()->list();
+$container = $client->Container()->load(["age_limit" => "example", "container_id" => "example", "country" => "example", "language" => "example"]);
 ```
 
 ### Golang
 
 ```go
 client := sdk.Test()
-result, err := client.Container(nil).List(
+result, err := client.Container(nil).Load(
     nil, nil,
 )
 ```
@@ -87,14 +87,14 @@ result, err := client.Container(nil).List(
 client = PlaystationStoreApi2SDK.test({
   "entity" => { "container" => { "test01" => {} } },
 })
-containers = client.Container.list()
+container = client.Container.load({ "age_limit" => "example", "container_id" => "example", "country" => "example", "language" => "example" })
 ```
 
 ### Lua
 
 ```lua
 local client = sdk.test()
-local results, err = client:Container():list()
+local result, err = client:Container():load({ age_limit = "example", container_id = "example", country = "example", language = "example" })
 ```
 
 ## Packages
@@ -119,11 +119,15 @@ import { PlaystationStoreApi2SDK } from '@voxgig-sdk/playstation-store-api2'
 
 const client = new PlaystationStoreApi2SDK()
 
-// List all containers (returns ContainerEntity[] — .data() for the record)
-const containers = await client.Container().list({ age_limit: "example", container_id: "example", country: "example", language: "example" })
-for (const container of containers) {
-  console.log(container)
-}
+
+// Load a specific container (returns a Container)
+const container = await client.Container().load({
+  age_limit: 'example_age_limit',
+  container_id: 'example_container_id',
+  country: 'example_country',
+  language: 'example_language',
+})
+console.log(container)
 ```
 
 See the [TypeScript README](ts/README.md) for the full guide.
@@ -164,9 +168,9 @@ The API exposes one entity:
 
 | Entity | Description | API path |
 | --- | --- | --- |
-| **Container** | The Container entity (list). | `/container/{country}/{language}/{age_limit}/{container_id}` |
+| **Container** | The Container entity (load). | `/container/{country}/{language}/{age_limit}/{container_id}` |
 
-The operations available across these entities are **list** — see each entity's
+The operations available across these entities are **load** — see each entity's
 own list above for exactly which it supports.
 
 ## Quickstart in other languages
@@ -178,10 +182,10 @@ from playstationstoreapi2_sdk import PlaystationStoreApi2SDK
 
 client = PlaystationStoreApi2SDK()
 
-# List all containers (returns a list, raises on error)
-containers = client.Container().list({"age_limit": "example", "container_id": "example", "country": "example", "language": "example"})
-for container in containers:
-    print(container)
+
+# Load a specific container (returns the record, raises on error)
+container = client.Container().load({"age_limit": "example_age_limit", "container_id": "example_container_id", "country": "example_country", "language": "example_language"})
+print(container)
 ```
 
 ### PHP
@@ -192,9 +196,10 @@ require_once 'playstationstoreapi2_sdk.php';
 
 $client = new PlaystationStoreApi2SDK();
 
-// List all containers (returns an array; throws on error)
-$containers = $client->Container()->list();
-print_r($containers);
+
+// Load a specific container (returns the ENTITY; call data_get() for the record; throws on error)
+$container = $client->Container()->load(["age_limit" => "example_age_limit", "container_id" => "example_container_id", "country" => "example_country", "language" => "example_language"]);
+print_r($container);
 ```
 
 ### Golang
@@ -204,12 +209,15 @@ import sdk "github.com/voxgig-sdk/playstation-store-api2-sdk/go"
 
 client := sdk.New()
 
-// List all containers
-containers, err := client.Container(nil).List(nil, nil)
+
+// Load a specific container
+container, err := client.Container(nil).Load(
+    map[string]any{"age_limit": "example_age_limit", "container_id": "example_container_id", "country": "example_country", "language": "example_language"}, nil,
+)
 if err != nil {
     panic(err)
 }
-fmt.Println(containers)
+fmt.Println(container)
 ```
 
 ### Ruby
@@ -219,9 +227,10 @@ require_relative "PlaystationStoreApi2_sdk"
 
 client = PlaystationStoreApi2SDK.new
 
-# List all containers (returns an Array; raises on error)
-containers = client.Container.list
-puts containers
+
+# Load a specific container (returns the ENTITY; call data_get for the record)
+container = client.Container.load({ "age_limit" => "example_age_limit", "container_id" => "example_container_id", "country" => "example_country", "language" => "example_language" })
+puts container
 ```
 
 ### Lua
@@ -231,9 +240,10 @@ local sdk = require("playstation-store-api2_sdk")
 
 local client = sdk.new()
 
--- List all containers
-local containers, err = client:Container():list()
-print(containers)
+
+-- Load a specific container
+local container, err = client:Container():load({ age_limit = "example_age_limit", container_id = "example_container_id", country = "example_country", language = "example_language" })
+print(container)
 ```
 
 ## Direct and prepare

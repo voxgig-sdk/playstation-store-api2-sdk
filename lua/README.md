@@ -4,7 +4,7 @@
 
 The Lua SDK for the PlaystationStoreApi2 API — an entity-oriented client using Lua conventions.
 
-It exposes the API as capitalised, semantic **Entities** — e.g. `client:Container()` — each with the same small set of operations (`list`) instead of raw URL paths and query strings. You call meaning, not endpoints, which keeps the cognitive load low.
+It exposes the API as capitalised, semantic **Entities** — e.g. `client:Container()` — each with the same small set of operations (`load`) instead of raw URL paths and query strings. You call meaning, not endpoints, which keeps the cognitive load low.
 
 > Other languages, the CLI, and MCP server live alongside this one — see
 > the [top-level README](../README.md).
@@ -33,18 +33,14 @@ local sdk = require("playstation-store-api2_sdk")
 local client = sdk.new()
 ```
 
-### 2. List container records
+### 3. Load a container
 
-Entity operations return `(value, err)`. For `list`, `value` is the
-array of records itself — iterate it directly (there is no wrapper).
+Container is nested under age_limit, so provide the `age_limit`.
 
 ```lua
-local containers, err = client:Container():list()
+local container, err = client:Container():load({ age_limit = "example_age_limit", container_id = "example_container_id", country = "example_country", language = "example_language" })
 if err then error(err) end
-
-for _, item in ipairs(containers) do
-  print(item["id"], item["container_type"])
-end
+print(container)
 ```
 
 
@@ -54,7 +50,7 @@ Entity operations return `(value, err)`. Check `err` before using
 the value:
 
 ```lua
-local containers, err = client:Container():list()
+local container, err = client:Container():load({ age_limit = "example", container_id = "example", country = "example", language = "example" })
 if err then error(err) end
 ```
 
@@ -112,7 +108,7 @@ Create a mock client for unit testing — no server required:
 ```lua
 local client = sdk.test()
 
-local result, err = client:Container():list()
+local result, err = client:Container():load({ age_limit = "example", container_id = "example", country = "example", language = "example" })
 -- result is the returned data; err is set on failure
 ```
 
@@ -199,7 +195,7 @@ All entities share the same interface.
 
 | Method | Signature | Description |
 | --- | --- | --- |
-| `list` | `(reqmatch, ctrl) -> any, err` | List entities matching the criteria. |
+| `load` | `(reqmatch, ctrl) -> any, err` | Load a single entity by match criteria. |
 | `data_get` | `() -> table` | Get entity data. |
 | `data_set` | `(data)` | Set entity data. |
 | `match_get` | `() -> table` | Get entity match criteria. |
@@ -214,13 +210,13 @@ data **directly** — there is no wrapper:
 
 | Operation | `value` |
 | --- | --- |
-| `list` | an array (`table`) of entity records |
+| `load` | the entity record (a `table`) |
 
 Check `err` first (it is non-`nil` on failure), then use `value`:
 
-    local container, err = client:Container():list()
+    local container, err = client:Container():load()
     if err then error(err) end
-    -- container is the record list
+    -- container is the loaded record
 
 Only `direct()` returns a response envelope — a `table` with `ok`,
 `status`, `headers`, and `data` keys.
@@ -240,7 +236,7 @@ Only `direct()` returns a response envelope — a `table` with `ok`,
 | `images` |  |
 | `links` |  |
 
-Operations: List.
+Operations: Load.
 
 API path: `/container/{country}/{language}/{age_limit}/{container_id}`
 
@@ -257,7 +253,7 @@ Create an instance: `local container = client:Container(nil)`
 
 | Method | Description |
 | --- | --- |
-| `list(match)` | List entities matching the criteria. |
+| `load(match)` | Load a single entity by match criteria. |
 
 #### Fields
 
@@ -272,10 +268,10 @@ Create an instance: `local container = client:Container(nil)`
 | `images` | `table` |  |
 | `links` | `table` |  |
 
-#### Example: List
+#### Example: Load
 
 ```lua
-local containers, err = client:Container():list()
+local container, err = client:Container():load({ age_limit = "age_limit", container_id = "container_id", country = "country", language = "language" })
 ```
 
 
@@ -351,14 +347,14 @@ when needed.
 
 ### Entity state
 
-Entity instances are stateful. After a successful `list`, the entity
+Entity instances are stateful. After a successful `load`, the entity
 stores the returned data and match criteria internally.
 
 ```lua
 local container = client:Container()
-container:list()
+container:load({ age_limit = "example", container_id = "example", country = "example", language = "example" })
 
--- container:data_get() now returns the container data from the last list
+-- container:data_get() now returns the container data from the last load
 -- container:match_get() returns the last match criteria
 ```
 

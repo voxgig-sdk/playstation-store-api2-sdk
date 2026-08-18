@@ -23,8 +23,8 @@ class PlaystationStoreApi2SDK:
         utility = PlaystationStoreApi2Utility()
         self._utility = utility
 
-        from playstationstoreapi2_sdk.config import make_config
-        config = make_config()
+        from playstationstoreapi2_sdk.config import shared_config
+        config = shared_config()
 
         self._rootctx = utility.make_context({
             "client": self,

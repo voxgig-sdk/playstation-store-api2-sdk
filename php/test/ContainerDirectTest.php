@@ -10,64 +10,46 @@ use PHPUnit\Framework\TestCase;
 
 class ContainerDirectTest extends TestCase
 {
-    public function test_direct_list_container(): void
+    public function test_direct_load_container(): void
     {
-        $setup = container_direct_setup([
-            ["id" => "direct01"],
-            ["id" => "direct02"],
-        ]);
-        [$_shouldSkip, $_reason] = Runner::is_control_skipped("direct", "direct-list-container", $setup["live"] ? "live" : "unit");
+        $setup = container_direct_setup(["id" => "direct01"]);
+        [$_shouldSkip, $_reason] = Runner::is_control_skipped("direct", "direct-load-container", $setup["live"] ? "live" : "unit");
         if ($_shouldSkip) {
             $this->markTestSkipped($_reason ?? "skipped via sdk-test-control.json");
             return;
         }
-        if ($setup["live"]) {
-            foreach (["age_limit01", "container01", "country01", "language01"] as $_liveKey) {
-                if (!isset($setup["idmap"][$_liveKey]) || $setup["idmap"][$_liveKey] === null) {
-                    $this->markTestSkipped("live test needs $_liveKey via *_ENTID env var (synthetic IDs only)");
-                    return;
-                }
-            }
-        }
         $client = $setup["client"];
 
         $params = [];
+        $query = [];
         if ($setup["live"]) {
-            $params["age_limit"] = $setup["idmap"]["age_limit01"];
+            $params["age_limit"] = "999";
+            $params["container_id"] = "STORE-MSF75508-FULLGAMES";
+            $params["country"] = "ch";
+            $params["language"] = "de";
         } else {
             $params["age_limit"] = "direct01";
-        }
-        if ($setup["live"]) {
-            $params["container_id"] = $setup["idmap"]["container01"];
-        } else {
-            $params["container_id"] = "direct01";
-        }
-        if ($setup["live"]) {
-            $params["country"] = $setup["idmap"]["country01"];
-        } else {
-            $params["country"] = "direct01";
-        }
-        if ($setup["live"]) {
-            $params["language"] = $setup["idmap"]["language01"];
-        } else {
-            $params["language"] = "direct01";
+            $params["container_id"] = "direct02";
+            $params["country"] = "direct03";
+            $params["language"] = "direct04";
         }
 
         $result = $client->direct([
             "path" => "container/{country}/{language}/{age_limit}/{container_id}",
             "method" => "GET",
             "params" => $params,
+            "query" => $query,
         ]);
         if ($setup["live"]) {
-            // Live mode is lenient: synthetic IDs frequently 4xx and the
-            // list-response shape varies wildly across public APIs. Skip
-            // rather than fail when the call doesn't return a usable list.
+            // Live mode is lenient: synthetic IDs frequently 4xx. Skip
+            // rather than fail when the load endpoint isn't reachable
+            // with the IDs we can construct from setup.idmap.
             if (!empty($result["err"])) {
-                $this->markTestSkipped("list call failed (likely synthetic IDs against live API): " . (string)$result["err"]);
+                $this->markTestSkipped("load call failed (likely synthetic IDs against live API): " . (string)$result["err"]);
                 return;
             }
             if (empty($result["ok"])) {
-                $this->markTestSkipped("list call not ok (likely synthetic IDs against live API)");
+                $this->markTestSkipped("load call not ok (likely synthetic IDs against live API)");
                 return;
             }
             $status = Helpers::to_int($result["status"]);
@@ -79,8 +61,10 @@ class ContainerDirectTest extends TestCase
             $this->assertArrayNotHasKey("err", $result);
             $this->assertTrue($result["ok"]);
             $this->assertEquals(200, Helpers::to_int($result["status"]));
-            $this->assertIsArray($result["data"]);
-            $this->assertCount(2, $result["data"]);
+            $this->assertNotNull($result["data"]);
+            if (is_array($result["data"]) && isset($result["data"]["id"])) {
+                $this->assertEquals("direct01", $result["data"]["id"]);
+            }
             $this->assertCount(1, $setup["calls"]);
         }
     }

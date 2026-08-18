@@ -54,8 +54,8 @@ main: kit: entity: container: {
 
   name: "container"
   op: {
-    list: {
-      name: "list"
+    load: {
+      name: "load"
       points: [
         {
           args: {

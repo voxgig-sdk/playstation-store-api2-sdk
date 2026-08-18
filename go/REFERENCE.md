@@ -109,16 +109,16 @@ fmt.Println(container.GetName()) // "container"
 
 ### Operations
 
-#### `List(reqmatch, ctrl map[string]any) (any, error)`
+#### `Load(reqmatch, ctrl map[string]any) (any, error)`
 
-List entities matching the given criteria. Returns an array.
+Load a single entity matching the given criteria.
 
 ```go
-results, err := client.Container(nil).List(nil, nil)
+result, err := client.Container(nil).Load(map[string]any{"age_limit": "age_limit", "container_id": "container_id", "country": "country", "language": "language"}, nil)
 if err != nil {
     panic(err)
 }
-fmt.Println(results)
+fmt.Println(result)
 ```
 
 ### Common Methods

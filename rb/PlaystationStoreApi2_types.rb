@@ -45,7 +45,7 @@ Container = Struct.new(
   keyword_init: true
 )
 
-# Request payload for Container#list.
+# Request payload for Container#load.
 #
 # @!attribute [rw] age_limit
 #   @return [String]
@@ -58,7 +58,7 @@ Container = Struct.new(
 #
 # @!attribute [rw] language
 #   @return [String]
-ContainerListMatch = Struct.new(
+ContainerLoadMatch = Struct.new(
   :age_limit,
   :container_id,
   :country,

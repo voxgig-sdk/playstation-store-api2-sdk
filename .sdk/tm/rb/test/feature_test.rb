@@ -15,7 +15,7 @@ require_relative "../PlaystationStoreApi2_sdk"
 module PlaystationStoreApi2FeatureHarness
   # True when this SDK was generated with the named feature.
   def self.has_feature?(name)
-    f = PlaystationStoreApi2Config.make_config["feature"]
+    f = PlaystationStoreApi2Config.shared_config["feature"]
     f.is_a?(Hash) && !f[name].nil?
   end
 

@@ -28,7 +28,7 @@ class PlaystationStoreApi2SDK
     utility = PlaystationStoreApi2Utility.new
     @_utility = utility
 
-    config = PlaystationStoreApi2Config.make_config
+    config = PlaystationStoreApi2Config.shared_config
 
     @_rootctx = utility.make_context.call({
       "client" => self,

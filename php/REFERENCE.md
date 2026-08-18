@@ -103,12 +103,12 @@ $container = $client->Container();
 
 ### Operations
 
-#### `list(?array $reqmatch = null, ?array $ctrl = null): mixed`
+#### `load(array $reqmatch, ?array $ctrl = null): mixed`
 
-List entities matching the given criteria (call with no argument to list all). Returns an array. Throws on error.
+Load a single entity matching the given criteria. Throws on error.
 
 ```php
-$results = $client->Container()->list();
+$result = $client->Container()->load(["age_limit" => "age_limit", "container_id" => "container_id", "country" => "country", "language" => "language"]);
 ```
 
 ### Common Methods

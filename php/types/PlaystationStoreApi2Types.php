@@ -25,8 +25,8 @@ class Container
     public ?array $links = null;
 }
 
-/** Request payload for Container#list. */
-class ContainerListMatch
+/** Request payload for Container#load. */
+class ContainerLoadMatch
 {
     public string $age_limit;
     public string $container_id;

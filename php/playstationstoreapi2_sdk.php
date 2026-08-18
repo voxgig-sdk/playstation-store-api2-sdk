@@ -40,7 +40,7 @@ class PlaystationStoreApi2SDK
         $utility = new PlaystationStoreApi2Utility();
         $this->_utility = $utility;
 
-        $config = PlaystationStoreApi2Config::make_config();
+        $config = PlaystationStoreApi2Config::shared_config();
 
         $this->_rootctx = ($utility->make_context)([
             "client" => $this,

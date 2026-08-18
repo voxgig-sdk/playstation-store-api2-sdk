@@ -19,14 +19,15 @@ make build
 export PLAYSTATION_STORE_API2_APIKEY=sk_live_xxx
 
 # 4. Each command line is ONE boru expression, run against the API:
-./playstation-store-api2-cli list container
+./playstation-store-api2-cli load 1 container            # {id:1} shorthand
+./playstation-store-api2-cli load '{id:1}' container       # explicit match map
 
 # 5. Override the API base URL for a single call
-PLAYSTATION_STORE_API2_BASE=https://api.example.com ./playstation-store-api2-cli list container
+PLAYSTATION_STORE_API2_BASE=https://api.example.com ./playstation-store-api2-cli load 1 container
 
 # 6. No arguments -> interactive REPL
 ./playstation-store-api2-cli
-playstation-store-api2> list container
+playstation-store-api2> load 1 container
 playstation-store-api2> /quit
 ```
 
@@ -52,7 +53,7 @@ playstation-store-api2> /quit
    arguments to open the REPL):
 
    ```sh
-   ./dist/*/playstation-store-api2-cli list container
+   ./dist/*/playstation-store-api2-cli load 1 container
    ```
 
 4. **Go interactive.** Run the binary with no arguments to open the REPL, then
@@ -62,14 +63,15 @@ That is the whole loop: *build → set key → evaluate boru expressions*.
 
 ## How-to guides
 
-### List the records of an entity
+### Load a single record
 
 ```sh
-./playstation-store-api2-cli list container
+./playstation-store-api2-cli load 1 container          # scalar shorthand for {id:1}
+./playstation-store-api2-cli load '{id:1}' container     # explicit match map
 ```
 
-`list <entity>` returns the first page of records. `<entity>` is a bareword —
-it is auto-quoted as an boru atom, so no quotes are needed.
+The query is either a **scalar** (`1`, treated as `{id:1}`) or a **match map**
+(`{id:1}`, `{slug:"acme"}`). Quote the map so your shell passes it through intact.
 
 ### Authenticate and choose an environment
 
@@ -78,7 +80,7 @@ Configuration is read from the environment — nothing is written to disk:
 ```sh
 export PLAYSTATION_STORE_API2_APIKEY=sk_live_xxx            # API key
 export PLAYSTATION_STORE_API2_BASE=https://api.example.com  # optional: override the API base URL
-./playstation-store-api2-cli list container
+./playstation-store-api2-cli load 1 container
 ```
 
 Both are injectable by a secrets vault, so the key never has to be typed inline.
@@ -90,7 +92,7 @@ evaluated as its own boru expression:
 
 ```text
 $ ./playstation-store-api2-cli
-playstation-store-api2> list container
+playstation-store-api2> load 1 container
 playstation-store-api2> /help
 playstation-store-api2> /quit
 ```
@@ -115,7 +117,7 @@ The CLI registers these boru words, each bound to the SDK:
 
 | Word     | Signatures                                    | Returns                        |
 |----------|-----------------------------------------------|--------------------------------|
-| `list`   | `list <entity>` · `list <query> <entity>`     | First page of records          |
+| `load`   | `load <entity>` · `load <query> <entity>`     | A single record                |
 
 - `<entity>` is a bareword, auto-quoted as an boru atom (e.g. `container`).
 - `<query>` is either a **Map** (`{id:1}`) or a **Scalar** (`1`, treated as

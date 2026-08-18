@@ -5,7 +5,7 @@
 The TypeScript SDK for the PlaystationStoreApi2 API — a type-safe, entity-oriented client with full async/await support.
 
 The API is exposed as capitalised, semantic **Entities** — e.g.
-`client.Container()` — each with a small set of operations (`list`)
+`client.Container()` — each with a small set of operations (`load`)
 instead of raw URL paths and query parameters. This keeps the surface
 predictable and low-friction for both humans and AI agents.
 
@@ -33,17 +33,22 @@ import { PlaystationStoreApi2SDK } from '@voxgig-sdk/playstation-store-api2'
 const client = new PlaystationStoreApi2SDK()
 ```
 
-### 2. List container records
+### 3. Load a container
 
-`list()` resolves to an array of Container ENTITIES — every operation
-resolves to entities, not raw records. Iterate them directly, and call
-`.data()` on one for the record it holds:
+Container is nested under age_limit, so provide the `age_limit`.
+`load()` returns the entity directly and throws on failure:
 
 ```ts
-const containers = await client.Container().list({ age_limit: "example", container_id: "example", country: "example", language: "example" })
-
-for (const container of containers) {
+try {
+  const container = await client.Container().load({
+    age_limit: 'example_age_limit',
+    container_id: 'example_container_id',
+    country: 'example_country',
+    language: 'example_language',
+  })
   console.log(container)
+} catch (err) {
+  console.error('load failed:', err)
 }
 ```
 
@@ -54,10 +59,10 @@ Entity operations reject on failure, so wrap them in `try` / `catch`:
 
 ```ts
 try {
-  const containers = await client.Container().list()
-  console.log(containers)
+  const container = await client.Container().load({ age_limit: "example", container_id: "example", country: "example", language: "example" })
+  console.log(container)
 } catch (err) {
-  console.error('list failed:', err)
+  console.error('load failed:', err)
 }
 ```
 
@@ -121,7 +126,7 @@ Create a mock client for unit testing — no server required:
 ```ts
 const client = PlaystationStoreApi2SDK.test()
 
-const container = await client.Container().list()
+const container = await client.Container().load({ age_limit: 'example_age_limit', container_id: 'example_container_id', country: 'example_country', language: 'example_language' })
 // container is the entity, populated with mock response data
 // — call container.data() for the record itself
 console.log(container)
@@ -142,7 +147,7 @@ Entity instances remember their last match and data:
 const entity = client.Container()
 
 // First call runs the operation and stores its result
-await entity.list()
+await entity.load({ age_limit: 'example_age_limit', container_id: 'example_container_id', country: 'example_country', language: 'example_language' })
 
 // Subsequent calls reuse the stored state
 const data = entity.data()
@@ -234,7 +239,7 @@ All entities share the same interface.
 
 | Method | Signature | Description |
 | --- | --- | --- |
-| `list` | `list(reqmatch?, ctrl?): Promise<Entity[]>` | List entities matching the criteria. |
+| `load` | `load(reqmatch?, ctrl?): Promise<Entity>` | Load a single entity by match criteria. |
 | `data` | `data(data?: Partial<Entity>): Entity` | Get or set entity data. |
 | `match` | `match(match?: Partial<Entity>): Partial<Entity>` | Get or set entity match criteria. |
 | `make` | `make(): Entity` | Create a new instance with the same options. |
@@ -246,8 +251,7 @@ All entities share the same interface.
 Entity operations resolve to the entity data directly — there is no
 result envelope:
 
-- `list` resolves to an **array** of entity objects (iterate it directly;
-  there is no `.data` and no `.ok`).
+- `load` resolves to a single entity object.
 
 On a failed request these methods **throw**, so wrap calls in
 `try`/`catch` to handle errors. Only `direct()` returns the result
@@ -296,7 +300,7 @@ The `prepare()` method returns:
 | `images` |  |
 | `links` |  |
 
-Operations: list.
+Operations: load.
 
 API path: `/container/{country}/{language}/{age_limit}/{container_id}`
 
@@ -313,7 +317,7 @@ Create an instance: `const container = client.Container()`
 
 | Method | Description |
 | --- | --- |
-| `list(match)` | List entities matching the criteria. |
+| `load(match)` | Load a single entity by match criteria. |
 
 #### Fields
 
@@ -328,10 +332,10 @@ Create an instance: `const container = client.Container()`
 | `images` | `any[]` |  |
 | `links` | `any[]` |  |
 
-#### Example: List
+#### Example: Load
 
 ```ts
-const containers = await client.Container().list({ age_limit: "example", container_id: "example", country: "example", language: "example" })
+const container = await client.Container().load({ age_limit: 'age_limit', container_id: 'container_id', country: 'country', language: 'language' })
 ```
 
 
@@ -399,15 +403,15 @@ import { PlaystationStoreApi2SDK } from '@voxgig-sdk/playstation-store-api2'
 
 ### Entity state
 
-Entity instances are stateful. After a successful `list`, the entity
+Entity instances are stateful. After a successful `load`, the entity
 stores the returned data and match criteria internally. Subsequent
 calls on the same instance can rely on this state.
 
 ```ts
 const container = client.Container()
-await container.list()
+await container.load({ age_limit: "example", container_id: "example", country: "example", language: "example" })
 
-// container.data() now returns the container data from the last `list`
+// container.data() now returns the container data from the last `load`
 // container.match() returns the last match criteria
 ```
 

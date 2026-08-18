@@ -101,12 +101,12 @@ local container = client:Container(nil)
 
 ### Operations
 
-#### `list(reqmatch, ctrl) -> any, err`
+#### `load(reqmatch, ctrl) -> any, err`
 
-List entities matching the given criteria. Returns an array.
+Load a single entity matching the given criteria.
 
 ```lua
-local results, err = client:Container():list()
+local result, err = client:Container():load({ age_limit = "age_limit", container_id = "container_id", country = "country", language = "language" })
 ```
 
 ### Common Methods

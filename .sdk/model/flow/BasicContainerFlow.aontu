@@ -7,19 +7,25 @@ main: kit: flow: BasicContainerFlow:
   name: "BasicContainerFlow",
   step: [
     {
+      input: {
+        ref: "container_ref01",
+        srcdatavar: "container_ref01_data",
+        suffix: "_dt0"
+      }
+
       match: {
         age_limit: "age_limit01",
-        container_id: "container01",
         country: "country01",
+        id: "container01",
         language: "language01"
       }
 
-      op: "list",
+      op: "load",
       valid: [
         {
-          apply: "ItemExists",
+          apply: "TextFieldMark",
           def: {
-            ref: "container_ref01"
+            mark: "Mark01-container_ref01"
           }
         }
       ]

@@ -12,47 +12,11 @@ class ContainerEntityTest < Minitest::Test
     assert !ent.nil?
   end
 
-  # Feature #4: the entity stream(action, ...) method runs the op pipeline and
-  # returns an Enumerator over result items. With the streaming feature active
-  # it yields the feature's incremental output; otherwise it falls back to the
-  # materialised list so stream always yields.
-  def test_stream
-    seed = {
-      "entity" => {
-        "container" => {
-          "s1" => { "id" => "s1" },
-          "s2" => { "id" => "s2" },
-          "s3" => { "id" => "s3" },
-        },
-      },
-    }
-
-    # Fallback: streaming inactive -> yields the materialised list items.
-    base = PlaystationStoreApi2SDK.test(seed, nil)
-    seen = base.Container(nil).stream("list", nil, nil).to_a
-    assert_equal 3, seen.length
-
-    # Inbound: streaming active -> yields each item from the feature.
-    cfg = PlaystationStoreApi2Config.make_config
-    if cfg["feature"].is_a?(Hash) && cfg["feature"].key?("streaming")
-      sdk = PlaystationStoreApi2SDK.test(seed, { "feature" => { "streaming" => { "active" => true } } })
-      got = []
-      sdk.Container(nil).stream("list", nil, nil).each do |item|
-        if item.is_a?(Array)
-          got.concat(item)
-        else
-          got << item
-        end
-      end
-      assert_equal 3, got.length
-    end
-  end
-
   def test_basic_flow
     setup = container_basic_setup(nil)
     # Per-op sdk-test-control.json skip.
     _live = setup[:live] || false
-    ["list"].each do |_op|
+    ["load"].each do |_op|
       _should_skip, _reason = Runner.is_control_skipped("entityOp", "container." + _op, _live ? "live" : "unit")
       if _should_skip
         skip(_reason || "skipped via sdk-test-control.json")
@@ -75,17 +39,15 @@ class ContainerEntityTest < Minitest::Test
       container_ref01_data = Helpers.to_map(container_ref01_data_raw[0][1])
     end
 
-    # LIST
+    # LOAD
     container_ref01_ent = client.Container(nil)
-    container_ref01_match = {
-      "age_limit" => setup[:idmap]["age_limit01"],
-      "container_id" => setup[:idmap]["container01"],
-      "country" => setup[:idmap]["country01"],
-      "language" => setup[:idmap]["language01"],
+    container_ref01_match_dt0 = {
+      "id" => container_ref01_data["id"],
     }
-
-    container_ref01_list_result = container_ref01_ent.list(container_ref01_match, nil)
-    assert container_ref01_list_result.is_a?(Array)
+    container_ref01_data_dt0_loaded = container_ref01_ent.load(container_ref01_match_dt0, nil)
+    container_ref01_data_dt0_load_result = Helpers.to_map(container_ref01_data_dt0_loaded.respond_to?(:data_get) ? container_ref01_data_dt0_loaded.data_get : container_ref01_data_dt0_loaded)
+    assert !container_ref01_data_dt0_load_result.nil?
+    assert_equal container_ref01_data_dt0_load_result["id"], container_ref01_data["id"]
 
   end
 end

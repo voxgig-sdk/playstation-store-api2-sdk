@@ -16,7 +16,7 @@ export interface Container {
   links?: any[]
 }
 
-export interface ContainerListMatch {
+export interface ContainerLoadMatch {
   age_limit: string
   container_id: string
   country: string

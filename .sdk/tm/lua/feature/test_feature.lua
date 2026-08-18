@@ -1,4 +1,4 @@
--- ProjectName SDK test feature
+-- PlaystationStoreApi2 SDK test feature
 
 local vs = require("utility.struct.struct")
 local BaseFeature = require("feature.base_feature")

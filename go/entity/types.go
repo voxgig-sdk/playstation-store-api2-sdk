@@ -24,8 +24,8 @@ type Container struct {
 	Links *[]any `json:"links,omitempty"`
 }
 
-// ContainerListMatch is the typed request payload for Container.ListTyped.
-type ContainerListMatch struct {
+// ContainerLoadMatch is the typed request payload for Container.LoadTyped.
+type ContainerLoadMatch struct {
 	AgeLimit string `json:"age_limit"`
 	ContainerId string `json:"container_id"`
 	Country string `json:"country"`

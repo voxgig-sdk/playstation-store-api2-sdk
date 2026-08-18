@@ -7,7 +7,7 @@ guide: {
 
   entity: container: {
     path: "/container/{country}/{language}/{age_limit}/{container_id}": {
-      op: list: method: *GET
+      op: load: method: *GET
     }
   }
 

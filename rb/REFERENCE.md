@@ -104,12 +104,12 @@ container = client.Container
 
 ### Operations
 
-#### `list(reqmatch = nil, ctrl = nil) -> Array`
+#### `load(reqmatch, ctrl = nil) -> result`
 
-List entities matching the given criteria (call with no argument to list all). Returns an array. Raises on error.
+Load a single entity matching the given criteria. Raises on error.
 
 ```ruby
-results = client.Container.list
+result = client.Container.load({ "age_limit" => "age_limit", "container_id" => "container_id", "country" => "country", "language" => "language" })
 ```
 
 ### Common Methods

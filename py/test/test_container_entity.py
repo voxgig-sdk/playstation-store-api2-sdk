@@ -21,47 +21,13 @@ class TestContainerEntity:
         ent = testsdk.Container(None)
         assert ent is not None
 
-    def test_should_stream(self):
-        # Feature #4: the entity stream(action, ...) method runs the op
-        # pipeline and yields result items. With the streaming feature active
-        # it yields the feature's incremental output; otherwise it falls back
-        # to the materialised list so stream always yields.
-        seed = {
-            "entity": {
-                "container": {
-                    "s1": {"id": "s1"},
-                    "s2": {"id": "s2"},
-                    "s3": {"id": "s3"},
-                }
-            }
-        }
-
-        # Fallback: streaming inactive -> yields the materialised list items.
-        base = PlaystationStoreApi2SDK.test(seed, None)
-        seen = list(base.Container(None).stream("list", None, None))
-        assert len(seen) == 3
-
-        # Inbound: streaming active -> yields each item from the feature.
-        from playstationstoreapi2_sdk.config import make_config
-        cfg = make_config()
-        if isinstance(cfg.get("feature"), dict) and "streaming" in cfg["feature"]:
-            sdk = PlaystationStoreApi2SDK.test(
-                seed, {"feature": {"streaming": {"active": True}}})
-            got = []
-            for item in sdk.Container(None).stream("list", None, None):
-                if isinstance(item, list):
-                    got.extend(item)
-                else:
-                    got.append(item)
-            assert len(got) == 3
-
     def test_should_run_basic_flow(self):
         setup = _container_basic_setup(None)
         # Per-op sdk-test-control.json skip — basic test exercises a flow with
         # multiple ops; skipping any one skips the whole flow (steps depend
         # on each other).
         _live = setup.get("live", False)
-        for _op in ["list"]:
+        for _op in ["load"]:
             _skip, _reason = runner.is_control_skipped("entityOp", "container." + _op, "live" if _live else "unit")
             if _skip:
                 pytest.skip(_reason or "skipped via sdk-test-control.json")
@@ -80,17 +46,15 @@ class TestContainerEntity:
         if len(container_ref01_data_raw) > 0:
             container_ref01_data = helpers.to_map(container_ref01_data_raw[0][1])
 
-        # LIST
+        # LOAD
         container_ref01_ent = client.Container(None)
-        container_ref01_match = {
-            "age_limit": setup["idmap"]["age_limit01"],
-            "container_id": setup["idmap"]["container01"],
-            "country": setup["idmap"]["country01"],
-            "language": setup["idmap"]["language01"],
+        container_ref01_match_dt0 = {
+            "id": container_ref01_data["id"],
         }
-
-        container_ref01_list_result = container_ref01_ent.list(container_ref01_match, None)
-        assert isinstance(container_ref01_list_result, list)
+        container_ref01_data_dt0_loaded = container_ref01_ent.load(container_ref01_match_dt0, None)
+        container_ref01_data_dt0_load_result = helpers.to_map(runner.entity_data(container_ref01_data_dt0_loaded))
+        assert container_ref01_data_dt0_load_result is not None
+        assert container_ref01_data_dt0_load_result["id"] == container_ref01_data["id"]
 
 
 

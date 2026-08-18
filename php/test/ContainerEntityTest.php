@@ -18,51 +18,12 @@ class ContainerEntityTest extends TestCase
         $this->assertNotNull($ent);
     }
 
-    // Feature #4: the entity stream(action, ...) method runs the op pipeline
-    // and yields result items. With the streaming feature active it yields the
-    // feature's incremental output; otherwise it falls back to the materialised
-    // list so stream always yields.
-    public function test_stream(): void
-    {
-        $seed = [
-            "entity" => [
-                "container" => [
-                    "s1" => ["id" => "s1"],
-                    "s2" => ["id" => "s2"],
-                    "s3" => ["id" => "s3"],
-                ],
-            ],
-        ];
-
-        // Fallback: streaming inactive -> yields the materialised list items.
-        $base = PlaystationStoreApi2SDK::test($seed, null);
-        $seen = iterator_to_array($base->Container(null)->stream("list", null, null), false);
-        $this->assertCount(3, $seen);
-
-        // Inbound: streaming active -> yields each item from the feature.
-        $cfg = PlaystationStoreApi2Config::make_config();
-        if (isset($cfg["feature"]) && is_array($cfg["feature"]) && isset($cfg["feature"]["streaming"])) {
-            $sdk = PlaystationStoreApi2SDK::test($seed, ["feature" => ["streaming" => ["active" => true]]]);
-            $got = [];
-            foreach ($sdk->Container(null)->stream("list", null, null) as $item) {
-                if (is_array($item) && array_is_list($item)) {
-                    foreach ($item as $sub) {
-                        $got[] = $sub;
-                    }
-                } else {
-                    $got[] = $item;
-                }
-            }
-            $this->assertCount(3, $got);
-        }
-    }
-
     public function test_basic_flow(): void
     {
         $setup = container_basic_setup(null);
         // Per-op sdk-test-control.json skip.
         $_live = !empty($setup["live"]);
-        foreach (["list"] as $_op) {
+        foreach (["load"] as $_op) {
             [$_shouldSkip, $_reason] = Runner::is_control_skipped("entityOp", "container." . $_op, $_live ? "live" : "unit");
             if ($_shouldSkip) {
                 $this->markTestSkipped($_reason ?? "skipped via sdk-test-control.json");
@@ -85,17 +46,15 @@ class ContainerEntityTest extends TestCase
             $container_ref01_data = Helpers::to_map($container_ref01_data_raw[0][1]);
         }
 
-        // LIST
+        // LOAD
         $container_ref01_ent = $client->Container(null);
-        $container_ref01_match = [
-            "age_limit" => $setup["idmap"]["age_limit01"],
-            "container_id" => $setup["idmap"]["container01"],
-            "country" => $setup["idmap"]["country01"],
-            "language" => $setup["idmap"]["language01"],
+        $container_ref01_match_dt0 = [
+            "id" => $container_ref01_data["id"],
         ];
-
-        $container_ref01_list_result = $container_ref01_ent->list($container_ref01_match, null);
-        $this->assertIsArray($container_ref01_list_result);
+        $container_ref01_data_dt0_loaded = $container_ref01_ent->load($container_ref01_match_dt0, null);
+        $container_ref01_data_dt0_load_result = Helpers::to_map(is_object($container_ref01_data_dt0_loaded) && method_exists($container_ref01_data_dt0_loaded, 'data_get') ? $container_ref01_data_dt0_loaded->data_get() : $container_ref01_data_dt0_loaded);
+        $this->assertNotNull($container_ref01_data_dt0_load_result);
+        $this->assertEquals($container_ref01_data_dt0_load_result["id"], $container_ref01_data["id"]);
 
     }
 }

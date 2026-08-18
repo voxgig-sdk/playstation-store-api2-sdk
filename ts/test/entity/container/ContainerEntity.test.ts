@@ -39,7 +39,7 @@ describe('ContainerEntity', async () => {
   test('basic', async (t) => {
 
     const live = 'TRUE' === process.env.PLAYSTATION_STORE_API2_TEST_LIVE
-    for (const op of ['list']) {
+    for (const op of ['load']) {
       if (maybeSkipControl(t, 'entityOp', 'container.' + op, live)) return
     }
 
@@ -59,15 +59,12 @@ describe('ContainerEntity', async () => {
 
     let container_ref01_data = Object.values(setup.data.existing.container)[0] as any
 
-    // LIST
+    // LOAD
     const container_ref01_ent = client.Container()
-    const container_ref01_match: any = {}
-    container_ref01_match['age_limit'] = setup.idmap['age_limit01']
-    container_ref01_match['container_id'] = setup.idmap['container01']
-    container_ref01_match['country'] = setup.idmap['country01']
-    container_ref01_match['language'] = setup.idmap['language01']
-
-    const container_ref01_list = (await container_ref01_ent.list(container_ref01_match)).map((e: any) => e.data())
+    const container_ref01_match_dt0: any = {}
+    container_ref01_match_dt0.id = container_ref01_data.id
+    const container_ref01_data_dt0 = (await container_ref01_ent.load(container_ref01_match_dt0)).data()
+    assert(container_ref01_data_dt0.id === container_ref01_data.id)
 
 
   })

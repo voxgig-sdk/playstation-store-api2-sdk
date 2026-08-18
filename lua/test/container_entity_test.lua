@@ -15,52 +15,11 @@ describe("ContainerEntity", function()
     assert.is_not_nil(ent)
   end)
 
-  -- Feature #4: the entity stream(action, ...) method runs the op pipeline and
-  -- returns an iterator over result items. With the streaming feature active it
-  -- yields the feature's incremental output; otherwise it falls back to the
-  -- materialised list so stream always yields.
-  it("should stream", function()
-    local seed = {
-      entity = {
-        ["container"] = {
-          s1 = { id = "s1" },
-          s2 = { id = "s2" },
-          s3 = { id = "s3" },
-        },
-      },
-    }
-
-    -- Fallback: streaming inactive -> yields the materialised list items.
-    local base = sdk.test(seed, nil)
-    local seen = {}
-    for item in base:Container(nil):stream("list", nil, nil) do
-      table.insert(seen, item)
-    end
-    assert.are.equal(3, #seen)
-
-    -- Inbound: streaming active -> yields each item from the feature.
-    local config = require("config")()
-    if type(config.feature) == "table" and config.feature.streaming ~= nil then
-      local streamsdk = sdk.test(seed, { feature = { streaming = { active = true } } })
-      local got = {}
-      for item in streamsdk:Container(nil):stream("list", nil, nil) do
-        if vs.islist(item) then
-          for _, sub in ipairs(item) do
-            table.insert(got, sub)
-          end
-        else
-          table.insert(got, item)
-        end
-      end
-      assert.are.equal(3, #got)
-    end
-  end)
-
   it("should run basic flow", function()
     local setup = container_basic_setup(nil)
     -- Per-op sdk-test-control.json skip.
     local _live = setup.live or false
-    for _, _op in ipairs({"list"}) do
+    for _, _op in ipairs({"load"}) do
       local _should_skip, _reason = runner.is_control_skipped("entityOp", "container." .. _op, _live and "live" or "unit")
       if _should_skip then
         pending(_reason or "skipped via sdk-test-control.json")
@@ -83,18 +42,16 @@ describe("ContainerEntity", function()
       container_ref01_data = helpers.to_map(container_ref01_data_raw[1][2])
     end
 
-    -- LIST
+    -- LOAD
     local container_ref01_ent = client:Container(nil)
-    local container_ref01_match = {
-      ["age_limit"] = setup.idmap["age_limit01"],
-      ["container_id"] = setup.idmap["container01"],
-      ["country"] = setup.idmap["country01"],
-      ["language"] = setup.idmap["language01"],
+    local container_ref01_match_dt0 = {
+      id = container_ref01_data["id"],
     }
-
-    local container_ref01_list_result, err = container_ref01_ent:list(container_ref01_match, nil)
+    local container_ref01_data_dt0_loaded, err = container_ref01_ent:load(container_ref01_match_dt0, nil)
     assert.is_nil(err)
-    assert.is_table(container_ref01_list_result)
+    local container_ref01_data_dt0_load_result = helpers.to_map(type(container_ref01_data_dt0_loaded) == 'table' and container_ref01_data_dt0_loaded.data_get and container_ref01_data_dt0_loaded:data_get() or container_ref01_data_dt0_loaded)
+    assert.is_not_nil(container_ref01_data_dt0_load_result)
+    assert.are.equal(container_ref01_data_dt0_load_result["id"], container_ref01_data["id"])
 
   end)
 end)

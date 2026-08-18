@@ -16,7 +16,7 @@
 ---@field images? table
 ---@field links? table
 
----@class ContainerListMatch
+---@class ContainerLoadMatch
 ---@field age_limit string
 ---@field container_id string
 ---@field country string

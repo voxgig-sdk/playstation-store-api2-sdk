@@ -127,12 +127,12 @@ const container = client.Container()
 
 ### Operations
 
-#### `list(match: object, ctrl?: object)`
+#### `load(match: object, ctrl?: object)`
 
-List entities matching the given criteria. Returns an array.
+Load a single entity matching the given criteria.
 
 ```ts
-const results = await client.Container().list({ age_limit: "example", container_id: "example", country: "example", language: "example" })
+const result = await client.Container().load({ age_limit: 'age_limit', container_id: 'container_id', country: 'country', language: 'language' })
 ```
 
 ### Common Methods

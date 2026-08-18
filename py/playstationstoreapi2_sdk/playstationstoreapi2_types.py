@@ -27,7 +27,7 @@ class Container(TypedDict, total=False):
     links: list
 
 
-class ContainerListMatch(TypedDict):
+class ContainerLoadMatch(TypedDict):
     age_limit: str
     container_id: str
     country: str

@@ -4,7 +4,7 @@
 
 The Golang SDK for the PlaystationStoreApi2 API — an entity-oriented client using standard Go conventions. No generics required; data flows as `map[string]any`.
 
-It exposes the API as capitalised, semantic **Entities** — e.g. `client.Container(nil)` — each with the same small set of operations (`List`) instead of raw URL paths and query strings. You call meaning, not endpoints, which keeps the cognitive load low.
+It exposes the API as capitalised, semantic **Entities** — e.g. `client.Container(nil)` — each with the same small set of operations (`Load`) instead of raw URL paths and query strings. You call meaning, not endpoints, which keeps the cognitive load low.
 
 > Other languages, the CLI, and MCP server live alongside this one — see
 > the [top-level README](../README.md).
@@ -50,14 +50,12 @@ import (
 func main() {
     client := sdk.New()
 
-    // List container records — the value is the array of records itself.
-    containers, err := client.Container(nil).List(nil, nil)
+    // Load a single container — the value is the loaded record.
+    container, err := client.Container(nil).Load(map[string]any{"age_limit": "example_age_limit", "container_id": "example_container_id", "country": "example_country", "language": "example_language"}, nil)
     if err != nil {
         panic(err)
     }
-    for _, item := range containers.([]any) {
-        fmt.Println(item)
-    }
+    fmt.Println(container)
 }
 ```
 
@@ -68,12 +66,12 @@ Every entity operation returns `(value, error)`. Check `err` before
 using the value — there is no exception to catch:
 
 ```go
-containers, err := client.Container(nil).List(nil, nil)
+container, err := client.Container(nil).Load(map[string]any{"age_limit": "example", "container_id": "example", "country": "example", "language": "example"}, nil)
 if err != nil {
     // handle err
     return
 }
-_ = containers
+_ = container
 ```
 
 `Direct` follows the same `(value, error)` convention:
@@ -137,8 +135,8 @@ Create a mock client for unit testing — no server required:
 ```go
 client := sdk.Test()
 
-container, err := client.Container(nil).List(
-    nil, nil,
+container, err := client.Container(nil).Load(
+    map[string]any{"age_limit": "example", "container_id": "example", "country": "example", "language": "example"}, nil,
 )
 if err != nil {
     panic(err)
@@ -228,7 +226,7 @@ All entities implement the `PlaystationStoreApi2Entity` interface.
 
 | Method | Signature | Description |
 | --- | --- | --- |
-| `List` | `(reqmatch, ctrl map[string]any) (any, error)` | List entities matching the criteria. |
+| `Load` | `(reqmatch, ctrl map[string]any) (any, error)` | Load a single entity by match criteria. |
 | `Data` | `(args ...any) any` | Get or set entity data. |
 | `Match` | `(args ...any) any` | Get or set entity match criteria. |
 | `Make` | `() Entity` | Create a new instance with the same options. |
@@ -241,13 +239,13 @@ operation's data **directly** — there is no wrapper:
 
 | Operation | `value` |
 | --- | --- |
-| `List` | a `[]any` of entity records |
+| `Load` | the entity record (`map[string]any`) |
 
 Check `err` first, then use the value directly (or the typed
 `...Typed` variants, which return the entity's model struct and a typed
 slice):
 
-    container, err := client.Container(nil).List(map[string]any{/* fields */}, nil)
+    container, err := client.Container(nil).Load(nil, nil)
     if err != nil { /* handle */ }
     // container is the returned record
 
@@ -269,7 +267,7 @@ Only `Direct()` returns a response envelope — a `map[string]any` with
 | `"images"` |  |
 | `"links"` |  |
 
-Operations: List.
+Operations: Load.
 
 API path: `/container/{country}/{language}/{age_limit}/{container_id}`
 
@@ -286,7 +284,7 @@ Create an instance: `container := client.Container(nil)`
 
 | Method | Description |
 | --- | --- |
-| `List(match, ctrl)` | List entities matching the criteria. |
+| `Load(match, ctrl)` | Load a single entity by match criteria. |
 
 #### Fields
 
@@ -301,14 +299,14 @@ Create an instance: `container := client.Container(nil)`
 | `images` | `[]any` |  |
 | `links` | `[]any` |  |
 
-#### Example: List
+#### Example: Load
 
 ```go
-containers, err := client.Container(nil).List(nil, nil)
+container, err := client.Container(nil).Load(map[string]any{"age_limit": "age_limit", "container_id": "container_id", "country": "country", "language": "language"}, nil)
 if err != nil {
     panic(err)
 }
-fmt.Println(containers) // the array of records
+fmt.Println(container) // the loaded record
 ```
 
 
@@ -381,14 +379,14 @@ like `core.ToMapAny`.
 
 ### Entity state
 
-Entity instances are stateful. After a successful `List`, the entity
+Entity instances are stateful. After a successful `Load`, the entity
 stores the returned data and match criteria internally.
 
 ```go
 container := client.Container(nil)
-container.List(nil, nil)
+container.Load(map[string]any{"age_limit": "example", "container_id": "example", "country": "example", "language": "example"}, nil)
 
-// container.Data() now returns the container data from the last list
+// container.Data() now returns the container data from the last load
 // container.Match() returns the last match criteria
 ```
 

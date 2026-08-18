@@ -98,14 +98,12 @@ container = client.Container()
 
 ### Operations
 
-#### `list(reqmatch=None, ctrl=None) -> list`
+#### `load(reqmatch, ctrl=None) -> dict`
 
-List entities matching the given criteria. The match is optional — call `list()` with no argument to list all records. Returns a list and raises on error.
+Load a single entity matching the given criteria. Returns the entity data and raises on error.
 
 ```python
-results = client.Container().list({"age_limit": "example", "container_id": "example", "country": "example", "language": "example"})
-for container in results:
-    print(container)
+result = client.Container().load({"age_limit": "age_limit", "container_id": "container_id", "country": "country", "language": "language"})
 ```
 
 ### Common Methods

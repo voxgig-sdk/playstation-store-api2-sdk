@@ -4,7 +4,7 @@
 
 The PHP SDK for the PlaystationStoreApi2 API — an entity-oriented client using PHP conventions.
 
-The SDK exposes the API as capitalised, semantic **Entities** — for example `$client->Container()` — with named operations (`list`) instead of raw URL paths and query strings. Working with resources and verbs keeps call sites self-describing and reduces cognitive load.
+The SDK exposes the API as capitalised, semantic **Entities** — for example `$client->Container()` — with named operations (`load`) instead of raw URL paths and query strings. Working with resources and verbs keeps call sites self-describing and reduces cognitive load.
 
 > Other languages, the CLI, and MCP server live alongside this one — see
 > the [top-level README](../README.md).
@@ -31,15 +31,15 @@ require_once 'playstationstoreapi2_sdk.php';
 $client = new PlaystationStoreApi2SDK();
 ```
 
-### 2. List container records
+### 3. Load a container
+
+Container is nested under age_limit, so provide the `age_limit`.
 
 ```php
 try {
-    // list() returns an array of Container records — iterate directly.
-    $containers = $client->Container()->list();
-    foreach ($containers as $item) {
-        echo $item["id"] . " " . $item["age_limit"] . "\n";
-    }
+    // load() returns the ENTITY — call data_get() for the Container record (throws on error).
+    $container = $client->Container()->load(["age_limit" => "example_age_limit", "container_id" => "example_container_id", "country" => "example_country", "language" => "example_language"]);
+    print_r($container);
 } catch (\Throwable $err) {
     echo "Error: " . $err->getMessage();
 }
@@ -53,7 +53,7 @@ Entity operations throw a `\Throwable` on failure, so wrap them in
 
 ```php
 try {
-    $containers = $client->Container()->list();
+    $container = $client->Container()->load(["age_limit" => "example", "container_id" => "example", "country" => "example", "language" => "example"]);
 } catch (\Throwable $err) {
     echo "Error: " . $err->getMessage();
 }
@@ -127,7 +127,7 @@ $client = PlaystationStoreApi2SDK::test();
 
 // Entity ops return the ENTITY (throws on error);
 // call data_get() for the mock record.
-$container = $client->Container()->list();
+$container = $client->Container()->load(["age_limit" => "example", "container_id" => "example", "country" => "example", "language" => "example"]);
 print_r($container);
 ```
 
@@ -215,7 +215,7 @@ All entities share the same interface.
 
 | Method | Signature | Description |
 | --- | --- | --- |
-| `list` | `(?array $reqmatch = null, $ctrl): array` | List entities matching the criteria (call with no argument to list all). |
+| `load` | `($reqmatch, $ctrl): array` | Load a single entity by match criteria. |
 | `data_get` | `(): array` | Get entity data. |
 | `data_set` | `($data): void` | Set entity data. |
 | `match_get` | `(): array` | Get entity match criteria. |
@@ -256,7 +256,7 @@ On error, `ok` is `false` and `$err` contains the error value.
 | `images` |  |
 | `links` |  |
 
-Operations: List.
+Operations: Load.
 
 API path: `/container/{country}/{language}/{age_limit}/{container_id}`
 
@@ -273,7 +273,7 @@ Create an instance: `$container = $client->Container();`
 
 | Method | Description |
 | --- | --- |
-| `list(match)` | List entities matching the criteria. |
+| `load(match)` | Load a single entity by match criteria. |
 
 #### Fields
 
@@ -288,11 +288,11 @@ Create an instance: `$container = $client->Container();`
 | `images` | `array` |  |
 | `links` | `array` |  |
 
-#### Example: List
+#### Example: Load
 
 ```php
-// list() returns an array of Container records (throws on error).
-$containers = $client->Container()->list();
+// load() returns the ENTITY — call data_get() for the Container record (throws on error).
+$container = $client->Container()->load(["age_limit" => "age_limit", "container_id" => "container_id", "country" => "country", "language" => "language"]);
 ```
 
 
@@ -368,14 +368,14 @@ when needed.
 
 ### Entity state
 
-Entity instances are stateful. After a successful `list`, the entity
+Entity instances are stateful. After a successful `load`, the entity
 stores the returned data and match criteria internally.
 
 ```php
 $container = $client->Container();
-$container->list();
+$container->load(["age_limit" => "example", "container_id" => "example", "country" => "example", "language" => "example"]);
 
-// $container->data_get() now returns the container data from the last list
+// $container->data_get() now returns the container data from the last load
 // $container->match_get() returns the last match criteria
 ```
 

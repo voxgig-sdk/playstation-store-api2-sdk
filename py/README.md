@@ -5,7 +5,7 @@
 The Python SDK for the PlaystationStoreApi2 API — an entity-oriented client following Pythonic conventions.
 
 The SDK exposes the API as capitalised, semantic **Entities** — for example `client.Container()` — each
-carrying a small, uniform set of operations (`list`) instead of raw URL
+carrying a small, uniform set of operations (`load`) instead of raw URL
 paths and query strings. You work with named resources and verbs, which
 keeps the cognitive load low.
 
@@ -36,18 +36,17 @@ from playstationstoreapi2_sdk import PlaystationStoreApi2SDK
 client = PlaystationStoreApi2SDK()
 ```
 
-### 2. List container records
+### 3. Load a container
 
-`list()` returns a `list` of records (each a `dict`) and raises on
-error — iterate it directly.
+Container is nested under age_limit, so provide the `age_limit`.
+`load()` returns the ENTITY — call data_get() for the record — and raises on error.
 
 ```python
 try:
-    containers = client.Container().list({"age_limit": "example", "container_id": "example", "country": "example", "language": "example"})
-    for container in containers:
-        print(container)
+    container = client.Container().load({"age_limit": "example_age_limit", "container_id": "example_container_id", "country": "example_country", "language": "example_language"})
+    print(container)
 except Exception as err:
-    print(f"list failed: {err}")
+    print(f"load failed: {err}")
 ```
 
 
@@ -57,10 +56,10 @@ Entity operations raise on failure, so wrap them in `try` / `except`:
 
 ```python
 try:
-    containers = client.Container().list()
-    print(containers)
+    container = client.Container().load({"age_limit": "example", "container_id": "example", "country": "example", "language": "example"})
+    print(container)
 except Exception as err:
-    print(f"list failed: {err}")
+    print(f"load failed: {err}")
 ```
 
 `direct()` does **not** raise — it returns the result envelope. Branch
@@ -126,7 +125,7 @@ client = PlaystationStoreApi2SDK.test()
 
 # Entity ops return the ENTITY and raises on error;
 # call data_get() for the record.
-container = client.Container().list()
+container = client.Container().load({"age_limit": "example", "container_id": "example", "country": "example", "language": "example"})
 # container contains the mock response record
 ```
 
@@ -211,7 +210,7 @@ All entities share the same interface.
 
 | Method | Signature | Description |
 | --- | --- | --- |
-| `list` | `(reqmatch, ctrl) -> list` | List entities matching the criteria. Raises on error. |
+| `load` | `(reqmatch, ctrl) -> any` | Load a single entity by match criteria. Raises on error. |
 | `data_get` | `() -> dict` | Get entity data. |
 | `data_set` | `(data)` | Set entity data. |
 | `match_get` | `() -> dict` | Get entity match criteria. |
@@ -252,7 +251,7 @@ On error, `ok` is `False` and `err` contains the error value.
 | `images` |  |
 | `links` |  |
 
-Operations: List.
+Operations: Load.
 
 API path: `/container/{country}/{language}/{age_limit}/{container_id}`
 
@@ -269,7 +268,7 @@ Create an instance: `container = client.Container()`
 
 | Method | Description |
 | --- | --- |
-| `list()` | List entities, optionally matching the given criteria. |
+| `load(match)` | Load a single entity by match criteria. |
 
 #### Fields
 
@@ -284,10 +283,10 @@ Create an instance: `container = client.Container()`
 | `images` | `list` |  |
 | `links` | `list` |  |
 
-#### Example: List
+#### Example: Load
 
 ```python
-containers = client.Container().list({"age_limit": "example", "container_id": "example", "country": "example", "language": "example"})
+container = client.Container().load({"age_limit": "age_limit", "container_id": "container_id", "country": "country", "language": "language"})
 ```
 
 
@@ -362,14 +361,14 @@ Import entity or utility modules directly only when needed.
 
 ### Entity state
 
-Entity instances are stateful. After a successful `list`, the entity
+Entity instances are stateful. After a successful `load`, the entity
 stores the returned data and match criteria internally.
 
 ```python
 container = client.Container()
-container.list()
+container.load({"age_limit": "example", "container_id": "example", "country": "example", "language": "example"})
 
-# container.data_get() now returns the container data from the last list
+# container.data_get() now returns the container data from the last load
 # container.match_get() returns the last match criteria
 ```
 
