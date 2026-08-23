@@ -11,6 +11,9 @@ func MakeConfig() map[string]any {
 	return map[string]any{
 		"main": map[string]any{
 			"name": "PlaystationStoreApi2",
+			"slug": "playstation-store-api2",
+			"version": "0.0.1",
+			"target": "go",
 		},
 		"feature": map[string]any{
 			"test": map[string]any{
@@ -33,6 +36,7 @@ func MakeConfig() map[string]any {
 				"fields": []any{
 					map[string]any{
 						"name": "age_limit",
+						"short": "Age limit for the content",
 						"type": "`$INTEGER`",
 					},
 					map[string]any{
@@ -41,18 +45,22 @@ func MakeConfig() map[string]any {
 					},
 					map[string]any{
 						"name": "container_type",
+						"short": "Type of container",
 						"type": "`$STRING`",
 					},
 					map[string]any{
 						"name": "content_origin",
+						"short": "Content origin identifier",
 						"type": "`$INTEGER`",
 					},
 					map[string]any{
 						"name": "dob_required",
+						"short": "Whether date of birth is required",
 						"type": "`$BOOLEAN`",
 					},
 					map[string]any{
 						"name": "id",
+						"short": "Container unique identifier",
 						"type": "`$STRING`",
 					},
 					map[string]any{
@@ -61,6 +69,7 @@ func MakeConfig() map[string]any {
 					},
 					map[string]any{
 						"name": "links",
+						"short": "List of products in the container",
 						"type": "`$ARRAY`",
 					},
 				},

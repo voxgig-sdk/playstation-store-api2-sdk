@@ -36,6 +36,7 @@
               "active": true,
               "name": "age_limit",
               "req": false,
+              "short": "Age limit for the content",
               "type": "`$INTEGER`"
             },
             {
@@ -48,24 +49,28 @@
               "active": true,
               "name": "container_type",
               "req": false,
+              "short": "Type of container",
               "type": "`$STRING`"
             },
             {
               "active": true,
               "name": "content_origin",
               "req": false,
+              "short": "Content origin identifier",
               "type": "`$INTEGER`"
             },
             {
               "active": true,
               "name": "dob_required",
               "req": false,
+              "short": "Whether date of birth is required",
               "type": "`$BOOLEAN`"
             },
             {
               "active": true,
               "name": "id",
               "req": false,
+              "short": "Container unique identifier",
               "type": "`$STRING`"
             },
             {
@@ -78,6 +83,7 @@
               "active": true,
               "name": "links",
               "req": false,
+              "short": "List of products in the container",
               "type": "`$ARRAY`"
             }
           ],

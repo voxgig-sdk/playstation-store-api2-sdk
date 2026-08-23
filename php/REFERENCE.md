@@ -92,14 +92,14 @@ $container = $client->Container();
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `age_limit` | `int` | No |  |
+| `age_limit` | `int` | No | Age limit for the content |
 | `attributes` | `array` | No |  |
-| `container_type` | `string` | No |  |
-| `content_origin` | `int` | No |  |
-| `dob_required` | `bool` | No |  |
-| `id` | `string` | No |  |
+| `container_type` | `string` | No | Type of container |
+| `content_origin` | `int` | No | Content origin identifier |
+| `dob_required` | `bool` | No | Whether date of birth is required |
+| `id` | `string` | No | Container unique identifier |
 | `images` | `array` | No |  |
-| `links` | `array` | No |  |
+| `links` | `array` | No | List of products in the container |
 
 ### Operations
 

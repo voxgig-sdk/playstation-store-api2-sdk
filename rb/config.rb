@@ -19,6 +19,9 @@ module PlaystationStoreApi2Config
     {
       "main" => {
         "name" => "PlaystationStoreApi2",
+        "slug" => "playstation-store-api2",
+        "version" => "0.0.1",
+        "target" => "rb",
       },
       "feature" => {
         "test" => {
@@ -41,6 +44,7 @@ module PlaystationStoreApi2Config
           "fields" => [
             {
               "name" => "age_limit",
+              "short" => "Age limit for the content",
               "type" => "`$INTEGER`",
             },
             {
@@ -49,18 +53,22 @@ module PlaystationStoreApi2Config
             },
             {
               "name" => "container_type",
+              "short" => "Type of container",
               "type" => "`$STRING`",
             },
             {
               "name" => "content_origin",
+              "short" => "Content origin identifier",
               "type" => "`$INTEGER`",
             },
             {
               "name" => "dob_required",
+              "short" => "Whether date of birth is required",
               "type" => "`$BOOLEAN`",
             },
             {
               "name" => "id",
+              "short" => "Container unique identifier",
               "type" => "`$STRING`",
             },
             {
@@ -69,6 +77,7 @@ module PlaystationStoreApi2Config
             },
             {
               "name" => "links",
+              "short" => "List of products in the container",
               "type" => "`$ARRAY`",
             },
           ],

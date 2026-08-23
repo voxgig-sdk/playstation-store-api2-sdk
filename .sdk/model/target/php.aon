@@ -1,9 +1,9 @@
 
-main: kit: target: rb: {
+main: kit: target: php: {
 
-  title: Ruby
-  ext: rb
-  comment: line: "#"
+  title: PHP
+  ext: php
+  comment: line: "//"
   module: name: 'playstation-store-api2'
   base: 'node_modules/@voxgig/sdkgen/project/.sdk'
   package: '@voxgig/sdkgen'
@@ -13,38 +13,37 @@ main: kit: target: rb: {
     kind: *'prod' | string
   }
 
-  deps: {
-    'voxgig-struct': { active: true, version: '0.0.10' }
-    'json': { active: true, version: '0' }
-  }
+  # struct utility is vendored under tm/php/utility/struct - no manifest dep needed
+  deps: {}
 }
 
 
-main: kit: feature: &: target: rb: deps: &: {
+main: kit: feature: &: target: php: deps: &: {
   kind: *'prod' | string
 }
 
 
-# Publication: rubygems registry (declared, publish pending — git-tag only).
+# Publication: packagist registry (declared, publish pending — git-tag only).
 #
 # `target add <t>` OVERWRITES this file, so a project must never set its
 # publication values here — voxgig-solardemo-sdk lost its pinned npm package
-# name exactly that way. Set them in the project's own model
-# (`model/sdk.aontu`), where they survive a resync.
+# name exactly that way. Set them in the project's own overlay
+# (`model/project.aon`), which create-sdkgen creates once and never
+# overwrites — NOT `model/sdk.aon`, which it rewrites on every scaffold.
 #
 # For that to work this file must LEAVE THOSE KEYS UNSET: in aontu a concrete
 # value does not yield to another concrete value, it CONFLICTS, and two
-# defaults conflict too. The schema (@voxgig/sdkgen/model/sdkgen.aontu)
+# defaults conflict too. The schema (@voxgig/sdkgen/model/sdkgen.aon)
 # already defaults `tag.active`, `registry.state`, `registry.active` and
 # `registry.package`, so a project's concrete value wins over the default and
 # repeating them here would only take that away.
 #
 # What remains below is per-target registry IDENTITY, which is not a project
 # choice and stays concrete.
-main: kit: target: rb: publish: {
+main: kit: target: php: publish: {
   registry: {
-    name: 'rubygems'
-    url: 'https://rubygems.org'
-    vault: { recipe: 'gem', alias: 'gem' }
+    name: 'packagist'
+    url: 'https://packagist.org'
+    vault: { alias: 'packagist', env: 'PACKAGIST_API_TOKEN' }
   }
 }

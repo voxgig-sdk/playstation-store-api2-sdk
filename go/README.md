@@ -6,7 +6,7 @@ The Golang SDK for the PlaystationStoreApi2 API — an entity-oriented client us
 
 It exposes the API as capitalised, semantic **Entities** — e.g. `client.Container(nil)` — each with the same small set of operations (`Load`) instead of raw URL paths and query strings. You call meaning, not endpoints, which keeps the cognitive load low.
 
-> Other languages, the CLI, and MCP server live alongside this one — see
+> Also generated from this model: `go-cli`, `go-mcp`, `lua`, `php`, `py`, `rb`, `ts` — see
 > the [top-level README](../README.md).
 
 
@@ -258,14 +258,14 @@ Only `Direct()` returns a response envelope — a `map[string]any` with
 
 | Field | Description |
 | --- | --- |
-| `"age_limit"` |  |
+| `"age_limit"` | Age limit for the content |
 | `"attributes"` |  |
-| `"container_type"` |  |
-| `"content_origin"` |  |
-| `"dob_required"` |  |
-| `"id"` |  |
+| `"container_type"` | Type of container |
+| `"content_origin"` | Content origin identifier |
+| `"dob_required"` | Whether date of birth is required |
+| `"id"` | Container unique identifier |
 | `"images"` |  |
-| `"links"` |  |
+| `"links"` | List of products in the container |
 
 Operations: Load.
 
@@ -290,14 +290,14 @@ Create an instance: `container := client.Container(nil)`
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `age_limit` | `int` |  |
+| `age_limit` | `int` | Age limit for the content |
 | `attributes` | `map[string]any` |  |
-| `container_type` | `string` |  |
-| `content_origin` | `int` |  |
-| `dob_required` | `bool` |  |
-| `id` | `string` |  |
+| `container_type` | `string` | Type of container |
+| `content_origin` | `int` | Content origin identifier |
+| `dob_required` | `bool` | Whether date of birth is required |
+| `id` | `string` | Container unique identifier |
 | `images` | `[]any` |  |
-| `links` | `[]any` |  |
+| `links` | `[]any` | List of products in the container |
 
 #### Example: Load
 

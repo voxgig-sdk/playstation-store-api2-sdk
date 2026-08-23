@@ -116,14 +116,14 @@ const container = client.Container()
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `age_limit` | `number` | No |  |
+| `age_limit` | `number` | No | Age limit for the content |
 | `attributes` | `Record<string, any>` | No |  |
-| `container_type` | `string` | No |  |
-| `content_origin` | `number` | No |  |
-| `dob_required` | `boolean` | No |  |
-| `id` | `string` | No |  |
+| `container_type` | `string` | No | Type of container |
+| `content_origin` | `number` | No | Content origin identifier |
+| `dob_required` | `boolean` | No | Whether date of birth is required |
+| `id` | `string` | No | Container unique identifier |
 | `images` | `any[]` | No |  |
-| `links` | `any[]` | No |  |
+| `links` | `any[]` | No | List of products in the container |
 
 ### Operations
 

@@ -19,9 +19,20 @@ class Config {
     return fi
   }
 
+  // False for a feature added at runtime via options.extend (station's
+  // adopt path) - the constructor uses this to skip makeFeature for names
+  // no generated class backs.
+  hasFeature(this: any, fn: string) {
+    return null != FEATURE_CLASS[fn]
+  }
+
 
   main = {
     name: 'PlaystationStoreApi2',
+        slug: "playstation-store-api2",
+    version: "0.0.1",
+    target: "ts",
+
   }
 
 
@@ -56,6 +67,7 @@ class Config {
       "fields": [
         {
           "name": "age_limit",
+          "short": "Age limit for the content",
           "type": "`$INTEGER`"
         },
         {
@@ -64,18 +76,22 @@ class Config {
         },
         {
           "name": "container_type",
+          "short": "Type of container",
           "type": "`$STRING`"
         },
         {
           "name": "content_origin",
+          "short": "Content origin identifier",
           "type": "`$INTEGER`"
         },
         {
           "name": "dob_required",
+          "short": "Whether date of birth is required",
           "type": "`$BOOLEAN`"
         },
         {
           "name": "id",
+          "short": "Container unique identifier",
           "type": "`$STRING`"
         },
         {
@@ -84,6 +100,7 @@ class Config {
         },
         {
           "name": "links",
+          "short": "List of products in the container",
           "type": "`$ARRAY`"
         }
       ],

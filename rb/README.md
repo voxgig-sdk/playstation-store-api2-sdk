@@ -237,14 +237,14 @@ returns a result `Hash` with these keys:
 
 | Field | Description |
 | --- | --- |
-| `age_limit` |  |
+| `age_limit` | Age limit for the content |
 | `attributes` |  |
-| `container_type` |  |
-| `content_origin` |  |
-| `dob_required` |  |
-| `id` |  |
+| `container_type` | Type of container |
+| `content_origin` | Content origin identifier |
+| `dob_required` | Whether date of birth is required |
+| `id` | Container unique identifier |
 | `images` |  |
-| `links` |  |
+| `links` | List of products in the container |
 
 Operations: Load.
 
@@ -269,14 +269,14 @@ Create an instance: `container = client.Container`
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `age_limit` | `Integer` |  |
+| `age_limit` | `Integer` | Age limit for the content |
 | `attributes` | `Hash` |  |
-| `container_type` | `String` |  |
-| `content_origin` | `Integer` |  |
-| `dob_required` | `Boolean` |  |
-| `id` | `String` |  |
+| `container_type` | `String` | Type of container |
+| `content_origin` | `Integer` | Content origin identifier |
+| `dob_required` | `Boolean` | Whether date of birth is required |
+| `id` | `String` | Container unique identifier |
 | `images` | `Array` |  |
-| `links` | `Array` |  |
+| `links` | `Array` | List of products in the container |
 
 #### Example: Load
 

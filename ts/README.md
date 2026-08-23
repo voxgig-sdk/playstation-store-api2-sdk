@@ -9,7 +9,7 @@ The API is exposed as capitalised, semantic **Entities** — e.g.
 instead of raw URL paths and query parameters. This keeps the surface
 predictable and low-friction for both humans and AI agents.
 
-> Other languages, the CLI, and MCP server live alongside this one — see
+> Also generated from this model: `go`, `go-cli`, `go-mcp`, `lua`, `php`, `py`, `rb` — see
 > the [top-level README](../README.md).
 
 
@@ -291,14 +291,14 @@ The `prepare()` method returns:
 
 | Field | Description |
 | --- | --- |
-| `age_limit` |  |
+| `age_limit` | Age limit for the content |
 | `attributes` |  |
-| `container_type` |  |
-| `content_origin` |  |
-| `dob_required` |  |
-| `id` |  |
+| `container_type` | Type of container |
+| `content_origin` | Content origin identifier |
+| `dob_required` | Whether date of birth is required |
+| `id` | Container unique identifier |
 | `images` |  |
-| `links` |  |
+| `links` | List of products in the container |
 
 Operations: load.
 
@@ -323,14 +323,14 @@ Create an instance: `const container = client.Container()`
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `age_limit` | `number` |  |
+| `age_limit` | `number` | Age limit for the content |
 | `attributes` | `Record<string, any>` |  |
-| `container_type` | `string` |  |
-| `content_origin` | `number` |  |
-| `dob_required` | `boolean` |  |
-| `id` | `string` |  |
+| `container_type` | `string` | Type of container |
+| `content_origin` | `number` | Content origin identifier |
+| `dob_required` | `boolean` | Whether date of birth is required |
+| `id` | `string` | Container unique identifier |
 | `images` | `any[]` |  |
-| `links` | `any[]` |  |
+| `links` | `any[]` | List of products in the container |
 
 #### Example: Load
 

@@ -93,14 +93,14 @@ container = client.Container
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `age_limit` | `Integer` | No |  |
+| `age_limit` | `Integer` | No | Age limit for the content |
 | `attributes` | `Hash` | No |  |
-| `container_type` | `String` | No |  |
-| `content_origin` | `Integer` | No |  |
-| `dob_required` | `Boolean` | No |  |
-| `id` | `String` | No |  |
+| `container_type` | `String` | No | Type of container |
+| `content_origin` | `Integer` | No | Content origin identifier |
+| `dob_required` | `Boolean` | No | Whether date of birth is required |
+| `id` | `String` | No | Container unique identifier |
 | `images` | `Array` | No |  |
-| `links` | `Array` | No |  |
+| `links` | `Array` | No | List of products in the container |
 
 ### Operations
 

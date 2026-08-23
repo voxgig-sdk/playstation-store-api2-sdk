@@ -7,6 +7,9 @@ local function make_config()
   return {
     main = {
       name = "PlaystationStoreApi2",
+      slug = "playstation-store-api2",
+      version = "0.0.1",
+      target = "lua",
     },
     feature = {
       ["test"] = {
@@ -29,6 +32,7 @@ local function make_config()
         ["fields"] = {
           {
             ["name"] = "age_limit",
+            ["short"] = "Age limit for the content",
             ["type"] = "`$INTEGER`",
           },
           {
@@ -37,18 +41,22 @@ local function make_config()
           },
           {
             ["name"] = "container_type",
+            ["short"] = "Type of container",
             ["type"] = "`$STRING`",
           },
           {
             ["name"] = "content_origin",
+            ["short"] = "Content origin identifier",
             ["type"] = "`$INTEGER`",
           },
           {
             ["name"] = "dob_required",
+            ["short"] = "Whether date of birth is required",
             ["type"] = "`$BOOLEAN`",
           },
           {
             ["name"] = "id",
+            ["short"] = "Container unique identifier",
             ["type"] = "`$STRING`",
           },
           {
@@ -57,6 +65,7 @@ local function make_config()
           },
           {
             ["name"] = "links",
+            ["short"] = "List of products in the container",
             ["type"] = "`$ARRAY`",
           },
         },

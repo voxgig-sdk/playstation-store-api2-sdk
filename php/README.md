@@ -247,14 +247,14 @@ On error, `ok` is `false` and `$err` contains the error value.
 
 | Field | Description |
 | --- | --- |
-| `age_limit` |  |
+| `age_limit` | Age limit for the content |
 | `attributes` |  |
-| `container_type` |  |
-| `content_origin` |  |
-| `dob_required` |  |
-| `id` |  |
+| `container_type` | Type of container |
+| `content_origin` | Content origin identifier |
+| `dob_required` | Whether date of birth is required |
+| `id` | Container unique identifier |
 | `images` |  |
-| `links` |  |
+| `links` | List of products in the container |
 
 Operations: Load.
 
@@ -279,14 +279,14 @@ Create an instance: `$container = $client->Container();`
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `age_limit` | `int` |  |
+| `age_limit` | `int` | Age limit for the content |
 | `attributes` | `array` |  |
-| `container_type` | `string` |  |
-| `content_origin` | `int` |  |
-| `dob_required` | `bool` |  |
-| `id` | `string` |  |
+| `container_type` | `string` | Type of container |
+| `content_origin` | `int` | Content origin identifier |
+| `dob_required` | `bool` | Whether date of birth is required |
+| `id` | `string` | Container unique identifier |
 | `images` | `array` |  |
-| `links` | `array` |  |
+| `links` | `array` | List of products in the container |
 
 #### Example: Load
 

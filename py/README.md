@@ -242,14 +242,14 @@ On error, `ok` is `False` and `err` contains the error value.
 
 | Field | Description |
 | --- | --- |
-| `age_limit` |  |
+| `age_limit` | Age limit for the content |
 | `attributes` |  |
-| `container_type` |  |
-| `content_origin` |  |
-| `dob_required` |  |
-| `id` |  |
+| `container_type` | Type of container |
+| `content_origin` | Content origin identifier |
+| `dob_required` | Whether date of birth is required |
+| `id` | Container unique identifier |
 | `images` |  |
-| `links` |  |
+| `links` | List of products in the container |
 
 Operations: Load.
 
@@ -274,14 +274,14 @@ Create an instance: `container = client.Container()`
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `age_limit` | `int` |  |
+| `age_limit` | `int` | Age limit for the content |
 | `attributes` | `dict` |  |
-| `container_type` | `str` |  |
-| `content_origin` | `int` |  |
-| `dob_required` | `bool` |  |
-| `id` | `str` |  |
+| `container_type` | `str` | Type of container |
+| `content_origin` | `int` | Content origin identifier |
+| `dob_required` | `bool` | Whether date of birth is required |
+| `id` | `str` | Container unique identifier |
 | `images` | `list` |  |
-| `links` | `list` |  |
+| `links` | `list` | List of products in the container |
 
 #### Example: Load
 

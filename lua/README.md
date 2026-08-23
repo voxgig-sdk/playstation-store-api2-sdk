@@ -227,14 +227,14 @@ Only `direct()` returns a response envelope — a `table` with `ok`,
 
 | Field | Description |
 | --- | --- |
-| `age_limit` |  |
+| `age_limit` | Age limit for the content |
 | `attributes` |  |
-| `container_type` |  |
-| `content_origin` |  |
-| `dob_required` |  |
-| `id` |  |
+| `container_type` | Type of container |
+| `content_origin` | Content origin identifier |
+| `dob_required` | Whether date of birth is required |
+| `id` | Container unique identifier |
 | `images` |  |
-| `links` |  |
+| `links` | List of products in the container |
 
 Operations: Load.
 
@@ -259,14 +259,14 @@ Create an instance: `local container = client:Container(nil)`
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `age_limit` | `number` |  |
+| `age_limit` | `number` | Age limit for the content |
 | `attributes` | `table` |  |
-| `container_type` | `string` |  |
-| `content_origin` | `number` |  |
-| `dob_required` | `boolean` |  |
-| `id` | `string` |  |
+| `container_type` | `string` | Type of container |
+| `content_origin` | `number` | Content origin identifier |
+| `dob_required` | `boolean` | Whether date of birth is required |
+| `id` | `string` | Container unique identifier |
 | `images` | `table` |  |
-| `links` | `table` |  |
+| `links` | `table` | List of products in the container |
 
 #### Example: Load
 

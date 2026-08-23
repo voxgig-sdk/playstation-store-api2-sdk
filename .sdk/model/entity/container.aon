@@ -8,6 +8,7 @@ main: kit: entity: container: {
     {
       name: "age_limit"
       req: false
+      short: "Age limit for the content"
       type: "`$INTEGER`"
     }
     {
@@ -18,21 +19,25 @@ main: kit: entity: container: {
     {
       name: "container_type"
       req: false
+      short: "Type of container"
       type: "`$STRING`"
     }
     {
       name: "content_origin"
       req: false
+      short: "Content origin identifier"
       type: "`$INTEGER`"
     }
     {
       name: "dob_required"
       req: false
+      short: "Whether date of birth is required"
       type: "`$BOOLEAN`"
     }
     {
       name: "id"
       req: false
+      short: "Container unique identifier"
       type: "`$STRING`"
     }
     {
@@ -43,6 +48,7 @@ main: kit: entity: container: {
     {
       name: "links"
       req: false
+      short: "List of products in the container"
       type: "`$ARRAY`"
     }
   ]
