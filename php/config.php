@@ -42,6 +42,7 @@ class PlaystationStoreApi2Config
           'options' => [
             'active' => false,
           ],
+          'transport' => 'base',
         ],
             ],
             "options" => [
