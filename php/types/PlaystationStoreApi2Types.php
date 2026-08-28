@@ -32,5 +32,13 @@ class ContainerLoadMatch
     public string $container_id;
     public string $country;
     public string $language;
+    public ?string $game_content_type = null;
+    public ?string $genre = null;
+    public ?string $platform = null;
+    public ?string $price = null;
+    public ?string $release_date = null;
+    public ?int $size = null;
+    public ?string $sort = null;
+    public ?int $start = null;
 }
 

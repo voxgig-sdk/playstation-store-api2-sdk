@@ -21,6 +21,14 @@
 ---@field container_id string
 ---@field country string
 ---@field language string
+---@field game_content_type? string
+---@field genre? string
+---@field platform? string
+---@field price? string
+---@field release_date? string
+---@field size? number
+---@field sort? string
+---@field start? number
 
 local M = {}
 

@@ -30,6 +30,14 @@ type ContainerLoadMatch struct {
 	ContainerId string `json:"container_id"`
 	Country string `json:"country"`
 	Language string `json:"language"`
+	GameContentType *string `json:"game_content_type,omitempty"`
+	Genre *string `json:"genre,omitempty"`
+	Platform *string `json:"platform,omitempty"`
+	Price *string `json:"price,omitempty"`
+	ReleaseDate *string `json:"release_date,omitempty"`
+	Size *int `json:"size,omitempty"`
+	Sort *string `json:"sort,omitempty"`
+	Start *int `json:"start,omitempty"`
 }
 
 // asMap turns a typed request/data struct into the map[string]any the

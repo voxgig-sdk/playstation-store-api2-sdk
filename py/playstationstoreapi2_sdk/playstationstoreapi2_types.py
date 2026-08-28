@@ -27,8 +27,19 @@ class Container(TypedDict, total=False):
     links: list
 
 
-class ContainerLoadMatch(TypedDict):
+class ContainerLoadMatchRequired(TypedDict):
     age_limit: str
     container_id: str
     country: str
     language: str
+
+
+class ContainerLoadMatch(ContainerLoadMatchRequired, total=False):
+    game_content_type: str
+    genre: str
+    platform: str
+    price: str
+    release_date: str
+    size: int
+    sort: str
+    start: int

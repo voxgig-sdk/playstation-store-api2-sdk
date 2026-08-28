@@ -58,11 +58,43 @@ Container = Struct.new(
 #
 # @!attribute [rw] language
 #   @return [String]
+#
+# @!attribute [rw] game_content_type
+#   @return [String, nil]
+#
+# @!attribute [rw] genre
+#   @return [String, nil]
+#
+# @!attribute [rw] platform
+#   @return [String, nil]
+#
+# @!attribute [rw] price
+#   @return [String, nil]
+#
+# @!attribute [rw] release_date
+#   @return [String, nil]
+#
+# @!attribute [rw] size
+#   @return [Integer, nil]
+#
+# @!attribute [rw] sort
+#   @return [String, nil]
+#
+# @!attribute [rw] start
+#   @return [Integer, nil]
 ContainerLoadMatch = Struct.new(
   :age_limit,
   :container_id,
   :country,
   :language,
+  :game_content_type,
+  :genre,
+  :platform,
+  :price,
+  :release_date,
+  :size,
+  :sort,
+  :start,
   keyword_init: true
 )
 

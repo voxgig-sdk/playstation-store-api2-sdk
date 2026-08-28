@@ -21,5 +21,13 @@ export interface ContainerLoadMatch {
   container_id: string
   country: string
   language: string
+  game_content_type?: string
+  genre?: string
+  platform?: string
+  price?: string
+  release_date?: string
+  size?: number
+  sort?: string
+  start?: number
 }
 
