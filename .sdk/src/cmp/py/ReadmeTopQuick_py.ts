@@ -1,5 +1,5 @@
 
-import { cmp, Content, isAuthActive, envName, canonKey, canonScalarKey, entityIdField, opRequestShape, safeVarName, exampleVarName, matchArg, idLiteral } from '@voxgig/sdkgen'
+import { cmp, Content, isAuthActive, envName, canonKey, canonScalarKey, entityIdField, opRequestShape, safeVarName, exampleVarName, matchArg, idLiteral , serverVariables} from '@voxgig/sdkgen'
 
 import {
   KIT,
@@ -41,10 +41,23 @@ const ReadmeTopQuick = cmp(function ReadmeTopQuick(props: any) {
   const exampleEntity = Object.values(entity).find((e: any) => e.active !== false) as any
 
   const authActive = isAuthActive(model)
+
+  // Server variables (a templated server URL) are REQUIRED at construction
+  // - the SDK refuses rather than request a URL with a literal
+  // {account_id} in it - so a quickstart that omits them is a quickstart
+  // that fails on its first line.
+  const svars = serverVariables(model)
+  const pyServerField = 0 === svars.length ? '' :
+    `\n    "server": {` +
+    svars.map((v: any) => `\n        "${v.name}": "<${v.name}>",`).join('') +
+    `\n    },`
+
   const apikeyImport = authActive ? `import os\n` : ''
   const ctor = authActive
-    ? `${model.const.Name}SDK({\n    "apikey": os.environ.get("${envName(model)}_APIKEY"),\n})`
-    : `${model.const.Name}SDK()`
+    ? `${model.const.Name}SDK({\n    "apikey": os.environ.get("${envName(model)}_APIKEY"),${pyServerField}\n})`
+    : ('' === pyServerField
+      ? `${model.const.Name}SDK()`
+      : `${model.const.Name}SDK({${pyServerField}\n})`)
 
   Content(`\`\`\`python
 ${apikeyImport}from ${model.const.Name.toLowerCase()}_sdk import ${model.const.Name}SDK

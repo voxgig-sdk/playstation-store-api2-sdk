@@ -1,10 +1,29 @@
 -- PlaystationStoreApi2 SDK primary utility test
+--
+-- Corpus sections run through the vendored omni runner, via the resolver
+-- in test/omni.lua (struct-runner shape over native vendored omni). The
+-- inline corpus engine this file used to carry is retired: omni resolves
+-- arguments, applies the null rules, and enforces out/err/match - the
+-- subjects below only adapt each utility's calling convention.
+--
+-- Three conventions to know when adding a section:
+--
+-- - Utilities that answer as a (value, err) PAIR go through `unwrap`,
+--   which raises the err so omni can match it against `err:` expectations.
+--   Utilities that answer bare values are passed straight through.
+--
+-- - A subject receives omni's RESOLVED arguments (the entry's ctx map, or
+--   its `in`/`args` values), not the raw entry. The ctx map arrives in
+--   the SDK's value model; `make_ctx_from_map` materialises the real
+--   Context from it, exactly as the retired engine did.
+--
+-- - `match: {ctx: ...}` assertions read the entry's ctx AFTER the subject
+--   ran, so a subject whose section asserts on context state writes the
+--   relevant live-context fields back onto the ctx map it received - the
+--   resolver splices those writebacks into the entry omni matches on.
 
-local json = require("dkjson")
-local vs = require("utility.struct.struct")
 local sdk = require("project-name-_sdk")
-local helpers = require("core.helpers")
-local runner = require("test.runner")
+local omni = require("test.omni")
 local Context = require("core.context")
 local Spec = require("core.spec")
 local Result = require("core.result")
@@ -13,30 +32,31 @@ local Operation = require("core.operation")
 local BaseFeature = require("feature.base_feature")
 local PlaystationStoreApi2Error = require("core.error")
 
-local _test_dir = debug.getinfo(1, "S").source:match("^@(.+/)") or "./"
+
+-- Resolved against test/omni.lua's own directory, so the suite works from
+-- any working directory.
+local TEST_JSON_FILE = "../../.sdk/test/test.json"
 
 
--- Load test.json
-local function load_test_spec()
-  local path = _test_dir .. "../../.sdk/test/test.json"
-  local f = io.open(path, "r")
-  if f == nil then
-    error("failed to load test.json: " .. path)
-  end
-  local content = f:read("*a")
-  f:close()
-  local spec = json.decode(content)
-  if spec == nil then
-    error("failed to parse test.json")
-  end
-  return spec
-end
+local runner = omni.makeRunner(TEST_JSON_FILE, sdk.test(nil, nil))
+local run = runner("primary")
+
+local spec = run.spec
+local runset = run.runset
+local runsetflags = run.runsetflags
+
+-- Under the old inline runner the suite drove the SDK directly; under omni
+-- the runpack's client is the read-through provider wrapping it. This
+-- suite treats the client as the SDK - so unwrap the real instance
+-- (mirrors ts/py).
+local client = run.client.sdk
+local utility = client:get_utility()
 
 
 -- Navigate into nested map by keys
-local function get_spec(spec, ...)
-  local cur = spec
-  local keys = {...}
+local function get_spec(base, ...)
+  local cur = base
+  local keys = { ... }
   for _, key in ipairs(keys) do
     if type(cur) ~= "table" then
       return nil
@@ -50,251 +70,62 @@ local function get_spec(spec, ...)
 end
 
 
--- JSON normalize: round-trip through JSON to normalize types
-local function json_normalize(val)
-  if val == nil then
-    return nil
+-- Sections deliberately left empty in the shared corpus
+-- (.sdk/test/primary/<name>.aon carries a PENDING header). Everything else
+-- MUST contribute cases.
+local PENDING = {
+  fetcher = true,
+  makeFetchDef = true,
+  makeResult = true,
+  featureAdd = true,
+  featureHook = true,
+  featureInit = true,
+}
+
+
+-- Run one corpus section, failing loudly when it would run ZERO cases. A
+-- renamed section or a fixture that compiled to an empty `set` used to
+-- pass silently, which defeats the point of a shared oracle. EVERY
+-- corpus-backed test goes through here (mirrors ts/py).
+local function runsection(name, subject)
+  local section = get_spec(spec, name)
+  assert(section ~= nil,
+    "test corpus section '" .. name .. "' missing - check the name " ..
+    "against .sdk/test/primary/")
+  local basic = get_spec(section, "basic")
+  assert(basic ~= nil and type(basic.set) == "table",
+    "test corpus section '" .. name .. "' has no basic.set list")
+  if #basic.set == 0 and not PENDING[name] then
+    error("test corpus section '" .. name .. "' is EMPTY - zero cases " ..
+      "would run; add cases, or mark the fixture PENDING in .sdk/test/primary/")
   end
-  local encoded = json.encode(val)
-  if encoded == nil then
-    return val
-  end
-  local decoded = json.decode(encoded)
-  return decoded
+  return runset(basic, subject)
 end
 
 
--- JSON string representation
-local function json_str(val)
-  if val == nil then
-    return "nil"
+-- (value, err) pair convention -> value-or-raise, omni's shape.
+local function unwrap(val, err)
+  if err ~= nil then
+    error(err)
   end
-  local encoded = json.encode(val)
-  if encoded == nil then
-    return tostring(val)
-  end
-  return encoded
-end
-
-
--- Match a string pattern: /regex/ or case-insensitive contains
--- Converts common PCRE patterns (\w, \d, \s) to Lua patterns (%w, %d, %s)
-local function match_string(pattern, val)
-  if #pattern >= 2 and pattern:sub(1, 1) == "/" and pattern:sub(-1) == "/" then
-    local re = pattern:sub(2, -2)
-    -- Convert PCRE character classes to Lua pattern equivalents
-    re = re:gsub("\\w", "%%w")
-    re = re:gsub("\\d", "%%d")
-    re = re:gsub("\\s", "%%s")
-    local ok = string.find(val, re)
-    return ok ~= nil
-  end
-  return string.find(string.lower(val), string.lower(pattern), 1, true) ~= nil
-end
-
-
--- Deep match: check that all keys in 'check' exist and match in 'base'
-local function match_deep(check, base, path, errors)
-  if check == nil then
-    return
-  end
-
-  path = path or ""
-  errors = errors or {}
-
-  if type(check) == "table" then
-    -- Determine if check is a list (array) or map
-    local is_list = false
-    if #check > 0 then
-      is_list = true
-      for k, _ in pairs(check) do
-        if type(k) ~= "number" then
-          is_list = false
-          break
-        end
-      end
-    end
-
-    if is_list then
-      for i, check_val in ipairs(check) do
-        local child_path = path .. "[" .. i .. "]"
-        local base_val = nil
-        if type(base) == "table" and base[i] ~= nil then
-          base_val = base[i]
-        end
-        match_deep(check_val, base_val, child_path, errors)
-      end
-    else
-      for key, check_val in pairs(check) do
-        local child_path = path .. "." .. tostring(key)
-        local base_val = nil
-        if type(base) == "table" then
-          base_val = base[key]
-        end
-        match_deep(check_val, base_val, child_path, errors)
-      end
-    end
-  else
-    local check_str = nil
-    if type(check) == "string" then
-      check_str = check
-    end
-
-    if check_str == "__EXISTS__" then
-      if base == nil then
-        table.insert(errors, "match " .. path .. ": expected value to exist but got nil")
-      end
-      return
-    end
-
-    if check_str == "__UNDEF__" then
-      if base ~= nil then
-        table.insert(errors, "match " .. path .. ": expected nil but got " .. json_str(base))
-      end
-      return
-    end
-
-    local norm_check = json_normalize(check)
-    local norm_base = json_normalize(base)
-
-    -- Compare normalized values
-    local check_json = json.encode(norm_check)
-    local base_json = json.encode(norm_base)
-
-    if check_json ~= base_json then
-      if check_str ~= nil and check_str ~= "" then
-        local base_str = tostring(base or "")
-        if match_string(check_str, base_str) then
-          return
-        end
-      end
-      table.insert(errors, "match " .. path .. ": got " ..
-        json_str(norm_base) .. ", want " .. json_str(norm_check))
-    end
-  end
-end
-
-
--- Run a test set from test.json
-local function runset(testspec, subject)
-  if testspec == nil then
-    return
-  end
-  local set = testspec["set"]
-  if type(set) ~= "table" then
-    return
-  end
-
-  for si, entry_ref in ipairs(set) do
-    local i = si - 1
-    local entry = entry_ref
-
-    local mark = ""
-    if entry["mark"] ~= nil then
-      mark = " (mark=" .. tostring(entry["mark"]) .. ")"
-    end
-
-    local result, err = subject(entry)
-
-    local expected_err = entry["err"]
-
-    if err ~= nil then
-      if expected_err ~= nil then
-        local err_msg = tostring(err)
-        if type(err) == "table" and err.msg ~= nil then
-          err_msg = err.msg
-        end
-        if type(expected_err) == "string" then
-          if not match_string(expected_err, err_msg) then
-            error("entry " .. i .. mark .. ": error mismatch: got " ..
-              json_str(err_msg) .. ", want contains " .. json_str(expected_err))
-          end
-        elseif type(expected_err) == "boolean" and expected_err == true then
-          -- err: true means any error is acceptable
-        end
-        if entry["match"] ~= nil then
-          local result_map = {
-            ["in"] = entry["in"],
-            out = json_normalize(result),
-            err = { message = tostring(err) },
-          }
-          local errors = {}
-          match_deep(entry["match"], result_map, "", errors)
-          if #errors > 0 then
-            error("entry " .. i .. mark .. ": " .. table.concat(errors, "; "))
-          end
-        end
-        goto continue
-      end
-      error("entry " .. i .. mark .. ": unexpected error: " .. tostring(err))
-    end
-
-    if expected_err ~= nil then
-      error("entry " .. i .. mark .. ": expected error containing " ..
-        json_str(expected_err) .. " but got result: " .. json_str(result))
-    end
-
-    do
-      local matched = false
-      if entry["match"] ~= nil then
-        local result_map = {
-          ["in"] = entry["in"],
-          out = json_normalize(result),
-        }
-        if entry["args"] ~= nil then
-          result_map["args"] = entry["args"]
-        elseif entry["in"] ~= nil then
-          result_map["args"] = { entry["in"] }
-        end
-        if entry["ctx"] ~= nil then
-          result_map["ctx"] = entry["ctx"]
-        end
-        local errors = {}
-        match_deep(entry["match"], result_map, "", errors)
-        if #errors > 0 then
-          error("entry " .. i .. mark .. ": " .. table.concat(errors, "; "))
-        end
-        matched = true
-      end
-
-      local expected_out = entry["out"]
-      if expected_out == nil and matched then
-        goto continue
-      end
-      if expected_out ~= nil then
-        local norm_result = json_normalize(result)
-        local norm_expected = json_normalize(expected_out)
-        local rj = json.encode(norm_result)
-        local ej = json.encode(norm_expected)
-        -- Treat empty [] and {} as equivalent
-        local rj_norm = (rj == "[]") and "{}" or rj
-        local ej_norm = (ej == "[]") and "{}" or ej
-        if rj_norm ~= ej_norm then
-          error("entry " .. i .. mark .. ": output mismatch: got " ..
-            json_str(norm_result) .. ", want " .. json_str(norm_expected))
-        end
-      end
-    end
-
-    ::continue::
-  end
+  return val
 end
 
 
 -- Create a context from a JSON map (like makeCtxFromMap in Go)
-local function make_ctx_from_map(ctxmap, client, utility)
+local function make_ctx_from_map(ctxmap, ctxclient, ctxutility)
   if ctxmap == nil then
     ctxmap = {}
   end
 
   local ctx = Context.new(ctxmap, nil)
 
-  if client ~= nil then
-    ctx.client = client
-    ctx.utility = utility
+  if ctxclient ~= nil then
+    ctx.client = ctxclient
+    ctx.utility = ctxutility
   end
-  if ctx.options == nil and client ~= nil then
-    ctx.options = client:options_map()
+  if ctx.options == nil and ctxclient ~= nil then
+    ctx.options = ctxclient:options_map()
   end
 
   -- Handle spec from JSON map
@@ -336,7 +167,7 @@ end
 
 
 -- Fix context options
-local function fixctx(ctx, client)
+local function fixctx(ctx, ctxclient)
   if ctx ~= nil and ctx.client ~= nil and ctx.options == nil then
     ctx.options = ctx.client:options_map()
   end
@@ -358,24 +189,24 @@ end
 
 
 -- Create a basic test context
-local function make_test_ctx(client, utility, overrides)
+local function make_test_ctx(ctxclient, ctxutility, overrides)
   local ctxmap = {
     opname = "load",
-    client = client,
-    utility = utility,
+    client = ctxclient,
+    utility = ctxutility,
   }
   if overrides ~= nil then
     for k, v in pairs(overrides) do
       ctxmap[k] = v
     end
   end
-  return utility.make_context(ctxmap, client:get_root_ctx())
+  return ctxutility.make_context(ctxmap, ctxclient:get_root_ctx())
 end
 
 
 -- Create a full test context with point and match
-local function make_test_full_ctx(client, utility)
-  local ctx = make_test_ctx(client, utility, nil)
+local function make_test_full_ctx(ctxclient, ctxutility)
+  local ctx = make_test_ctx(ctxclient, ctxutility, nil)
   ctx.point = {
     parts = { "items", "{id}" },
     args = { params = { { name = "id", reqd = true } } },
@@ -392,13 +223,6 @@ end
 
 
 describe("PrimaryUtility", function()
-  local spec = load_test_spec()
-  local primary = get_spec(spec, "primary")
-  assert.is_not_nil(primary, "primary section not found in test.json")
-
-  local client = sdk.test(nil, nil)
-  local utility = client:get_utility()
-
 
   it("exists", function()
     assert.is_not_nil(utility.clean, "clean should not be nil")
@@ -442,40 +266,31 @@ describe("PrimaryUtility", function()
 
 
   it("done-basic", function()
-    runset(get_spec(primary, "done", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("done", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
+      local ctx = make_ctx_from_map(cin, client, utility)
       fixctx(ctx, client)
-      return utility.done(ctx)
+      return unwrap(utility.done(ctx))
     end)
   end)
 
 
   it("makeError-basic", function()
-    runset(get_spec(primary, "makeError", "basic"), function(entry)
-      local args = entry["args"]
-      if type(args) ~= "table" or #args == 0 then
-        args = { {} }
+    runsection("makeError", function(cin, errmap)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-
-      local ctxmap = args[1]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
-      end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
+      local ctx = make_ctx_from_map(cin, client, utility)
       fixctx(ctx, client)
 
       local err_val = nil
-      if #args > 1 then
-        if type(args[2]) == "table" then
-          err_val = err_from_map(args[2])
-        end
+      if type(errmap) == "table" then
+        err_val = err_from_map(errmap)
       end
 
-      return utility.make_error(ctx, err_val)
+      return unwrap(utility.make_error(ctx, err_val))
     end)
   end)
 
@@ -632,22 +447,21 @@ describe("PrimaryUtility", function()
 
 
   it("makeContext-basic", function()
-    runset(get_spec(primary, "makeContext", "basic"), function(entry)
-      local in_val = entry["in"]
-      if type(in_val) == "table" then
-        local ctx = utility.make_context(in_val, nil)
-        local out = {
-          id = ctx.id,
-        }
-        if ctx.op ~= nil then
-          out["op"] = {
-            name = ctx.op.name,
-            input = ctx.op.input,
-          }
-        end
-        return out, nil
+    runsection("makeContext", function(vin)
+      if type(vin) ~= "table" then
+        return nil
       end
-      return nil, nil
+      local ctx = utility.make_context(vin, nil)
+      local out = {
+        id = ctx.id,
+      }
+      if ctx.op ~= nil then
+        out["op"] = {
+          name = ctx.op.name,
+          input = ctx.op.input,
+        }
+      end
+      return out
     end)
   end)
 
@@ -708,70 +522,58 @@ describe("PrimaryUtility", function()
 
 
   it("makeOptions-basic", function()
-    runset(get_spec(primary, "makeOptions", "basic"), function(entry)
-      local in_val = entry["in"]
-      if type(in_val) ~= "table" then
-        in_val = {}
+    runsection("makeOptions", function(vin)
+      if type(vin) ~= "table" then
+        vin = {}
       end
       local ctx = utility.make_context({
-        options = in_val["options"],
-        config = in_val["config"],
+        options = vin["options"],
+        config = vin["config"],
       }, nil)
       ctx.client = client
       ctx.utility = utility
-      return utility.make_options(ctx), nil
+      return (utility.make_options(ctx))
     end)
   end)
 
 
   it("makeRequest-basic", function()
-    runset(get_spec(primary, "makeRequest", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("makeRequest", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
+      local ctx = make_ctx_from_map(cin, client, utility)
       ctx.options = client:options_map()
 
-      local _, err = utility.make_request(ctx)
-      if err ~= nil then
-        return nil, err
+      unwrap(utility.make_request(ctx))
+
+      -- Write live-context state back for match checking (the corpus
+      -- asserts `__EXISTS__`, so presence is what matters).
+      if ctx.response ~= nil then
+        cin["response"] = "exists"
+      end
+      if ctx.result ~= nil then
+        cin["result"] = "exists"
       end
 
-      -- Update entry ctx for match checking
-      local entry_ctx = entry["ctx"]
-      if type(entry_ctx) == "table" then
-        if ctx.response ~= nil then
-          entry_ctx["response"] = "exists"
-        end
-        if ctx.result ~= nil then
-          entry_ctx["result"] = "exists"
-        end
-      end
-
-      return nil, nil
+      return nil
     end)
   end)
 
 
   it("makeResponse-basic", function()
-    runset(get_spec(primary, "makeResponse", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("makeResponse", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
+      local ctx = make_ctx_from_map(cin, client, utility)
       fixctx(ctx, client)
 
-      local _, err = utility.make_response(ctx)
-      if err ~= nil then
-        return nil, err
-      end
+      unwrap(utility.make_response(ctx))
 
-      -- Update entry ctx for match checking with result data
-      local entry_ctx = entry["ctx"]
-      if type(entry_ctx) == "table" and ctx.result ~= nil then
-        entry_ctx["result"] = {
+      -- Write live-context result state back for match checking
+      if ctx.result ~= nil then
+        cin["result"] = {
           ok = ctx.result.ok,
           status = ctx.result.status,
           statusText = ctx.result.status_text,
@@ -780,7 +582,7 @@ describe("PrimaryUtility", function()
         }
       end
 
-      return nil, nil
+      return nil
     end)
   end)
 
@@ -839,27 +641,22 @@ describe("PrimaryUtility", function()
 
 
   it("makeSpec-basic", function()
-    local setup_opts = get_spec(primary, "makeSpec", "DEF", "setup", "a")
+    local setup_opts = omni.tostruct(get_spec(spec, "makeSpec", "DEF", "setup", "a"))
     local spec_client = sdk.test(nil, setup_opts)
     local spec_utility = spec_client:get_utility()
 
-    runset(get_spec(primary, "makeSpec", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("makeSpec", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, spec_client, spec_utility)
+      local ctx = make_ctx_from_map(cin, spec_client, spec_utility)
       ctx.options = spec_client:options_map()
 
-      local _, err = utility.make_spec(ctx)
-      if err ~= nil then
-        return nil, err
-      end
+      unwrap(utility.make_spec(ctx))
 
-      -- Update entry ctx for match
-      local entry_ctx = entry["ctx"]
-      if type(entry_ctx) == "table" and ctx.spec ~= nil then
-        entry_ctx["spec"] = {
+      -- Write live-context spec state back for match checking
+      if ctx.spec ~= nil then
+        cin["spec"] = {
           base = ctx.spec.base,
           prefix = ctx.spec.prefix,
           suffix = ctx.spec.suffix,
@@ -871,7 +668,7 @@ describe("PrimaryUtility", function()
         }
       end
 
-      return nil, nil
+      return nil
     end)
   end)
 
@@ -896,175 +693,135 @@ describe("PrimaryUtility", function()
 
 
   it("makeUrl-basic", function()
-    runset(get_spec(primary, "makeUrl", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("makeUrl", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
+      local ctx = make_ctx_from_map(cin, client, utility)
       if ctx.result == nil then
         ctx.result = Result.new({})
       end
-      return utility.make_url(ctx)
+      return unwrap(utility.make_url(ctx))
     end)
   end)
 
 
   it("operator-basic", function()
-    runset(get_spec(primary, "operator", "basic"), function(entry)
-      local in_val = entry["in"]
-      if type(in_val) ~= "table" then
-        in_val = {}
+    runsection("operator", function(vin)
+      if type(vin) ~= "table" then
+        vin = {}
       end
-      local op = Operation.new(in_val)
+      local op = Operation.new(vin)
       return {
         entity = op.entity,
         name = op.name,
         input = op.input,
         points = op.points,
-      }, nil
+      }
     end)
   end)
 
 
   it("param-basic", function()
-    runset(get_spec(primary, "param", "basic"), function(entry)
-      local args = entry["args"]
-      if type(args) ~= "table" or #args < 2 then
-        return nil, nil
+    runsection("param", function(cin, paramdef)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-
-      local ctxmap = args[1]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
-      end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
-      local paramdef = args[2]
+      local ctx = make_ctx_from_map(cin, client, utility)
 
       local result = utility.param(ctx, paramdef)
 
-      -- Update entry ctx for match
-      if type(entry["match"]) == "table" then
-        local ctx_match = entry["match"]["ctx"]
-        if type(ctx_match) == "table" then
-          local entry_ctx = entry["ctx"]
-          if entry_ctx == nil then
-            entry_ctx = {}
-            entry["ctx"] = entry_ctx
-          end
-          -- Copy spec alias back to entry ctx for matching
-          local spec_match = ctx_match["spec"]
-          if type(spec_match) == "table" then
-            if ctx.spec ~= nil then
-              if entry_ctx["spec"] == nil then
-                entry_ctx["spec"] = {}
-              end
-              local alias_match = spec_match["alias"]
-              if type(alias_match) == "table" then
-                entry_ctx["spec"] = {
-                  alias = ctx.spec.alias,
-                }
-              end
-            end
-          end
+      -- Write spec alias back for `match: {ctx: {spec: {alias: ...}}}`
+      if ctx.spec ~= nil and ctx.spec.alias ~= nil then
+        if type(cin["spec"]) ~= "table" then
+          cin["spec"] = {}
         end
+        cin["spec"]["alias"] = ctx.spec.alias
       end
 
-      return result, nil
+      return result
     end)
   end)
 
 
   it("prepareAuth-basic", function()
-    local setup_opts = get_spec(primary, "prepareAuth", "DEF", "setup", "a")
+    local setup_opts = omni.tostruct(get_spec(spec, "prepareAuth", "DEF", "setup", "a"))
     local auth_client = sdk.test(nil, setup_opts)
     local auth_utility = auth_client:get_utility()
 
-    runset(get_spec(primary, "prepareAuth", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("prepareAuth", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, auth_client, auth_utility)
+      local ctx = make_ctx_from_map(cin, auth_client, auth_utility)
       fixctx(ctx, auth_client)
 
-      local _, err = utility.prepare_auth(ctx)
-      if err ~= nil then
-        return nil, err
-      end
+      unwrap(utility.prepare_auth(ctx))
 
-      -- Update entry ctx for match
-      local entry_ctx = entry["ctx"]
-      if type(entry_ctx) == "table" and ctx.spec ~= nil then
-        entry_ctx["spec"] = {
+      -- Write live-context spec headers back for match checking
+      if ctx.spec ~= nil then
+        cin["spec"] = {
           headers = ctx.spec.headers,
         }
       end
 
-      return nil, nil
+      return nil
     end)
   end)
 
 
   it("prepareBody-basic", function()
-    runset(get_spec(primary, "prepareBody", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("prepareBody", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
+      local ctx = make_ctx_from_map(cin, client, utility)
       fixctx(ctx, client)
-      return utility.prepare_body(ctx), nil
+      return (utility.prepare_body(ctx))
     end)
   end)
 
 
   it("prepareHeaders-basic", function()
-    runset(get_spec(primary, "prepareHeaders", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("prepareHeaders", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
-      return utility.prepare_headers(ctx), nil
+      local ctx = make_ctx_from_map(cin, client, utility)
+      return (utility.prepare_headers(ctx))
     end)
   end)
 
 
   it("prepareMethod-basic", function()
-    runset(get_spec(primary, "prepareMethod", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("prepareMethod", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
-      return utility.prepare_method(ctx), nil
+      local ctx = make_ctx_from_map(cin, client, utility)
+      return (utility.prepare_method(ctx))
     end)
   end)
 
 
   it("prepareParams-basic", function()
-    runset(get_spec(primary, "prepareParams", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("prepareParams", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
-      return utility.prepare_params(ctx), nil
+      local ctx = make_ctx_from_map(cin, client, utility)
+      return (utility.prepare_params(ctx))
     end)
   end)
 
 
   it("preparePath-basic", function()
-    -- Was hand-written cases that had drifted out of the shared corpus
-    -- (the preparePath fixture shipped as an empty `set: []`).
-    runset(get_spec(primary, "preparePath", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("preparePath", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
-      return utility.prepare_path(ctx), nil
+      local ctx = make_ctx_from_map(cin, client, utility)
+      return (utility.prepare_path(ctx))
     end)
   end)
 
@@ -1082,24 +839,22 @@ describe("PrimaryUtility", function()
 
 
   it("prepareQuery-basic", function()
-    runset(get_spec(primary, "prepareQuery", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("prepareQuery", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
-      return utility.prepare_query(ctx), nil
+      local ctx = make_ctx_from_map(cin, client, utility)
+      return (utility.prepare_query(ctx))
     end)
   end)
 
 
   it("resultBasic-basic", function()
-    runset(get_spec(primary, "resultBasic", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("resultBasic", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
+      local ctx = make_ctx_from_map(cin, client, utility)
       fixctx(ctx, client)
 
       local result = utility.result_basic(ctx)
@@ -1118,101 +873,87 @@ describe("PrimaryUtility", function()
         }
       end
 
-      return out, nil
+      return out
     end)
   end)
 
 
   it("resultBody-basic", function()
-    runset(get_spec(primary, "resultBody", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("resultBody", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
+      local ctx = make_ctx_from_map(cin, client, utility)
 
       utility.result_body(ctx)
 
-      -- Update entry ctx for match
-      local entry_ctx = entry["ctx"]
-      if type(entry_ctx) == "table" and ctx.result ~= nil then
-        entry_ctx["result"] = {
+      -- Write live-context result state back for match checking
+      if ctx.result ~= nil then
+        cin["result"] = {
           body = ctx.result.body,
         }
       end
 
-      return nil, nil
+      return nil
     end)
   end)
 
 
   it("resultHeaders-basic", function()
-    runset(get_spec(primary, "resultHeaders", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("resultHeaders", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
+      local ctx = make_ctx_from_map(cin, client, utility)
 
       utility.result_headers(ctx)
 
-      -- Update entry ctx for match
-      local entry_ctx = entry["ctx"]
-      if type(entry_ctx) == "table" and ctx.result ~= nil then
-        entry_ctx["result"] = {
+      -- Write live-context result state back for match checking
+      if ctx.result ~= nil then
+        cin["result"] = {
           headers = ctx.result.headers,
         }
       end
 
-      return nil, nil
+      return nil
     end)
   end)
 
 
   it("transformRequest-basic", function()
-    runset(get_spec(primary, "transformRequest", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("transformRequest", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
+      local ctx = make_ctx_from_map(cin, client, utility)
 
       local result = utility.transform_request(ctx)
 
-      -- Update entry ctx for match (step changed)
-      local entry_ctx = entry["ctx"]
-      if type(entry_ctx) == "table" and ctx.spec ~= nil then
-        local spec_map = entry_ctx["spec"]
-        if type(spec_map) == "table" then
-          spec_map["step"] = ctx.spec.step
-        end
+      -- Write the step change back for match checking
+      if ctx.spec ~= nil and type(cin["spec"]) == "table" then
+        cin["spec"]["step"] = ctx.spec.step
       end
 
-      return result, nil
+      return result
     end)
   end)
 
 
   it("transformResponse-basic", function()
-    runset(get_spec(primary, "transformResponse", "basic"), function(entry)
-      local ctxmap = entry["ctx"]
-      if type(ctxmap) ~= "table" then
-        ctxmap = {}
+    runsection("transformResponse", function(cin)
+      if type(cin) ~= "table" then
+        cin = {}
       end
-      local ctx = make_ctx_from_map(ctxmap, client, utility)
+      local ctx = make_ctx_from_map(cin, client, utility)
 
       local result = utility.transform_response(ctx)
 
-      -- Update entry ctx for match (step changed)
-      local entry_ctx = entry["ctx"]
-      if type(entry_ctx) == "table" and ctx.spec ~= nil then
-        local spec_map = entry_ctx["spec"]
-        if type(spec_map) == "table" then
-          spec_map["step"] = ctx.spec.step
-        end
+      -- Write the step change back for match checking
+      if ctx.spec ~= nil and type(cin["spec"]) == "table" then
+        cin["spec"]["step"] = ctx.spec.step
       end
 
-      return result, nil
+      return result
     end)
   end)
 

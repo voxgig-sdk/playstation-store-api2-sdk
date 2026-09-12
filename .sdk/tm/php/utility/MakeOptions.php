@@ -94,10 +94,29 @@ class PlaystationStoreApi2MakeOptions
             }
         }
 
+        // `auth: null` is the documented way to disable auth outright, and
+        // prepareAuth honours it before it ever reads the apikey. It cannot
+        // survive validate: depending on the struct port a stored null is
+        // either REPLACED by the optspec default - transmitting the
+        // credential the caller withheld - or REJECTED outright. Withhold the
+        // key for validate, then put the null back. Same fix as ts/js/go
+        // makeOptions.
+        //
+        // Suppliedness cannot be recovered after validate, hence here, and it
+        // must tell an ABSENT auth from a present null: array_key_exists
+        // rather than isset, which is false for both.
+        $authsuppressed = is_array($options)
+            && array_key_exists('auth', $options)
+            && null === $options['auth'];
+
         $opts = \Voxgig\Struct\Struct::clone($options);
         $opts = self::to_array_deep($opts);
         if (!is_array($opts)) {
             $opts = [];
+        }
+
+        if ($authsuppressed) {
+            unset($opts['auth']);
         }
 
         // Feature add-order. options['feature'] may be given as an ordered LIST
@@ -162,6 +181,11 @@ class PlaystationStoreApi2MakeOptions
         $opts = self::to_array_deep($validated);
         if (!is_array($opts)) {
             $opts = [];
+        }
+
+        // Restore the suppression the optspec default would otherwise erase.
+        if ($authsuppressed) {
+            $opts['auth'] = null;
         }
 
         // Reattach the station binding handle held aside above (the feature

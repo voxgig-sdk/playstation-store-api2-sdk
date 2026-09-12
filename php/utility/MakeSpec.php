@@ -37,13 +37,20 @@ class PlaystationStoreApi2MakeSpec
             'suffix' => $suffix, 'step' => 'start',
         ]);
 
-        $ctx->spec->method = ($utility->prepare_method)($ctx);
+        // prepare_method answers null for an op name outside the convention
+        // (mirrors the ts reference, where methodMap[key] is undefined) -
+        // which then fails the allow check below, never a TypeError and
+        // never a silently-allowed empty method.
+        $method = ($utility->prepare_method)($ctx);
 
         $allow_method = \Voxgig\Struct\Struct::getpath($options, 'allow.method') ?? '';
-        if (strpos($allow_method, $ctx->spec->method) === false) {
+        if (!is_string($method) || '' === $method
+            || strpos($allow_method, $method) === false) {
+            $shown = is_string($method) ? $method : '';
             return [null, $ctx->make_error('spec_method_allow',
-                "Method \"{$ctx->spec->method}\" not allowed by SDK option allow.method value: \"{$allow_method}\"")];
+                "Method \"{$shown}\" not allowed by SDK option allow.method value: \"{$allow_method}\"")];
         }
+        $ctx->spec->method = $method;
 
         $ctx->spec->params = ($utility->prepare_params)($ctx);
         $ctx->spec->query = ($utility->prepare_query)($ctx);

@@ -9,6 +9,7 @@ import { Utility } from './utility/Utility'
 
 
 import { BaseFeature } from './feature/base/BaseFeature'
+// #SecretsImport
 
 
 const stdutil = new Utility()
@@ -20,6 +21,7 @@ class ProjectNameSDK {
   _utility = new Utility()
   _features: Feature[]
   _rootctx: Context
+  // #SecretsField
 
   constructor(options?: any) {
 
@@ -92,6 +94,8 @@ class ProjectNameSDK {
     return this._utility.struct.clone(this._utility)
   }
 
+  // #SecretsAccessor
+
 
   async prepare(fetchargs?: any) {
     const utility = this._utility
@@ -137,6 +141,8 @@ class ProjectNameSDK {
         spec.headers[key] = uheaders[key]
       }
     }
+
+    // #SecretsResolve
 
     // Apply SDK auth (apikey, auth prefix, etc.)
     const authResult = prepareAuth(ctx)
@@ -334,6 +340,7 @@ const SDK = ProjectNameSDK
 export {
   stdutil,
   config,
+  // #SecretsExport
 
   BaseFeature,
   ProjectNameEntityBase,

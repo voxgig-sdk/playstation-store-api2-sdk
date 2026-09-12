@@ -11,7 +11,10 @@ import {
   File,
   cmp,
   snakify,
-  isAuthActive, envName, envToken
+  isAuthActive,
+  serverVarEnv,
+  serverVariables, envName, envToken,
+  pointParts,
 } from '@voxgig/sdkgen'
 
 
@@ -64,11 +67,25 @@ const TestDirect = cmp(function TestDirect(props: any) {
 
   const authActive = isAuthActive(model)
   const apikeyEnvEntry = authActive
-    ? `\n        "${PROJECTNAME}_APIKEY": "NONE",`
+    ? `\n        "${PROJECTNAME}_APIKEY": "",`
     : ''
   const apikeyLiveField = authActive
     ? `\n            "apikey": env.get("${PROJECTNAME}_APIKEY"),`
     : ''
+
+  // A templated server URL (OpenAPI server variables) makes a LIVE client
+  // impossible to construct without values: make_options raises rather than
+  // request a URL with a literal `{account_id}` in it. Taken from the
+  // environment, the same way the apikey is.
+  const svars = serverVariables(model)
+  const serverEnvEntry = svars
+    .map((v: any) => `\n        "${serverVarEnv(PROJECTNAME, v.name)}": ${JSON.stringify(v.dflt)},`).join('')
+  const serverLiveField = 0 === svars.length ? '' :
+    `\n            "server": {` +
+    svars.map((v: any) =>
+      `\n                "${v.name}": env.get("${serverVarEnv(PROJECTNAME, v.name)}"),`).join('') +
+    `\n            },`
+
 
   const opnames = Object.keys(entity.op || {})
   const hasLoad = opnames.includes('load')
@@ -82,7 +99,7 @@ const TestDirect = cmp(function TestDirect(props: any) {
   const listOp = entity.op?.list
 
   const loadPoint = loadOp?.points?.[0]
-  const loadPath = loadPoint ? normalizePathParams(loadPoint.parts || [], loadPoint?.args?.params || [], loadPoint?.rename?.param) : ''
+  const loadPath = loadPoint ? normalizePathParams(pointParts(loadPoint), loadPoint?.args?.params || [], loadPoint?.rename?.param) : ''
   const allLoadParams = loadPoint?.args?.params || []
   // Some upstream OpenAPI specs declare a parameter as `in: path` even when
   // that path has no `{name}` placeholder for it. Only path params that
@@ -90,7 +107,7 @@ const TestDirect = cmp(function TestDirect(props: any) {
   // setup and URL-substitution asserts; otherwise the SDK silently drops
   // them and the URL-includes assert fails.
   const _pathPlaceholders = new Set<string>()
-  for (const part of (loadPoint?.parts || [])) {
+  for (const part of pointParts(loadPoint)) {
     if (typeof part === 'string' && part.startsWith('{') && part.endsWith('}')) {
       _pathPlaceholders.add(part.slice(1, -1))
     }
@@ -107,7 +124,7 @@ const TestDirect = cmp(function TestDirect(props: any) {
     _renamedPlaceholders.has(p.name) || _renamedPlaceholders.has(p.orig))
 
   const listPoint = listOp?.points?.[0]
-  const listPath = listPoint ? normalizePathParams(listPoint.parts || [], listPoint?.args?.params || [], listPoint?.rename?.param) : ''
+  const listPath = listPoint ? normalizePathParams(pointParts(listPoint), listPoint?.args?.params || [], listPoint?.rename?.param) : ''
   const listParams = listPoint?.args?.params || []
 
   // Required query params with spec-provided examples — needed in live mode
@@ -337,14 +354,17 @@ def _${entity.name}_direct_setup(mockres):
 
     env = runner.env_override({
         "${entidEnvVar}": {},
-        "${PROJECTNAME}_TEST_LIVE": "FALSE",${apikeyEnvEntry}
+        "${PROJECTNAME}_TEST_LIVE": "FALSE",${apikeyEnvEntry}${serverEnvEntry}
     })
 
     live = env.get("${PROJECTNAME}_TEST_LIVE") == "TRUE"
 
     if live:
-        merged_opts = {${apikeyLiveField}
-        }
+        # sdk-test-control.json's test.client.options seeds the live
+        # client; the generated fields below overwrite anything they name.
+        merged_opts = dict(runner.live_client_options())
+        merged_opts.update({${apikeyLiveField}${serverLiveField}
+        })
         client = ${model.const.Name}SDK(merged_opts)
         return {
             "client": client,

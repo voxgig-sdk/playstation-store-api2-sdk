@@ -5,6 +5,9 @@ import {
   cmp, each, names, cmap,
   List, File, Content, Copy, Folder, Fragment, Line, FeatureHook,
   entityClassName, entityCollection,
+  pluginExcludes,
+  targetFeatures,
+  TEST_CONTROL_EXCLUDE
 } from '@voxgig/sdkgen'
 
 
@@ -32,7 +35,14 @@ const Main = cmp(async function Main(props: any) {
   const { model } = props.ctx$
 
   const entity: ModelEntity = getModelPath(model, `main.${KIT}.entity`)
-  const feature = getModelPath(model, `main.${KIT}.feature`)
+  // Gated by the applicability tags, so this target never imports or
+  // registers a feature it has no source for. One rule, one place:
+  // helpers/applicability.
+  const feature = targetFeatures(model, target)
+
+  // Does the secrets feature apply here and is it switched on? Both, since
+  // targetFeatures already dropped it for a target with no sekreto port.
+  const secrets = null != (feature as any).secrets
 
   // The one package directory everything the SDK owns lives in.
   const pkgdir = model.const.Name.toLowerCase() + '_sdk'
@@ -46,7 +56,7 @@ const Main = cmp(async function Main(props: any) {
   // below.
   Copy({
     from: 'tm/' + target.name,
-    exclude: [/src\//, /pkg\//],
+    exclude: [/src\//, /pkg\//, TEST_CONTROL_EXCLUDE],
     replace: {
       ...props.ctx$.stdrep,
     }
@@ -68,6 +78,13 @@ const Main = cmp(async function Main(props: any) {
 
   Copy({
     from: 'tm/' + target.name + '/pkg',
+    // An ACTIVE feature's INACTIVE plugins do not ship. py has no
+    // src/feature layout (srcfeature: false), so this blanket pkg copy is
+    // the one place the generate-time plugin trim can act; the model's
+    // `plugin.<group>.path` entries name their files relative to THIS
+    // copy's root ('feature/secrets/voxgig_sekreto/plugins/<kind>.py').
+    // See helpers/featureSource.pluginExcludes.
+    exclude: [...pluginExcludes(model)],
     replace: {
       ...props.ctx$.stdrep,
     }
@@ -81,6 +98,38 @@ const Main = cmp(async function Main(props: any) {
         from: Path.normalize(__dirname + '/../../../src/cmp/py/fragment/Main.fragment.py'),
         replace: {
           ...props.ctx$.stdrep,
+
+          // SECRETS. Both slots are emitted only when the secrets feature
+          // applies to this target AND the model activates it - an
+          // unconditional edit would land in every generated SDK, and with
+          // the feature off the marker line is REMOVED, so the inactive
+          // output is byte-identical to pre-migration. `feature` is
+          // already gated by targetFeatures, so a target that does not
+          // provide 'sekreto' never reaches these.
+          //
+          // CUSTOM-REGEX keys, like Entity_py's hook markers: jostraca's
+          // built-in `#Name` tag pattern is hardcoded to `//` comments,
+          // so a bare '#SecretsAccessor' key would silently never match a
+          // python `# #SecretsAccessor` marker line.
+
+          // The LIVE Sekreto, not a clone: sekreto holds provider and
+          // cache state, so a clone would resolve into a copy that
+          // prepare_auth never sees.
+          '/(?<indent>[ \\t]*)#[ \\t]*#SecretsAccessor[ \\t]*\\n?/':
+            ({ indent }: any) => !secrets ? '' :
+              `${indent}def secrets(self):\n` +
+              `${indent}    _s = getattr(self, "_secrets", None)\n` +
+              `${indent}    return None if _s is None else _s.sekreto()\n\n`,
+
+          // prepare() bypasses the feature hook pipeline, so the PreSpec
+          // hook that resolves the secret for entity ops never runs on
+          // this path and the resolve has to be explicit. It RAISES on a
+          // broken provider - prepare() already raises on prepare_auth
+          // errors, so the direct path's error contract is unchanged.
+          '/(?<indent>[ \\t]*)#[ \\t]*#SecretsResolve[ \\t]*\\n?/':
+            ({ indent }: any) => !secrets ? '' :
+              `${indent}if getattr(self, "_secrets", None) is not None:\n` +
+              `${indent}    self._secrets.resolve()\n\n`,
 
           '#BuildFeatures': ({ indent }: any) => {
             each(feature, (feat: any) => {

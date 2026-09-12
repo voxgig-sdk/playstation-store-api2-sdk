@@ -40,7 +40,7 @@ func prepareAuthUtil(ctx *core.Context) (*core.Spec, error) {
 		delete(headers, headerAuth)
 	} else {
 		authPrefix := ""
-		if ap := vs.GetPath([]any{"auth", "prefix"}, options); ap != nil {
+		if ap := vs.GetPath(options, []any{"auth", "prefix"}); ap != nil {
 			authPrefix, _ = ap.(string)
 		}
 		apikeyVal := ""

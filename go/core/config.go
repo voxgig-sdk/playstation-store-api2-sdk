@@ -74,6 +74,20 @@ func MakeConfig() map[string]any {
 						"type": "`$ARRAY`",
 					},
 				},
+				"id": map[string]any{
+					"field": "id",
+					"from": map[string]any{
+						"age_limit": "age_limit",
+					},
+					"name": "id",
+					"parts": []any{
+						"country",
+						"language",
+						"age_limit",
+						"container_id",
+					},
+					"sep": "/",
+				},
 				"name": "container",
 				"op": map[string]any{
 					"load": map[string]any{
@@ -173,12 +187,22 @@ func MakeConfig() map[string]any {
 								"kind": "http",
 								"method": "GET",
 								"orig": "/container/{country}/{language}/{age_limit}/{container_id}",
-								"parts": []any{
-									"container",
-									"{country}",
-									"{language}",
-									"{age_limit}",
-									"{container_id}",
+								"segments": []any{
+									map[string]any{
+										"lit": "container",
+									},
+									map[string]any{
+										"var": "country",
+									},
+									map[string]any{
+										"var": "language",
+									},
+									map[string]any{
+										"var": "age_limit",
+									},
+									map[string]any{
+										"var": "container_id",
+									},
 								},
 								"select": map[string]any{
 									"exist": []any{
@@ -200,6 +224,13 @@ func MakeConfig() map[string]any {
 									"req": "`reqdata`",
 									"res": "`body`",
 								},
+								"parts": []any{
+									"container",
+									"{country}",
+									"{language}",
+									"{age_limit}",
+									"{container_id}",
+								},
 							},
 						},
 					},
@@ -214,6 +245,17 @@ func MakeConfig() map[string]any {
 			},
 		},
 	}
+}
+
+// The plugin definitions the model selected per feature, as []any so a
+// feature package can consume them without core naming its types. Empty
+// when no active feature declares active plugin groups for this target.
+var featurePlugins = map[string][]any{
+}
+
+// FeaturePlugins is the definitions list for one feature's chain.
+func FeaturePlugins(name string) []any {
+	return featurePlugins[name]
 }
 
 var (

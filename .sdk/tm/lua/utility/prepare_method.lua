@@ -22,7 +22,11 @@ local function prepare_method_util(ctx)
     return string.upper(method)
   end
 
-  return METHOD_MAP[opname] or "GET"
+  -- No default: an op name outside the convention resolves to no method,
+  -- exactly as the ts reference (`methodMap[key]` is undefined there).
+  -- The silent-pass inline runner hid a stray "GET" fallback here; the
+  -- shared corpus (prepareMethod, opname "bad" -> null) pins it now.
+  return METHOD_MAP[opname]
 end
 
 return prepare_method_util

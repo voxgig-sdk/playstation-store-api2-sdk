@@ -1,9 +1,14 @@
-# Vendored from voxgig/struct/rb
+# PlaystationStoreApi2 SDK struct utility test
+#
+# Corpus sections run through the vendored omni runner, via the resolver
+# in test/omni.rb (struct-runner shape over native voxgig_omni;
+# test/struct_runner.rb is retired - see
+# docs/design/vendor-tag-rollout.md).
 
 require 'minitest/autorun'
 require 'json'
-require_relative '../utility/struct/voxgig_struct'
-require_relative 'struct_runner'
+require_relative '../PlaystationStoreApi2_sdk'
+require_relative 'omni'
 
 # A helper for deep equality comparison using JSON round-trip.
 def deep_equal(a, b)
@@ -29,13 +34,14 @@ STRUCT_TEST_JSON_FILE = File.join(__dir__, '../../.sdk/test/test.json')
 
 class StructUtilityTest < Minitest::Test
   def setup
-    @client       = StructTestClient.new
-    @runner       = StructRunner.make_runner(STRUCT_TEST_JSON_FILE, @client)
+    # The struct corpus drives the LIVE SDK's struct utilities, as ts does.
+    @client       = PlaystationStoreApi2SDK.test(nil, nil)
+    @runner       = PlaystationStoreApi2Omni.make_runner(STRUCT_TEST_JSON_FILE, @client)
     @runpack      = @runner.call('struct')
     @spec         = @runpack[:spec]
     @runset       = @runpack[:runset]
     @runsetflags  = @runpack[:runsetflags]
-    @struct       = @client.utility.struct
+    @struct       = VoxgigStruct
     @minor_spec   = @spec["minor"]
     @walk_spec    = @spec["walk"]
     @merge_spec   = @spec["merge"]
@@ -105,7 +111,7 @@ class StructUtilityTest < Minitest::Test
 
   def test_minor_stringify
     @runsetflags.call(@minor_spec["stringify"], {}, lambda { |vin|
-      value = vin.key?("val") ? (vin["val"] == StructRunner::NULLMARK ? "null" : vin["val"]) : ""
+      value = vin.key?("val") ? (vin["val"] == PlaystationStoreApi2Omni::NULLMARK ? "null" : vin["val"]) : ""
       VoxgigStruct.stringify(value, vin["max"])
     })
   end

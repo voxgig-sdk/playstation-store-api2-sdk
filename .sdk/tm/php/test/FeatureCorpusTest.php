@@ -91,7 +91,16 @@ class FeatureCorpusTest extends TestCase
      */
     private static function buildClient(array $kase)
     {
-        $opts = ['utility' => ['fetcher' => self::scriptedFetcher($kase['res'] ?? null)]];
+        // 'test' here is the OPTION, not the `test` FEATURE. It says "this
+        // client is not live", which is what makes a REQUIRED OpenAPI server
+        // variable resolve to a deterministic test-<name> rather than throw
+        // at construction (see makeOptions). It installs no transport, so the
+        // scripted fetcher still stands - the FEATURE is transport: 'base'
+        // and would shadow it.
+        $opts = [
+            'test' => ['active' => true],
+            'utility' => ['fetcher' => self::scriptedFetcher($kase['res'] ?? null)],
+        ];
         if (isset($kase['feature'])) {
             $opts['feature'] = $kase['feature'];
         }

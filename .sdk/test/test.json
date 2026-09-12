@@ -10280,6 +10280,351 @@
         ]
       }
     },
+    "nullsem": {
+      "getelem": {
+        "set": [
+          {
+            "in": {
+              "alt": "ALT",
+              "key": 0,
+              "val": [
+                null
+              ]
+            },
+            "out": "ALT"
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": 1,
+              "val": [
+                10,
+                null,
+                30
+              ]
+            },
+            "out": "ALT"
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": 2,
+              "val": [
+                10,
+                null,
+                30
+              ]
+            },
+            "out": 30
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": -1,
+              "val": [
+                10,
+                null
+              ]
+            },
+            "out": "ALT"
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": -1,
+              "val": [
+                null,
+                20
+              ]
+            },
+            "out": 20
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": 0,
+              "val": [
+                false
+              ]
+            },
+            "out": false
+          }
+        ]
+      },
+      "getpath": {
+        "set": [
+          {
+            "in": {
+              "path": "a",
+              "store": {
+                "a": null
+              }
+            }
+          },
+          {
+            "in": {
+              "path": "a.b",
+              "store": {
+                "a": null
+              }
+            }
+          },
+          {
+            "in": {
+              "path": "a.b.c",
+              "store": {
+                "a": {
+                  "b": null
+                }
+              }
+            }
+          },
+          {
+            "in": {
+              "path": "a.b",
+              "store": {
+                "a": {
+                  "b": null
+                }
+              }
+            }
+          },
+          {
+            "in": {
+              "path": "a.b",
+              "store": {
+                "a": {
+                  "b": 1
+                }
+              }
+            },
+            "out": 1
+          },
+          {
+            "in": {
+              "path": "a.b",
+              "store": {
+                "a": {
+                  "b": false
+                }
+              }
+            },
+            "out": false
+          }
+        ]
+      },
+      "getprop": {
+        "set": [
+          {
+            "in": {
+              "alt": "ALT",
+              "key": "x",
+              "val": {
+                "x": null
+              }
+            },
+            "out": "ALT"
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": "x",
+              "val": {}
+            },
+            "out": "ALT"
+          },
+          {
+            "in": {
+              "key": "x",
+              "val": {
+                "x": null
+              }
+            }
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": "y",
+              "val": {
+                "x": null,
+                "y": 1
+              }
+            },
+            "out": 1
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": "x",
+              "val": {
+                "x": 1,
+                "y": null
+              }
+            },
+            "out": 1
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": "x",
+              "val": {
+                "x": false
+              }
+            },
+            "out": false
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": "x",
+              "val": {
+                "x": 0
+              }
+            },
+            "out": 0
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": "x",
+              "val": {
+                "x": ""
+              }
+            },
+            "out": ""
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": 0,
+              "val": [
+                null
+              ]
+            },
+            "out": "ALT"
+          },
+          {
+            "in": {
+              "alt": "ALT",
+              "key": 1,
+              "val": [
+                null,
+                1
+              ]
+            },
+            "out": 1
+          }
+        ]
+      },
+      "haskey": {
+        "set": [
+          {
+            "in": {
+              "key": "x",
+              "src": {
+                "x": null
+              }
+            },
+            "out": false
+          },
+          {
+            "in": {
+              "key": "x",
+              "src": {}
+            },
+            "out": false
+          },
+          {
+            "in": {
+              "key": "x",
+              "src": {
+                "x": 1
+              }
+            },
+            "out": true
+          },
+          {
+            "in": {
+              "key": "x",
+              "src": {
+                "x": false
+              }
+            },
+            "out": true
+          },
+          {
+            "in": {
+              "key": "x",
+              "src": {
+                "x": 0
+              }
+            },
+            "out": true
+          },
+          {
+            "in": {
+              "key": "x",
+              "src": {
+                "x": ""
+              }
+            },
+            "out": true
+          },
+          {
+            "in": {
+              "key": 0,
+              "src": [
+                null
+              ]
+            },
+            "out": false
+          },
+          {
+            "in": {
+              "key": 0,
+              "src": [
+                1
+              ]
+            },
+            "out": true
+          }
+        ]
+      },
+      "keysof": {
+        "set": [
+          {
+            "in": {
+              "a": null
+            },
+            "out": [
+              "a"
+            ]
+          },
+          {
+            "in": {
+              "a": null,
+              "b": 1
+            },
+            "out": [
+              "a",
+              "b"
+            ]
+          },
+          {
+            "in": {
+              "a": 1,
+              "b": null
+            },
+            "out": [
+              "a",
+              "b"
+            ]
+          }
+        ]
+      },
+      "name": "nullsem",
+      "set": []
+    },
     "select": {
       "alts": {
         "data": {

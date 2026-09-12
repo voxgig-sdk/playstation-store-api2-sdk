@@ -24,9 +24,13 @@ import {
   buildIdNames,
   getMatchEntries,
   isAuthActive,
+  serverVarEnv,
+  serverVariables,
   entityDataIdField, envName, envToken,
   phpEntityAccessor,
 } from '@voxgig/sdkgen'
+
+import { formatPhpValue } from './utility_php'
 
 
 // PHP's GenCtx mirrors the shared shape (see TestEntity_ts.ts) plus an
@@ -75,11 +79,24 @@ const TestEntity = cmp(function TestEntity(props: any) {
 
   const authActive = isAuthActive(model)
   const apikeyEnvEntry = authActive
-    ? `\n        "${PROJUPPER}_APIKEY" => "NONE",`
+    ? `\n        "${PROJUPPER}_APIKEY" => "",`
     : ''
   const apikeyLiveField = authActive
     ? `\n                "apikey" => $env["${PROJUPPER}_APIKEY"],`
     : ''
+
+  // A templated server URL (OpenAPI server variables) makes a LIVE client
+  // impossible to construct without values: makeOptions raises rather than
+  // request a URL with a literal `{account_id}` in it. So the live suite
+  // takes them from the environment the same way it takes the apikey.
+  const svars = serverVariables(model)
+  const serverEnvEntry = svars
+    .map((v: any) => `\n        "${serverVarEnv(PROJUPPER, v.name)}" => ${formatPhpValue(v.dflt)},`).join('')
+  const serverLiveField = 0 === svars.length ? '' : `
+                "server" => [${svars
+      .map((v: any) => `
+                    "${v.name}" => $env["${serverVarEnv(PROJUPPER, v.name)}"],`).join('')}
+                ],`
 
   const idnames = buildIdNames(entity, basicflow)
   const idnamesStr = idnames.map(n => `"${n}"`).join(', ')
@@ -246,7 +263,7 @@ ${hasList ? `
     $env = Runner::env_override([
         "${PROJUPPER}_TEST_${envToken(entity.name)}_ENTID" => $idmap,
         "${PROJUPPER}_TEST_LIVE" => "FALSE",
-        "${PROJUPPER}_TEST_EXPLAIN" => "FALSE",${apikeyEnvEntry}
+        "${PROJUPPER}_TEST_EXPLAIN" => "FALSE",${apikeyEnvEntry}${serverEnvEntry}
     ]);
 
     $idmap_resolved = Helpers::to_map(
@@ -267,9 +284,16 @@ ${hasList ? `
     Content(`
     if ($env["${PROJUPPER}_TEST_LIVE"] === "TRUE") {
         $merged_opts = Vs::merge([
-            [${apikeyLiveField}
+            // FIRST, so the generated fields below win: sdk-test-control.json's
+            // test.client.options adds to the live client, it does not redirect it.
+            Runner::live_client_options(),
+            [${apikeyLiveField}${serverLiveField}
             ],
-            $extra ?? [],
+            // ismap, not a plain "?? []" default: an empty PHP array is a
+            // LIST, and a non-map later entry REPLACES the accumulated map in
+            // merge - so the no-extras call discarded live_client_options()
+            // and the apikey/server map above it.
+            Vs::ismap($extra) ? $extra : new \\stdClass(),
         ]);
         $client = new ${model.const.Name}SDK(Helpers::to_map($merged_opts));
     }

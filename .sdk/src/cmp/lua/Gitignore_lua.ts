@@ -16,6 +16,10 @@ const Gitignore = cmp(async function Gitignore(_props: any) {
 *.dylib
 *.dll
 
+# The sekreto transport helper the secrets feature's plugin kinds run,
+# compiled by \`make build\` from feature/secrets/native/sekretonet.c
+feature/secrets/native/sekreto-net
+
 # LuaRocks
 .luarocks/
 lua_modules/

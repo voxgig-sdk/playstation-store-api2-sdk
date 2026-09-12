@@ -15,6 +15,7 @@ import {
   isConfigData,
   resolveAuthPrefix,
   serverVariables,
+  targetFeatures,
 } from '@voxgig/sdkgen'
 
 
@@ -27,10 +28,61 @@ import {
 
 
 import {
-  clean,
   formatLuaTable,
   luaLongString,
 } from './utility_lua'
+
+
+// PLUGIN DEFINITION REQUIRES AND THE FEATURE PLUGINS TABLE (the lua peer
+// of cmp/py/Config_py.ts's pluginImports/pluginDefs).
+//
+// Upstream sekreto replaced its self-registration registry with
+// voxgig/plugin definitions: a provider kind the caller did not pass in via
+// `plugins = { ... }` is unknown to that Sekreto. So the generated
+// config_plugins module requires each active plugin's module and names the
+// FIELD it exports (the model's `def.lua` map - `hashicorp` on
+// plugins/hashicorp.lua, `awssecrets` AND `awsparams` on plugins/aws.lua),
+// handing the list to the feature.
+//
+// A def value is the module's path under tm/lua, this target's root; the
+// require is that path with `.lua` stripped and slashes turned to dots,
+// resolved by the plain `?.lua` searcher every generated lua SDK relies on.
+// One `local` per module, so a two-definition module is required once.
+function pluginRequires(feature: any): { locals: string[], defs: Record<string, string[]> } {
+  const bypath: Record<string, { local: string, syms: string[] }> = {}
+  const defs: Record<string, string[]> = {}
+
+  each(feature, (f: any) => {
+    const syms: string[] = []
+
+    each(f.plugin, (plugin: any) => {
+      // Filter on `active` HERE rather than trusting the feature object to
+      // arrive filtered: getting it wrong in this direction emits a
+      // require for a module the plugin trim just deleted - an SDK that
+      // does not load, rather than one that merely carries too much.
+      if (false === plugin.active || null == plugin.active) return
+
+      for (const [sym, one] of Object.entries(plugin.def?.lua || {})) {
+        const path = String(one)
+        const local = path.replace(/^.*\//, '').replace(/\.lua$/, '')
+        const entry = (bypath[path] = bypath[path] || { local: 'plugin_' + local, syms: [] })
+        entry.syms.push(sym)
+        syms.push(entry.local + '.' + sym)
+      }
+    })
+
+    if (0 < syms.length) {
+      defs[f.name] = syms.sort()
+    }
+  })
+
+  const locals = Object.keys(bypath).sort().map((path: string) => {
+    const mod = path.replace(/\.lua$/, '').replace(/\//g, '.')
+    return `local ${bypath[path].local} = require("${mod}")`
+  })
+
+  return { locals, defs }
+}
 
 
 const Config = cmp(async function Config(props: any) {
@@ -40,7 +92,10 @@ const Config = cmp(async function Config(props: any) {
   const model: Model = ctx$.model
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  const feature = getModelPath(model, `main.${KIT}.feature`)
+  // Gated by the applicability tags, so this target never imports or
+  // registers a feature it has no source for. One rule, one place:
+  // helpers/applicability.
+  const feature = targetFeatures(model, target)
 
   const headers = getModelPath(model, `main.${KIT}.config.headers`) || {}
 
@@ -156,12 +211,7 @@ ${serverBlock}${authBlock}      headers = ${formatLuaTable(headers, 3)},
     Content(`      },
     },
     entity = ${formatLuaTable(
-      Object.values(entity).reduce((a: any, n: any) => (a[n.name] = clean({
-        fields: n.fields,
-        name: n.name,
-        op: n.op,
-        relations: n.relations,
-      }, true), a), {}), 2)},
+configDef.entity, 2)},
   }
 end
 `)
@@ -186,6 +236,42 @@ end
 
 
 return make_config
+`)
+  })
+
+  // The plugin definitions the model selected per feature, as a module of
+  // the config family. ALWAYS emitted, even with nothing declared: the
+  // secrets feature requires it (a missing module and a broken one must
+  // read differently there), and a feature source arrives in the tree by
+  // Main's blanket copy whether or not the model declares the feature.
+  //
+  // A sibling module rather than a member of `config`, for the reason
+  // config_shared is: `config` returns a bare function.
+  const plugins = pluginRequires(feature)
+
+  File({ name: 'config_plugins.' + target.ext }, () => {
+    Content(`-- ${model.const.Name} SDK feature plugin definitions
+--
+-- The sekreto plugin DEFINITIONS the model selected per feature, required
+-- below from the modules the catalogue's active \`plugin.def\` entries
+-- declare. Handed to each feature (secrets builds its Sekreto with them):
+-- a provider kind not listed here is unknown to this SDK - the four
+-- built-in kinds (env, memory, dotenv, file) come with the core and never
+-- appear here.
+${0 < plugins.locals.length ? '\n' + plugins.locals.join('\n') + '\n' : ''}
+
+local FEATURE_PLUGINS = {
+${Object.keys(plugins.defs).sort().map((fname: string) =>
+  `  ["${fname}"] = {\n` +
+  plugins.defs[fname].map((sym: string) => `    ${sym},\n`).join('') +
+  `  },\n`).join('')}}
+
+
+-- The definitions list for one feature's chain; empty when the model
+-- selected no plugin group for it.
+return function(name)
+  return FEATURE_PLUGINS[name] or {}
+end
 `)
   })
 

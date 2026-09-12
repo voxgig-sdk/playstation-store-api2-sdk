@@ -36,6 +36,20 @@ func makeOptionsUtil(ctx *core.Context) map[string]any {
 		}
 	}
 
+	// `auth: nil` is the documented way to disable auth outright, and
+	// prepareAuth honours it before it ever reads the apikey. But validate
+	// treats a stored nil as "no value", so the optspec's `auth` default
+	// fires and the suppression silently becomes "use default auth" —
+	// transmitting a credential the caller explicitly asked not to send.
+	//
+	// Suppliedness cannot be recovered after validate, hence here. The
+	// two-value form is required: options["auth"] reads nil both when the
+	// key is ABSENT and when it is present and nil, and only the second is
+	// a suppression. (ts gets this for free — `null === options.auth` is
+	// false for an omitted key, since that reads undefined.)
+	authval, authgiven := options["auth"]
+	authsuppressed := authgiven && authval == nil
+
 	opts := vs.Clone(options).(map[string]any)
 
 	// Feature add-order (feature #2). options.feature may be given as an ordered
@@ -108,7 +122,14 @@ func makeOptionsUtil(ctx *core.Context) map[string]any {
 			},
 		},
 		"utility": map[string]any{},
-		"system":  map[string]any{},
+		// Feature INSTANCES supplied at construction (the station adopt
+		// path): consumed by the constructor's featureAdd loop, so they
+		// are class instances, not data - `$ANY` accepts them verbatim.
+		// Without this entry the seam is dead: the constructor reads
+		// options.extend, but validate rejected the key (mirrors
+		// MakeOptionsUtility.ts).
+		"extend": "`$ANY`",
+		"system": map[string]any{},
 		"test": map[string]any{
 			"active": false,
 			"entity": map[string]any{
@@ -129,7 +150,7 @@ func makeOptionsUtil(ctx *core.Context) map[string]any {
 
 	// Preserve system.fetch before merge/validate.
 	var sysFetch any
-	if sf := vs.GetPath([]any{"system", "fetch"}, opts); sf != nil {
+	if sf := vs.GetPath(opts, []any{"system", "fetch"}); sf != nil {
 		sysFetch = sf
 	}
 
@@ -141,6 +162,11 @@ func makeOptionsUtil(ctx *core.Context) map[string]any {
 	validated, _ := vs.Validate(merged, optspec)
 	opts = validated.(map[string]any)
 
+	// Restore the suppression the optspec default would otherwise erase.
+	if authsuppressed {
+		opts["auth"] = nil
+	}
+
 	// Resolve a templated base URL (e.g. https://{tenant_id}.hanko.io).
 	// Every placeholder must resolve to a non-empty value: from
 	// options["server"] (user), else the config default. A placeholder that
@@ -151,15 +177,15 @@ func makeOptionsUtil(ctx *core.Context) map[string]any {
 	// PANICS (construction-time misconfiguration, as regexp.MustCompile).
 	if base, ok := opts["base"].(string); ok && strings.Contains(base, "{") {
 		testmode := false
-		if ta, ok := vs.GetPath([]any{"test", "active"}, opts).(bool); ok && ta {
+		if ta, ok := vs.GetPath(opts, []any{"test", "active"}).(bool); ok && ta {
 			testmode = true
 		}
-		if fa, ok := vs.GetPath([]any{"feature", "test", "active"}, opts).(bool); ok && fa {
+		if fa, ok := vs.GetPath(opts, []any{"feature", "test", "active"}).(bool); ok && fa {
 			testmode = true
 		}
 		server := core.ToMapAny(opts["server"])
 		sdkname := "SDK"
-		if mn, ok := vs.GetPath([]any{"main", "name"}, config).(string); ok && mn != "" {
+		if mn, ok := vs.GetPath(config, []any{"main", "name"}).(string); ok && mn != "" {
 			sdkname = mn
 		}
 		resolved := serverVarRe.ReplaceAllStringFunc(base, func(ph string) string {
@@ -191,7 +217,7 @@ func makeOptionsUtil(ctx *core.Context) map[string]any {
 
 	// Derived clean config.
 	cleanKeys := "key,token,id"
-	if ck := vs.GetPath([]any{"clean", "keys"}, opts); ck != nil {
+	if ck := vs.GetPath(opts, []any{"clean", "keys"}); ck != nil {
 		if cks, ok := ck.(string); ok {
 			cleanKeys = cks
 		}

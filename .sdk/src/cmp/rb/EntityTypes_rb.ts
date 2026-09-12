@@ -50,11 +50,21 @@ function symName(name: string): string {
 // Emit one typed value class: a YARD @!attribute block plus a keyword-init
 // Struct. Ruby's `Struct.new` rejects zero members, so an empty shape falls
 // back to a plain empty class (keeps the type name available).
+//
+// A member with an EMPTY name is dropped first. `Struct.new(:"")` raises
+// `NameError: cannot make operator ID : attrset` when the file loads, which
+// takes the whole SDK down rather than just that type -- and quoting does
+// not help, since the empty symbol is the one Ruby will not accept (`:"a-b"`
+// and `:"1x"` are both fine). A model should not carry a nameless field, so
+// upstream is where it gets fixed; this keeps one bad field from costing the
+// target everything.
 function emitStruct(
   typeName: string,
   doc: string,
-  members: Array<{ name: string, type: unknown, optional: boolean }>,
+  allmembers: Array<{ name: string, type: unknown, optional: boolean }>,
 ) {
+  const members = allmembers.filter((m) => '' !== String(m.name ?? '').trim())
+
   let block = `# ${doc}\n`
 
   members.forEach((m) => {

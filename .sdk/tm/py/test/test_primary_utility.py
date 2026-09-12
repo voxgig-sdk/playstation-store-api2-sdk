@@ -1,238 +1,87 @@
 # PlaystationStoreApi2 SDK primary utility test
-
-import json
-import os
-import re
+#
+# Corpus sections run through the vendored omni runner, via the resolver
+# in test/omni.py (struct-runner shape over native voxgig_omni). The
+# inline corpus engine this file used to carry is retired: omni resolves
+# arguments, applies the null rules, and enforces out/err/match - the
+# subjects below only adapt each utility's calling convention.
+#
+# Two conventions to know when adding a section:
+#
+# - Utilities that answer as a (value, err) TUPLE go through _unwrap,
+#   which raises the err so omni can match it against `err:` expectations.
+#   Utilities that answer bare values (or raise) are passed straight in.
+#
+# - `match: {ctx: ...}` assertions read the LIVE context after the
+#   subject ran - the resolver's CtxView takes care of presenting the
+#   context object as the map omni walks, camelCase keys included.
 
 import pytest
 
-from projectname_sdk.utility.voxgig_struct import voxgig_struct as vs
 from projectname_sdk import PlaystationStoreApi2SDK
 from projectname_sdk.core.spec import PlaystationStoreApi2Spec
 from projectname_sdk.core.result import PlaystationStoreApi2Result
-from projectname_sdk.core.response import PlaystationStoreApi2Response
 from projectname_sdk.core.operation import PlaystationStoreApi2Operation
 from projectname_sdk.core.error import PlaystationStoreApi2Error
-from projectname_sdk.core import helpers
 from projectname_sdk.feature.base_feature import PlaystationStoreApi2BaseFeature
 
-_TEST_DIR = os.path.dirname(os.path.abspath(__file__))
+from test.omni import makeRunner
 
 
-def _load_test_spec():
-    test_json_path = os.path.join(_TEST_DIR, '../../.sdk/test/test.json')
-    with open(test_json_path, 'r') as f:
-        return json.loads(f.read())
+# Resolved against test/omni.py's own directory, so the suite works from
+# any working directory.
+TEST_JSON_FILE = '../../.sdk/test/test.json'
 
 
-def _get_spec(spec, *keys):
-    cur = spec
-    for key in keys:
-        if isinstance(cur, dict):
-            cur = cur.get(key)
-        else:
-            return None
-    if isinstance(cur, dict):
-        return cur
-    return None
+_runner = makeRunner(TEST_JSON_FILE, PlaystationStoreApi2SDK.test(None, None))
+_run = _runner('primary')
+
+spec = _run['spec']
+runset = _run['runset']
+runsetflags = _run['runsetflags']
+
+# Under the old inline runner the suite drove the SDK directly; under omni
+# the runpack's client is the provider wrapping it. This suite treats the
+# client as the SDK - so unwrap the real instance (mirrors ts).
+client = _run['client']['sdk']
+utility = client._utility
 
 
-def _json_normalize(val):
-    if val is None:
-        return None
-    return json.loads(json.dumps(val, default=str))
+# Sections deliberately left empty in the shared corpus
+# (.sdk/test/primary/<name>.aon carries a PENDING header). Everything else
+# MUST contribute cases.
+PENDING = {
+    'fetcher', 'makeFetchDef', 'makeResult',
+    'featureAdd', 'featureHook', 'featureInit',
+}
 
 
-def _json_str(val):
-    try:
-        return json.dumps(val, default=str)
-    except Exception:
-        return str(val)
+def runsection(name, subject):
+    """Run one corpus section, failing loudly when it would run ZERO
+    cases. A renamed section or a fixture that compiled to an empty `set`
+    used to pass silently, which defeats the point of a shared oracle.
+    EVERY corpus-backed test goes through here (mirrors ts)."""
+    section = spec.get(name) if isinstance(spec, dict) else None
+    assert section is not None, (
+        "test corpus section '%s' missing - check the name against "
+        ".sdk/test/primary/" % name)
+    basic = section.get('basic') if isinstance(section, dict) else None
+    assert isinstance(basic, dict) and isinstance(basic.get('set'), list), (
+        "test corpus section '%s' has no basic.set list" % name)
+    if 0 == len(basic['set']) and name not in PENDING:
+        raise AssertionError(
+            "test corpus section '%s' is EMPTY - zero cases would run; "
+            "add cases, or mark the fixture PENDING in .sdk/test/primary/"
+            % name)
+    return runset(basic, subject)
 
 
-def _match_string(pattern, val):
-    if len(pattern) >= 2 and pattern[0] == '/' and pattern[-1] == '/':
-        try:
-            return re.search(pattern[1:-1], val) is not None
-        except Exception:
-            return False
-    return pattern.lower() in val.lower()
-
-
-def _match_deep(errors, check, base, path):
-    if check is None:
-        return
-
-    if isinstance(check, dict):
-        for key, check_val in check.items():
-            child_path = path + "." + key
-            base_val = None
-            if isinstance(base, dict):
-                base_val = base.get(key)
-            _match_deep(errors, check_val, base_val, child_path)
-    elif isinstance(check, list):
-        for i, check_val in enumerate(check):
-            child_path = "{}[{}]".format(path, i)
-            base_val = None
-            if isinstance(base, list) and i < len(base):
-                base_val = base[i]
-            _match_deep(errors, check_val, base_val, child_path)
-    else:
-        if isinstance(check, str) and check == "__EXISTS__":
-            if base is None:
-                errors.append("match {}: expected value to exist but got None".format(path))
-            return
-        if isinstance(check, str) and check == "__UNDEF__":
-            if base is not None:
-                errors.append("match {}: expected None but got {}".format(path, base))
-            return
-
-        norm_check = _json_normalize(check)
-        norm_base = _json_normalize(base)
-
-        if norm_check != norm_base:
-            if isinstance(check, str) and check != "":
-                base_str = vs.stringify(base) if base is not None else ""
-                if _match_string(check, base_str):
-                    return
-            errors.append("match {}: got {}, want {}".format(
-                path, _json_str(norm_base), _json_str(norm_check)))
-
-
-def _runset(testspec, subject):
-    if testspec is None:
-        return
-    entries = testspec.get("set")
-    if not isinstance(entries, list):
-        return
-
-    for i, entry in enumerate(entries):
-        if not isinstance(entry, dict):
-            continue
-
-        mark = ""
-        m = entry.get("mark")
-        if m is not None:
-            mark = " (mark={})".format(m)
-
-        result = None
-        err = None
-
-        try:
-            result, err = subject(entry)
-        except Exception as e:
-            err = e
-
-        expected_err = entry.get("err")
-
-        if err is not None:
-            if expected_err is not None:
-                err_msg = str(err)
-                if isinstance(expected_err, str):
-                    assert _match_string(expected_err, err_msg), \
-                        "entry {}{}: error mismatch: got {!r}, want contains {!r}".format(
-                            i, mark, err_msg, expected_err)
-                elif isinstance(expected_err, bool) and expected_err:
-                    pass  # any error is acceptable
-
-                match_spec = entry.get("match")
-                if isinstance(match_spec, dict):
-                    result_map = {
-                        "in": entry.get("in"),
-                        "out": _json_normalize(result),
-                        "err": {"message": str(err)},
-                    }
-                    errors = []
-                    _match_deep(errors, match_spec, result_map, "")
-                    assert len(errors) == 0, \
-                        "entry {}{}: {}".format(i, mark, "; ".join(errors))
-                continue
-
-            pytest.fail("entry {}{}: unexpected error: {}".format(i, mark, err))
-            continue
-
-        if expected_err is not None:
-            pytest.fail("entry {}{}: expected error containing {!r} but got result: {}".format(
-                i, mark, expected_err, _json_str(result)))
-            continue
-
-        matched = False
-        match_spec = entry.get("match")
-        if isinstance(match_spec, dict):
-            result_map = {
-                "in": entry.get("in"),
-                "out": _json_normalize(result),
-            }
-            if entry.get("args") is not None:
-                result_map["args"] = entry["args"]
-            elif entry.get("in") is not None:
-                result_map["args"] = [entry["in"]]
-            if entry.get("ctx") is not None:
-                result_map["ctx"] = entry["ctx"]
-            errors = []
-            _match_deep(errors, match_spec, result_map, "")
-            assert len(errors) == 0, \
-                "entry {}{}: {}".format(i, mark, "; ".join(errors))
-            matched = True
-
-        expected_out = entry.get("out")
-        if expected_out is None and matched:
-            continue
-        if expected_out is not None:
-            norm_result = _json_normalize(result)
-            norm_expected = _json_normalize(expected_out)
-            assert norm_result == norm_expected, \
-                "entry {}{}: output mismatch: got {} want {}".format(
-                    i, mark, _json_str(norm_result), _json_str(norm_expected))
-
-
-def _make_ctx_from_map(ctxmap, client, utility):
-    if ctxmap is None:
-        ctxmap = {}
-
-    ctx = utility.make_context(ctxmap, None)
-
-    if client is not None:
-        ctx.client = client
-        ctx.utility = utility
-    if ctx.options is None and client is not None:
-        ctx.options = client.options_map()
-
-    # Handle spec from JSON map
-    spec_map = ctxmap.get("spec")
-    if isinstance(spec_map, dict):
-        ctx.spec = PlaystationStoreApi2Spec(spec_map)
-
-    # Handle result from JSON map
-    res_map = ctxmap.get("result")
-    if isinstance(res_map, dict):
-        ctx.result = PlaystationStoreApi2Result(res_map)
-        err_map = res_map.get("err")
-        if isinstance(err_map, dict):
-            msg = err_map.get("message", "")
-            ctx.result.err = PlaystationStoreApi2Error("", msg)
-
-    # Handle response from JSON map
-    resp_map = ctxmap.get("response")
-    if isinstance(resp_map, dict):
-        ctx.response = PlaystationStoreApi2Response(resp_map)
-        body = resp_map.get("body")
-        if body is not None:
-            body_copy = body
-            ctx.response.json_func = lambda: body_copy
-        headers = resp_map.get("headers")
-        if isinstance(headers, dict):
-            lower_headers = {}
-            for k, v in headers.items():
-                lower_headers[k.lower()] = v
-            ctx.response.headers = lower_headers
-
-    return ctx
-
-
-def _fixctx(ctx, client):
-    if ctx is not None and ctx.client is not None and ctx.options is None:
-        ctx.options = ctx.client.options_map()
+def _unwrap(pair):
+    """(value, err) tuple convention -> value-or-raise, omni's shape."""
+    val, err = pair
+    if err is not None:
+        raise err
+    return val
 
 
 def _err_from_map(m):
@@ -318,57 +167,16 @@ class TestPrimaryUtility:
         assert cleaned is not None
 
     def test_done_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-            _fixctx(ctx, client)
-            # done() returns the bare result data on success and raises on
-            # error. Adapt to the (result, err) shape the runner expects.
-            try:
-                return utility.done(ctx), None
-            except PlaystationStoreApi2Error as e:
-                return None, e
-
-        _runset(_get_spec(primary, "done", "basic"), subject)
+        runsection('done', lambda ctx: utility.done(ctx))
 
     def test_make_error_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            args = entry.get("args")
-            if not isinstance(args, list) or len(args) == 0:
-                args = [{}]
-
-            ctxmap = args[0]
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-            _fixctx(ctx, client)
-
-            err = None
-            if len(args) > 1:
-                err_map = args[1]
-                if isinstance(err_map, dict):
-                    err = _err_from_map(err_map)
-
+        def subject(ctx, errmap=None):
+            err = _err_from_map(errmap) if isinstance(errmap, dict) else None
             # make_error() raises the constructed exception on the default
-            # (throw) path. Adapt to the (result, err) shape the runner expects.
-            try:
-                return utility.make_error(ctx, err), None
-            except PlaystationStoreApi2Error as e:
-                return None, e
+            # (throw) path; omni matches it against the entry's err.
+            return utility.make_error(ctx, err)
 
-        _runset(_get_spec(primary, "makeError", "basic"), subject)
+        runsection('makeError', subject)
 
     def test_make_error_no_throw(self):
         client = PlaystationStoreApi2SDK.test(None, None)
@@ -514,27 +322,21 @@ class TestPrimaryUtility:
         assert "blocked" in str(err).lower()
 
     def test_make_context_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            in_val = entry.get("in")
-            if isinstance(in_val, dict):
-                ctx = utility.make_context(in_val, None)
-                out = {
-                    "id": ctx.id,
+        def subject(vin):
+            if not isinstance(vin, dict):
+                return None
+            ctx = utility.make_context(vin, None)
+            out = {
+                "id": ctx.id,
+            }
+            if ctx.op is not None:
+                out["op"] = {
+                    "name": ctx.op.name,
+                    "input": ctx.op.input,
                 }
-                if ctx.op is not None:
-                    out["op"] = {
-                        "name": ctx.op.name,
-                        "input": ctx.op.input,
-                    }
-                return out, None
-            return None, None
+            return out
 
-        _runset(_get_spec(primary, "makeContext", "basic"), subject)
+        runsection('makeContext', subject)
 
     def test_make_fetch_def_basic(self):
         client = PlaystationStoreApi2SDK.test(None, None)
@@ -587,85 +389,26 @@ class TestPrimaryUtility:
         assert '"name"' in body_str
 
     def test_make_options_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            in_val = entry.get("in")
-            if not isinstance(in_val, dict):
-                in_val = {}
+        def subject(vin):
+            if not isinstance(vin, dict):
+                vin = {}
             ctx = utility.make_context({
-                "options": in_val.get("options"),
-                "config": in_val.get("config"),
+                "options": vin.get("options"),
+                "config": vin.get("config"),
             }, None)
             ctx.client = client
             ctx.utility = utility
-            return utility.make_options(ctx), None
+            return utility.make_options(ctx)
 
-        _runset(_get_spec(primary, "makeOptions", "basic"), subject)
+        runsection('makeOptions', subject)
 
     def test_make_request_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-            ctx.options = client.options_map()
-
-            _, err = utility.make_request(ctx)
-            if err is not None:
-                return None, err
-
-            # Update entry ctx for match checking
-            entry_ctx = entry.get("ctx")
-            if isinstance(entry_ctx, dict):
-                if ctx.response is not None:
-                    entry_ctx["response"] = "exists"
-                if ctx.result is not None:
-                    entry_ctx["result"] = "exists"
-
-            return None, None
-
-        _runset(_get_spec(primary, "makeRequest", "basic"), subject)
+        runsection('makeRequest',
+                   lambda ctx: _unwrap(utility.make_request(ctx)))
 
     def test_make_response_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-            _fixctx(ctx, client)
-
-            _, err = utility.make_response(ctx)
-            if err is not None:
-                return None, err
-
-            # Update entry ctx for match with result data
-            entry_ctx = entry.get("ctx")
-            if isinstance(entry_ctx, dict) and ctx.result is not None:
-                entry_ctx["result"] = {
-                    "ok": ctx.result.ok,
-                    "status": ctx.result.status,
-                    "statusText": ctx.result.status_text,
-                    "headers": ctx.result.headers,
-                    "body": ctx.result.body,
-                }
-
-            return None, None
-
-        _runset(_get_spec(primary, "makeResponse", "basic"), subject)
+        runsection('makeResponse',
+                   lambda ctx: _unwrap(utility.make_response(ctx)))
 
     def test_make_result_basic(self):
         client = PlaystationStoreApi2SDK.test(None, None)
@@ -720,45 +463,30 @@ class TestPrimaryUtility:
         assert err is not None
 
     def test_make_spec_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
+        setup = spec.get('makeSpec', {}).get('DEF', {}).get('setup', {})
+        spec_client = PlaystationStoreApi2SDK.test(None, setup.get('a') or {})
 
-        setup_opts = _get_spec(primary, "makeSpec", "DEF", "setup", "a")
-        spec_client = PlaystationStoreApi2SDK.test(None, setup_opts)
-        spec_utility = spec_client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, spec_client, spec_utility)
+        def subject(ctx):
+            ctx.client = spec_client
             ctx.options = spec_client.options_map()
+            return _unwrap(utility.make_spec(ctx))
 
-            _, err = utility.make_spec(ctx)
-            if err is not None:
-                return None, err
-
-            # Update entry ctx for match
-            entry_ctx = entry.get("ctx")
-            if isinstance(entry_ctx, dict) and ctx.spec is not None:
-                entry_ctx["spec"] = {
-                    "base": ctx.spec.base,
-                    "prefix": ctx.spec.prefix,
-                    "suffix": ctx.spec.suffix,
-                    "method": ctx.spec.method,
-                    "params": ctx.spec.params,
-                    "query": ctx.spec.query,
-                    "headers": ctx.spec.headers,
-                    "step": ctx.spec.step,
-                }
-
-            return None, None
-
-        _runset(_get_spec(primary, "makeSpec", "basic"), subject)
+        runsection('makeSpec', subject)
 
     def test_make_point_basic(self):
+        # Driven from the corpus like every other section (was one
+        # hand-written case covering one of this utility's branches; the
+        # single-point sanity case is kept below).
+        def subject(ctx):
+            point, err = utility.make_point(ctx)
+            # The corpus asserts refusals by code (`match: {out: {code:
+            # ...}}`), so an error is the RESULT here, as in ts where
+            # makePoint answers with an Error value.
+            return err if err is not None else point
+
+        runsection('makePoint', subject)
+
+    def test_make_point_single(self):
         client = PlaystationStoreApi2SDK.test(None, None)
         utility = client._utility
         ctx = _make_test_ctx(client, utility)
@@ -778,226 +506,61 @@ class TestPrimaryUtility:
         assert ctx.point is not None
 
     def test_make_url_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
+        def subject(ctx):
             if ctx.result is None:
                 ctx.result = PlaystationStoreApi2Result({})
-            return utility.make_url(ctx)
+            return _unwrap(utility.make_url(ctx))
 
-        _runset(_get_spec(primary, "makeUrl", "basic"), subject)
+        runsection('makeUrl', subject)
 
     def test_operator_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-
-        def subject(entry):
-            in_val = entry.get("in")
-            if not isinstance(in_val, dict):
-                in_val = {}
-            op = PlaystationStoreApi2Operation(in_val)
+        def subject(vin):
+            if not isinstance(vin, dict):
+                vin = {}
+            op = PlaystationStoreApi2Operation(vin)
             return {
                 "entity": op.entity,
                 "name": op.name,
                 "input": op.input,
                 "points": op.points,
-            }, None
+            }
 
-        _runset(_get_spec(primary, "operator", "basic"), subject)
+        runsection('operator', subject)
 
     def test_param_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            args = entry.get("args")
-            if not isinstance(args, list) or len(args) < 2:
-                return None, None
-
-            ctxmap = args[0]
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-            paramdef = args[1]
-
-            result = utility.param(ctx, paramdef)
-
-            # Update entry ctx for match
-            match_spec = entry.get("match")
-            if isinstance(match_spec, dict):
-                ctx_match = match_spec.get("ctx")
-                if isinstance(ctx_match, dict):
-                    entry_ctx = entry.get("ctx")
-                    if entry_ctx is None:
-                        entry_ctx = {}
-                        entry["ctx"] = entry_ctx
-                    # Copy spec alias back to entry ctx for matching
-                    spec_match = ctx_match.get("spec")
-                    if isinstance(spec_match, dict):
-                        if ctx.spec is not None:
-                            if entry_ctx.get("spec") is None:
-                                entry_ctx["spec"] = {}
-                            alias_match = spec_match.get("alias")
-                            if isinstance(alias_match, dict):
-                                entry_ctx["spec"] = {
-                                    "alias": ctx.spec.alias,
-                                }
-
-            return result, None
-
-        _runset(_get_spec(primary, "param", "basic"), subject)
+        runsection('param', lambda ctx, name=None: utility.param(ctx, name))
 
     def test_prepare_auth_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
+        setup = spec.get('prepareAuth', {}).get('DEF', {}).get('setup', {})
+        auth_client = PlaystationStoreApi2SDK.test(None, setup.get('a') or {})
 
-        setup_opts = _get_spec(primary, "prepareAuth", "DEF", "setup", "a")
-        auth_client = PlaystationStoreApi2SDK.test(None, setup_opts)
-        auth_utility = auth_client._utility
+        def subject(ctx):
+            ctx.client = auth_client
+            return _unwrap(utility.prepare_auth(ctx))
 
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, auth_client, auth_utility)
-            _fixctx(ctx, auth_client)
-
-            _, err = utility.prepare_auth(ctx)
-            if err is not None:
-                return None, err
-
-            # Update entry ctx for match
-            entry_ctx = entry.get("ctx")
-            if isinstance(entry_ctx, dict) and ctx.spec is not None:
-                entry_ctx["spec"] = {
-                    "headers": ctx.spec.headers,
-                }
-
-            return None, None
-
-        _runset(_get_spec(primary, "prepareAuth", "basic"), subject)
+        runsection('prepareAuth', subject)
 
     def test_prepare_body_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-            _fixctx(ctx, client)
-            return utility.prepare_body(ctx), None
-
-        _runset(_get_spec(primary, "prepareBody", "basic"), subject)
+        runsection('prepareBody', lambda ctx: utility.prepare_body(ctx))
 
     def test_prepare_headers_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-            return utility.prepare_headers(ctx), None
-
-        _runset(_get_spec(primary, "prepareHeaders", "basic"), subject)
+        runsection('prepareHeaders', lambda ctx: utility.prepare_headers(ctx))
 
     def test_prepare_method_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-            return utility.prepare_method(ctx), None
-
-        _runset(_get_spec(primary, "prepareMethod", "basic"), subject)
+        runsection('prepareMethod', lambda ctx: utility.prepare_method(ctx))
 
     def test_prepare_params_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-            return utility.prepare_params(ctx), None
-
-        _runset(_get_spec(primary, "prepareParams", "basic"), subject)
+        runsection('prepareParams', lambda ctx: utility.prepare_params(ctx))
 
     def test_prepare_path_basic(self):
-        # Was two hand-written cases that had drifted out of the shared corpus
-        # (the preparePath fixture shipped as an empty `set: []`). Now driven
-        # by the corpus like every other section, so all ports assert the same
-        # separator / blank-segment behaviour.
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-            return utility.prepare_path(ctx), None
-
-        _runset(_get_spec(primary, "preparePath", "basic"), subject)
+        runsection('preparePath', lambda ctx: utility.prepare_path(ctx))
 
     def test_prepare_query_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-            return utility.prepare_query(ctx), None
-
-        _runset(_get_spec(primary, "prepareQuery", "basic"), subject)
+        runsection('prepareQuery', lambda ctx: utility.prepare_query(ctx))
 
     def test_result_basic_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-            _fixctx(ctx, client)
-
+        def subject(ctx):
             result = utility.result_basic(ctx)
-
             out = {
                 "status": result.status,
                 "statusText": result.status_text,
@@ -1006,107 +569,20 @@ class TestPrimaryUtility:
                 out["err"] = {
                     "message": str(result.err),
                 }
+            return out
 
-            return out, None
-
-        _runset(_get_spec(primary, "resultBasic", "basic"), subject)
+        runsection('resultBasic', subject)
 
     def test_result_body_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-
-            utility.result_body(ctx)
-
-            # Update entry ctx for match
-            entry_ctx = entry.get("ctx")
-            if isinstance(entry_ctx, dict) and ctx.result is not None:
-                entry_ctx["result"] = {
-                    "body": ctx.result.body,
-                }
-
-            return None, None
-
-        _runset(_get_spec(primary, "resultBody", "basic"), subject)
+        runsection('resultBody', lambda ctx: utility.result_body(ctx))
 
     def test_result_headers_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-
-            utility.result_headers(ctx)
-
-            # Update entry ctx for match
-            entry_ctx = entry.get("ctx")
-            if isinstance(entry_ctx, dict) and ctx.result is not None:
-                entry_ctx["result"] = {
-                    "headers": ctx.result.headers,
-                }
-
-            return None, None
-
-        _runset(_get_spec(primary, "resultHeaders", "basic"), subject)
+        runsection('resultHeaders', lambda ctx: utility.result_headers(ctx))
 
     def test_transform_request_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-
-            result = utility.transform_request(ctx)
-
-            # Update entry ctx for match (step changed)
-            entry_ctx = entry.get("ctx")
-            if isinstance(entry_ctx, dict) and ctx.spec is not None:
-                spec_map = entry_ctx.get("spec")
-                if isinstance(spec_map, dict):
-                    spec_map["step"] = ctx.spec.step
-
-            return result, None
-
-        _runset(_get_spec(primary, "transformRequest", "basic"), subject)
+        runsection('transformRequest',
+                   lambda ctx: utility.transform_request(ctx))
 
     def test_transform_response_basic(self):
-        spec = _load_test_spec()
-        primary = _get_spec(spec, "primary")
-        client = PlaystationStoreApi2SDK.test(None, None)
-        utility = client._utility
-
-        def subject(entry):
-            ctxmap = entry.get("ctx")
-            if not isinstance(ctxmap, dict):
-                ctxmap = {}
-            ctx = _make_ctx_from_map(ctxmap, client, utility)
-
-            result = utility.transform_response(ctx)
-
-            # Update entry ctx for match (step changed)
-            entry_ctx = entry.get("ctx")
-            if isinstance(entry_ctx, dict) and ctx.spec is not None:
-                spec_map = entry_ctx.get("spec")
-                if isinstance(spec_map, dict):
-                    spec_map["step"] = ctx.spec.step
-
-            return result, None
-
-        _runset(_get_spec(primary, "transformResponse", "basic"), subject)
+        runsection('transformResponse',
+                   lambda ctx: utility.transform_response(ctx))

@@ -7,6 +7,8 @@ import {
   nom,
 } from '@voxgig/apidef'
 
+import { luaKey } from './utility_lua'
+
 
 const ReadmeQuick = cmp(function ReadmeQuick(props: any) {
   const { target, ctx$: { model } } = props
@@ -65,9 +67,6 @@ local client = ${ctor}
       if ('ARRAY' === k || 'OBJECT' === k) return '{}'
       return `"${placeholder}"`
     }
-    const luaKey = (name: string): string =>
-      /^[A-Za-z_]\w*$/.test(name) ? name : `["${name}"]`
-
     // MODEL-DRIVEN display field: the list example must reference a field
     // the entity actually has, not a hardcoded "name". Pick the entity's
     // first non-id string field (falling back to the first non-id field of

@@ -114,7 +114,14 @@ func fcFetcher(res []any) sdk.FetcherFunc {
 // REPLACES the transport, so a client in test mode would shadow the script.
 func fcClient(kase map[string]any) *sdk.PlaystationStoreApi2SDK {
 	res, _ := kase["res"].([]any)
+	// "test" here is the OPTION, not the `test` FEATURE. It says "this
+	// client is not live", which is what makes a REQUIRED OpenAPI server
+	// variable resolve to a deterministic test-<name> rather than panic at
+	// construction (see makeOptions). It installs no transport, so the
+	// scripted fetcher still stands — the FEATURE is transport: 'base' and
+	// would shadow it, which is why this cannot just turn the feature on.
 	opts := map[string]any{
+		"test":    map[string]any{"active": true},
 		"utility": map[string]any{"fetcher": fcFetcher(res)},
 	}
 	if f, ok := kase["feature"]; ok {

@@ -12,6 +12,7 @@ struct: transform: @"transform.aon"
 struct: walk: @"walk.aon"
 struct: validate: @"validate.aon"
 struct: select: @"select.aon"
+struct: nullsem: @"nullsem.aon"
 
 primary: check: {
   DEF: {

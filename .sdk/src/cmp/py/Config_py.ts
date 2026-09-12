@@ -15,6 +15,7 @@ import {
   isConfigData,
   resolveAuthPrefix,
   serverVariables,
+  targetFeatures,
 } from '@voxgig/sdkgen'
 
 
@@ -27,9 +28,66 @@ import {
 
 
 import {
-  clean,
   formatPyDict,
 } from './utility_py'
+
+
+// PLUGIN DEFINITION IMPORTS AND THE FEATURE_PLUGINS MAP (mirrors
+// cmp/ts/Config_ts.ts).
+//
+// Upstream sekreto replaced its self-registration registry with
+// voxgig/plugin definitions: a provider kind the caller did not pass in
+// via `plugins: [...]` is unknown to that Sekreto. So config imports each
+// active plugin's exported definition BY NAME (the model's `def.py` map)
+// and hands the list to the feature through FEATURE_PLUGINS.
+//
+// The `def` map is declared in the model rather than derived from
+// filenames because one module may export several definitions (sekreto's
+// aws.py exports awssecrets AND awsparams). A def value is the module's
+// path under tm/py ('pkg/feature/.../aws.py'); Main copies tm/py/pkg INTO
+// the <name>_sdk package, so the import module is the path with `pkg/`
+// swapped for the package name and slashes for dots.
+function pluginImports(feature: any, pkg: string) {
+  each(feature, (f: any) => {
+    // path -> [symbol, ...], so one import line serves a two-definition
+    // module.
+    const bypath: Record<string, string[]> = {}
+
+    each(f.plugin, (plugin: any) => {
+      // Filter on `active` HERE rather than trusting the feature object
+      // to arrive filtered: getting it wrong in this direction emits an
+      // import for a module the plugin trim just deleted - an SDK that
+      // does not import, rather than one that merely carries too much.
+      if (false === plugin.active || null == plugin.active) return
+
+      for (const [sym, one] of Object.entries(plugin.def?.py || {})) {
+        const path = String(one)
+        ; (bypath[path] = bypath[path] || []).push(sym)
+      }
+    })
+
+    for (const path of Object.keys(bypath).sort()) {
+      const mod = pkg + '.' +
+        path.replace(/^pkg\//, '').replace(/\.py$/, '').replace(/\//g, '.')
+      Line(`from ${mod} import ${bypath[path].sort().join(', ')}`)
+    }
+  })
+}
+
+// The FEATURE_PLUGINS entries: one line per feature that has any active
+// plugin definitions, listing the imported symbols.
+function pluginDefs(feature: any) {
+  each(feature, (f: any) => {
+    const syms: string[] = []
+    each(f.plugin, (plugin: any) => {
+      if (false === plugin.active || null == plugin.active) return
+      syms.push(...Object.keys(plugin.def?.py || {}))
+    })
+    if (0 < syms.length) {
+      Line(`    "${f.name}": [${syms.sort().join(', ')}],`)
+    }
+  })
+}
 
 
 const Config = cmp(async function Config(props: any) {
@@ -39,7 +97,10 @@ const Config = cmp(async function Config(props: any) {
   const model: Model = ctx$.model
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  const feature = getModelPath(model, `main.${KIT}.feature`)
+  // Gated by the applicability tags, so this target never imports or
+  // registers a feature it has no source for. One rule, one place:
+  // helpers/applicability.
+  const feature = targetFeatures(model, target)
 
   const headers = getModelPath(model, `main.${KIT}.config.headers`) || {}
 
@@ -73,10 +134,33 @@ const Config = cmp(async function Config(props: any) {
   const { def: configDef, json: configJson } = configDefinition(model, target.name)
   const asData = isConfigData(configJson, configReprSetting(model))
 
+  const pkg = model.const.Name.toLowerCase() + '_sdk'
+
   File({ name: 'config.' + target.ext }, () => {
 
     Content(`# ${model.const.Name} SDK configuration
-${asData ? '\nimport json\n' : ''}
+${asData ? '\nimport json\n' : ''}`)
+
+    pluginImports(feature, pkg)
+
+    // The FEATURE_PLUGINS map is ALWAYS emitted, even empty: the secrets
+    // feature module imports it unconditionally, and (unlike ts) the py
+    // feature source is copied by Main's blanket pkg copy whether or not
+    // the model declares the feature - an import of a missing name would
+    // fail the whole package at collection time.
+    Content(`
+
+# The sekreto plugin DEFINITIONS the model selected per feature, imported
+# above by name from the modules the catalogue's active \`plugin.def\`
+# entries declare. Handed to each feature (secrets builds its Sekreto
+# with them): a provider kind not listed here is unknown to that SDK.
+FEATURE_PLUGINS = {
+`)
+
+    pluginDefs(feature)
+
+    Content(`}
+
 
 _shared_config = None
 
@@ -176,12 +260,7 @@ ${serverBlock}${authBlock}            "headers": ${formatPyDict(headers, 3)},
     Content(`            },
         },
         "entity": ${formatPyDict(
-      Object.values(entity).reduce((a: any, n: any) => (a[n.name] = clean({
-        fields: n.fields,
-        name: n.name,
-        op: n.op,
-        relations: n.relations,
-      }, true), a), {}), 2)},
+configDef.entity, 2)},
     }
 `)
   })

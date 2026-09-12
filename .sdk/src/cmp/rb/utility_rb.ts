@@ -48,7 +48,9 @@ function formatRubyValue(val: any, indent: number = 0): string {
     return 'nil'
   }
   if (typeof val === 'string') {
-    return `"${val.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+    // `#` is escaped only where it OPENS an interpolation (#{, #$, #@), so
+    // this changes output solely for values that would otherwise interpolate.
+    return `"${val.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/#(?=[{$@])/g, '\\#')}"`
   }
   if (typeof val === 'number') {
     return String(val)

@@ -24,6 +24,8 @@ import {
   buildIdNames,
   getMatchEntries,
   isAuthActive,
+  serverVarEnv,
+  serverVariables,
   entityDataIdField, envName, envToken
 } from '@voxgig/sdkgen'
 
@@ -60,11 +62,25 @@ const TestEntity = cmp(function TestEntity(props: any) {
 
   const authActive = isAuthActive(model)
   const apikeyEnvEntry = authActive
-    ? `\n        "${PROJUPPER}_APIKEY": "NONE",`
+    ? `\n        "${PROJUPPER}_APIKEY": "",`
     : ''
   const apikeyLiveField = authActive
     ? `\n                "apikey": env.get("${PROJUPPER}_APIKEY"),`
     : ''
+
+  // A templated server URL (OpenAPI server variables) makes a LIVE client
+  // impossible to construct without values: make_options raises rather than
+  // request a URL with a literal `{account_id}` in it. Taken from the
+  // environment, the same way the apikey is.
+  const svars = serverVariables(model)
+  const serverEnvEntry = svars
+    .map((v: any) => `\n        "${serverVarEnv(PROJUPPER, v.name)}": ${JSON.stringify(v.dflt)},`).join('')
+  const serverLiveField = 0 === svars.length ? '' :
+    `\n                "server": {` +
+    svars.map((v: any) =>
+      `\n                    "${v.name}": env.get("${serverVarEnv(PROJUPPER, v.name)}"),`).join('') +
+    `\n                },`
+
 
   const idnames = buildIdNames(entity, basicflow)
   const idnamesStr = idnames.map(n => `"${n}"`).join(', ')
@@ -235,7 +251,7 @@ def _${entity.name}_basic_setup(extra):
     env = runner.env_override({
         "${PROJUPPER}_TEST_${envToken(entity.name)}_ENTID": idmap,
         "${PROJUPPER}_TEST_LIVE": "FALSE",
-        "${PROJUPPER}_TEST_EXPLAIN": "FALSE",${apikeyEnvEntry}
+        "${PROJUPPER}_TEST_EXPLAIN": "FALSE",${apikeyEnvEntry}${serverEnvEntry}
     })
 
     idmap_resolved = helpers.to_map(
@@ -254,7 +270,11 @@ def _${entity.name}_basic_setup(extra):
     Content(`
     if env.get("${PROJUPPER}_TEST_LIVE") == "TRUE":
         merged_opts = vs.merge([
-            {${apikeyLiveField}
+            # FIRST, so the generated fields below win: sdk-test-control.json's
+            # test.client.options adds to the live client, it does not
+            # redirect it.
+            runner.live_client_options(),
+            {${apikeyLiveField}${serverLiveField}
             },
             extra or {},
         ])

@@ -102,6 +102,34 @@ class PlaystationStoreApi2TestRunner:
         return False, None
 
     @staticmethod
+    def live_client_options():
+        """Extra SDK options every LIVE client is constructed with, from
+        sdk-test-control.json `test.client.options`.
+
+        The generated live client knows two things: the base URL (from the
+        spec) and the credential (from the environment). Everything else
+        about how a particular API wants to be talked to - which features to
+        switch on, and with what settings - is a property of THAT API, known
+        to the project and to nothing in the toolchain.
+
+        Merged UNDER the generated fields, so the suite's own
+        base/apikey/server values win: this ADDS to the live client, it does
+        not redirect it.
+
+        Reserved fields are stripped HERE rather than at each merge site:
+        the generated dict only names a field when the model calls for one,
+        so a "base" in this block would face no competing value and would
+        silently redirect the whole suite - credential included - to another
+        host.
+        """
+        ctrl = PlaystationStoreApi2TestRunner.load_test_control()
+        opts = ctrl.get("test", {}).get("client", {}).get("options")
+        if not isinstance(opts, dict):
+            return {}
+        reserved = ("base", "prefix", "suffix", "server", "apikey", "secret")
+        return {k: v for k, v in opts.items() if k not in reserved}
+
+    @staticmethod
     def live_delay_ms():
         """Per-test live pacing delay (ms); default 500."""
         ctrl = PlaystationStoreApi2TestRunner.load_test_control()
@@ -159,6 +187,10 @@ def is_control_skipped(kind, name, mode):
 
 def load_test_control():
     return PlaystationStoreApi2TestRunner.load_test_control()
+
+
+def live_client_options():
+    return PlaystationStoreApi2TestRunner.live_client_options()
 
 
 def live_delay_ms():

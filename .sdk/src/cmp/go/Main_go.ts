@@ -4,7 +4,9 @@ import * as Path from 'node:path'
 import {
   cmp, each, names, cmap,
   List, File, Content, Copy, Folder, Fragment, Line, FeatureHook,
-  entityClassName, entityCollection, goModule, goPackageIdent
+  entityClassName, entityCollection, goModule, goPackageIdent, pluginExcludes,
+  targetFeatures,
+  TEST_CONTROL_EXCLUDE
 } from '@voxgig/sdkgen'
 
 
@@ -33,7 +35,10 @@ const Main = cmp(async function Main(props: any) {
   const { model } = props.ctx$
 
   const entity: ModelEntity = getModelPath(model, `main.${KIT}.entity`)
-  const feature = getModelPath(model, `main.${KIT}.feature`)
+  // Gated by the applicability tags, so this target never imports or
+  // registers a feature it has no source for. One rule, one place:
+  // helpers/applicability.
+  const feature = targetFeatures(model, target)
 
   // Go module path == the repo path on GitHub (org from model.origin),
   // e.g. github.com/voxgig-sdk/<slug>-sdk. Used in go.mod and every import.
@@ -55,7 +60,13 @@ const Main = cmp(async function Main(props: any) {
   // downstream consumers.
   Copy({
     from: 'tm/' + target.name,
-    exclude: [/src\//, /utility\/struct\/go\.mod$/],
+    // pluginExcludes: the generate-time plugin trim (an INACTIVE plugin
+    // group's declared files stay out of the tree - the model's `path`
+    // entries are target-root-relative, which is this Copy's root). The
+    // FEATURE-level trim for go stays an add-time concern (vendor-tag
+    // rollout, Decision 5).
+    exclude: [/src\//, /utility\/struct\/go\.mod$/, TEST_CONTROL_EXCLUDE,
+      ...pluginExcludes(model)],
     replace: {
       ...props.ctx$.stdrep,
       GOMODULE: gomodule,

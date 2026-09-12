@@ -3,23 +3,30 @@ package core
 import (
 	"math/rand"
 	"strconv"
+	"sync"
 
 	vs "github.com/voxgig/struct"
 )
 
 type Context struct {
-	Id       string
-	Out      map[string]any
-	Ctrl     *Control
-	Meta     map[string]any
-	Client   *PlaystationStoreApi2SDK
-	Utility  *Utility
-	Op       *Operation
-	Point    map[string]any
-	Config   map[string]any
-	Entopts  map[string]any
-	Options  map[string]any
-	Opmap    map[string]*Operation
+	Id      string
+	Out     map[string]any
+	Ctrl    *Control
+	Meta    map[string]any
+	Client  *PlaystationStoreApi2SDK
+	Utility *Utility
+	Op      *Operation
+	Point   map[string]any
+	Config  map[string]any
+	Entopts map[string]any
+	Options map[string]any
+	Opmap   map[string]*Operation
+	// Opmu guards Opmap. The map is a CACHE shared by inheritance across
+	// every context derived from the same root (see the Opmap block in
+	// NewContext), so two entity operations running on separate
+	// goroutines otherwise race resolveOp's read-then-write - the mutex
+	// travels WITH the map, inherited from the same base context.
+	Opmu     *sync.Mutex
 	Response *Response
 	Result   *Result
 	Spec     *Spec
@@ -156,9 +163,13 @@ func NewContext(ctxmap map[string]any, basectx *Context) *Context {
 	}
 	if ctx.Opmap == nil && basectx != nil {
 		ctx.Opmap = basectx.Opmap
+		ctx.Opmu = basectx.Opmu
 	}
 	if ctx.Opmap == nil {
 		ctx.Opmap = map[string]*Operation{}
+	}
+	if ctx.Opmu == nil {
+		ctx.Opmu = &sync.Mutex{}
 	}
 
 	// Data
@@ -237,7 +248,10 @@ func (ctx *Context) resolveOp(opname string) *Operation {
 	}
 	cacheKey := entname + ":" + opname
 
-	if op, ok := ctx.Opmap[cacheKey]; ok && op != nil {
+	ctx.Opmu.Lock()
+	cached, cachedok := ctx.Opmap[cacheKey]
+	ctx.Opmu.Unlock()
+	if op, ok := cached, cachedok; ok && op != nil {
 		return op
 	}
 
@@ -245,7 +259,7 @@ func (ctx *Context) resolveOp(opname string) *Operation {
 		return NewOperation(map[string]any{})
 	}
 
-	opcfg := vs.GetPath([]any{"entity", entname, "op", opname}, ctx.Config)
+	opcfg := vs.GetPath(ctx.Config, []any{"entity", entname, "op", opname})
 
 	input := "match"
 	if opname == "update" || opname == "create" {
@@ -267,13 +281,15 @@ func (ctx *Context) resolveOp(opname string) *Operation {
 	}
 
 	op := NewOperation(map[string]any{
-		"entity":  entname,
-		"name":    opname,
-		"input":   input,
+		"entity": entname,
+		"name":   opname,
+		"input":  input,
 		"points": targets,
 	})
 
+	ctx.Opmu.Lock()
 	ctx.Opmap[cacheKey] = op
+	ctx.Opmu.Unlock()
 	return op
 }
 

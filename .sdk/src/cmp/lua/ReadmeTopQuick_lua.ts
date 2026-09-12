@@ -7,6 +7,8 @@ import {
   nom,
 } from '@voxgig/apidef'
 
+import { luaKey } from './utility_lua'
+
 
 // A type-correct, executable Lua literal for a param: numeric/boolean/table
 // params render a typed literal; strings render the quoted placeholder (the
@@ -20,9 +22,6 @@ function luaLit(type: any, placeholder: string = 'example'): string {
 }
 
 // Non-identifier table keys use bracket syntax.
-function luaKey(name: string): string {
-  return /^[A-Za-z_]\w*$/.test(name) ? name : `["${name}"]`
-}
 
 
 const ReadmeTopQuick = cmp(function ReadmeTopQuick(props: any) {

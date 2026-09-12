@@ -14,6 +14,19 @@ function makeOptions(ctx: Context) {
 
   let opts = { ...(options || {}) }
 
+  // EXPLICIT AUTH SUPPRESSION, captured BEFORE merge and validate.
+  //
+  // `auth: null` is the documented way to disable auth outright, and
+  // prepareAuth honours it. But struct 0.3.2's getprop treats a stored
+  // null as "no value", so validate fills in the optspec's `auth`
+  // default and the suppression silently became "use default auth" —
+  // transmitting a credential the caller explicitly asked not to send.
+  // (0.0.10 rejected `auth: null` outright, so nothing depended on the
+  // old behaviour, and nothing catches the new one.)
+  //
+  // Suppliedness cannot be recovered after validate, hence here.
+  const authSuppressed = null === (options || {}).auth
+
   // Feature add-order. `options.feature` may be given as an ordered ARRAY of
   // { name, active, ...opts } entries (the array position IS the order in
   // which features are added), or as a { name: {opts} } map. Normalize an
@@ -110,6 +123,11 @@ function makeOptions(ctx: Context) {
   opts = merge([{}, struct.clone(cfgopts), opts])
 
   opts = validate(opts, optspec)
+
+  // Restore the suppression the optspec default would otherwise erase.
+  if (authSuppressed) {
+    opts.auth = null
+  }
 
   // Resolve a templated base URL (e.g. https://{tenant_id}.hanko.io).
   // Every placeholder must resolve to a non-empty value: from

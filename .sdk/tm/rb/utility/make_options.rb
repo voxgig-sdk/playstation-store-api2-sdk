@@ -40,8 +40,22 @@ module PlaystationStoreApi2Utilities
       end
     end
 
+    # `auth: nil` is the documented way to disable auth outright, and
+    # prepare_auth honours it before it ever reads the apikey. It cannot
+    # survive validate: depending on the struct port a stored null is either
+    # REPLACED by the optspec default - transmitting the credential the
+    # caller withheld - or REJECTED outright. Withhold the key for validate,
+    # then put the nil back. Same fix as ts/js/go make_options.
+    #
+    # Suppliedness cannot be recovered after validate, hence here, and it
+    # must tell an ABSENT auth from a present nil: only the latter is a
+    # suppression.
+    authsuppressed = options.is_a?(Hash) && options.key?('auth') && options['auth'].nil?
+
     opts = VoxgigStruct.clone(options)
     opts = {} unless opts.is_a?(Hash)
+
+    opts.delete('auth') if authsuppressed
 
     # Feature add-order. options["feature"] may be given as an ordered ARRAY of
     # { "name" => ..., "active" => ..., ... } entries (the array position IS the
@@ -108,6 +122,9 @@ module PlaystationStoreApi2Utilities
     merged = VoxgigStruct.merge([{}, VoxgigStruct.clone(cfgopts), opts])
     validated = VoxgigStruct.validate(merged, optspec)
     opts = validated.is_a?(Hash) ? validated : {}
+
+    # Restore the suppression the optspec default would otherwise erase.
+    opts['auth'] = nil if authsuppressed
 
     # Resolve a templated base URL (e.g. https://{tenant_id}.hanko.io).
     # Every placeholder must resolve to a non-empty value: from

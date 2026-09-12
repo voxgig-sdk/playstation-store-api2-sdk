@@ -109,7 +109,12 @@ func TestCustomUtility(t *testing.T) {
 		// that was broken: a plain function literal in a map[string]any has the
 		// unnamed signature, so an override that only accepted the named type
 		// shelved it in Custom. Converting here would have hidden that.
+		// "test" is the OPTION, not the `test` FEATURE: it says "this client
+		// is not live", so a REQUIRED OpenAPI server variable resolves to a
+		// deterministic test-<name> instead of panicking at construction. It
+		// installs no transport, so the override under test still stands.
 		client := sdk.NewPlaystationStoreApi2SDK(map[string]any{
+			"test":    map[string]any{"active": true},
 			"utility": map[string]any{"fetcher": scripted},
 		})
 
@@ -138,7 +143,12 @@ func TestCustomUtility(t *testing.T) {
 	// the subtest above, and broken by any fix that swaps one for the other.
 	t.Run("a converted fetcher is accepted too", func(t *testing.T) {
 		reached := 0
+		// "test" is the OPTION, not the `test` FEATURE: it says "this client
+		// is not live", so a REQUIRED OpenAPI server variable resolves to a
+		// deterministic test-<name> instead of panicking at construction. It
+		// installs no transport, so the override under test still stands.
 		client := sdk.NewPlaystationStoreApi2SDK(map[string]any{
+			"test": map[string]any{"active": true},
 			"utility": map[string]any{
 				"fetcher": sdk.FetcherFunc(func(
 					ctx *sdk.Context, fullurl string, fetchdef map[string]any,
@@ -171,7 +181,12 @@ func TestCustomUtility(t *testing.T) {
 	// An unknown key must still be attached rather than dropped, so the two
 	// halves cannot be satisfied by a switch that also swallows extras.
 	t.Run("an unknown key is still attached", func(t *testing.T) {
+		// "test" is the OPTION, not the `test` FEATURE: it says "this client
+		// is not live", so a REQUIRED OpenAPI server variable resolves to a
+		// deterministic test-<name> instead of panicking at construction. It
+		// installs no transport, so the override under test still stands.
 		client := sdk.NewPlaystationStoreApi2SDK(map[string]any{
+			"test": map[string]any{"active": true},
 			"utility": map[string]any{
 				"notAUtilityMember": func() string { return "EXTRA" },
 			},

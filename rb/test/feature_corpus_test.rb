@@ -71,7 +71,15 @@ class FeatureCorpusTest < Minitest::Test
   # transport: 'base' and REPLACES the transport, so a client in test mode
   # would shadow the script.
   def build_client(kase)
-    opts = { "utility" => { "fetcher" => scripted_fetcher(kase["res"]) } }
+    # "test" here is the OPTION, not the `test` FEATURE. It says "this
+    # client is not live", which is what makes a REQUIRED OpenAPI server
+    # variable resolve to a deterministic test-<name> rather than raise at
+    # construction (see make_options). It installs no transport, so the
+    # scripted fetcher still stands.
+    opts = {
+      "test" => { "active" => true },
+      "utility" => { "fetcher" => scripted_fetcher(kase["res"]) },
+    }
     opts["feature"] = kase["feature"] unless kase["feature"].nil?
     PlaystationStoreApi2SDK.new(opts)
   end

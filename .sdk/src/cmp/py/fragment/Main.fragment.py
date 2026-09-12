@@ -99,6 +99,7 @@ class ProjectNameSDK:
     def get_root_ctx(self):
         return self._rootctx
 
+    # #SecretsAccessor
     def prepare(self, fetchargs=None):
         utility = self._utility
 
@@ -114,6 +115,7 @@ class ProjectNameSDK:
             "ctrl": ctrl,
         }, self._rootctx)
 
+        # #SecretsResolve
         options = self.options
 
         path = vs.getprop(fetchargs, "path") or ""

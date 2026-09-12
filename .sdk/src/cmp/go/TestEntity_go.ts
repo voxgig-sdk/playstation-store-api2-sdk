@@ -24,6 +24,8 @@ import {
   buildIdNames,
   getMatchEntries,
   isAuthActive,
+  serverVarEnv,
+  serverVariables,
   entityDataIdField, envName, envToken
 } from '@voxgig/sdkgen'
 
@@ -71,11 +73,25 @@ const TestEntity = cmp(function TestEntity(props: any) {
 
   const authActive = isAuthActive(model)
   const apikeyEnvEntry = authActive
-    ? `\n\t\t"${PROJUPPER}_APIKEY":         "NONE",`
+    ? `\n\t\t"${PROJUPPER}_APIKEY":         "",`
     : ''
   const apikeyLiveField = authActive
     ? `\n\t\t\t\t"apikey": env["${PROJUPPER}_APIKEY"],`
     : ''
+
+
+  // A templated server URL (OpenAPI server variables) makes a LIVE client
+  // impossible to construct without values: makeOptions refuses rather than
+  // request a URL with a literal `{account_id}` in it. Taken from the
+  // environment, the same way the apikey is.
+  const svars = serverVariables(model)
+  const serverEnvEntry = svars
+    .map((v: any) => `\n\t\t"${serverVarEnv(PROJUPPER, v.name)}": ${JSON.stringify(v.dflt)},`).join('')
+  const serverLiveField = 0 === svars.length ? '' :
+    `\n\t\t\t\t"server": map[string]any{` +
+    svars.map((v: any) =>
+      `\n\t\t\t\t\t"${v.name}": env["${serverVarEnv(PROJUPPER, v.name)}"],`).join('') +
+    `\n\t\t\t\t},`
 
   const idnames = buildIdNames(entity, basicflow)
   const idnamesStr = idnames.map(n => `"${n}"`).join(', ')
@@ -205,7 +221,7 @@ ${allSteps.length > 0 ? '\t\tclient := setup.client\n\n' : ''}`)
       const preambleRef = entity.name + '_ref01'
       const preambleVar = goVar(preambleRef)
       Content(`		// Bootstrap entity data from existing test data (no create step in flow).
-		${preambleVar}DataRaw := vs.Items(core.ToMapAny(vs.GetPath("existing.${entity.name}", setup.data)))
+		${preambleVar}DataRaw := vs.Items(core.ToMapAny(vs.GetPath(setup.data, "existing.${entity.name}")))
 		var ${preambleVar}Data map[string]any
 		if len(${preambleVar}DataRaw) > 0 {
 			${preambleVar}Data = core.ToMapAny(${preambleVar}DataRaw[0][1])
@@ -265,9 +281,14 @@ ${allSteps.length > 0 ? '\t\tclient := setup.client\n\n' : ''}`)
 
 `)
 
-    // Generate idmap via vs.Transform
+    // Generate idmap via vs.Transform.
+    //
+    // The error return Transform gained in struct go 0.1.3 is discarded
+    // deliberately: this transforms the entity's own id names, which the
+    // generator produced, so an error would be a generator bug rather than
+    // anything the generated test can act on.
     Content('\t// Generate idmap via transform, matching TS pattern.\n')
-    Content('\tidmap := vs.Transform(\n')
+    Content('\tidmap, _ := vs.Transform(\n')
     Content('\t\t[]any{' + idnamesStr + '},\n')
     Content('\t\tmap[string]any{\n')
     Content('\t\t\t"`$PACK`": []any{"", map[string]any{\n')
@@ -287,7 +308,7 @@ ${allSteps.length > 0 ? '\t\tclient := setup.client\n\n' : ''}`)
 	env := envOverride(map[string]any{
 		"${PROJUPPER}_TEST_${envToken(entity.name)}_ENTID": idmap,
 		"${PROJUPPER}_TEST_LIVE":      "FALSE",
-		"${PROJUPPER}_TEST_EXPLAIN":   "FALSE",${apikeyEnvEntry}
+		"${PROJUPPER}_TEST_EXPLAIN":   "FALSE",${apikeyEnvEntry}${serverEnvEntry}
 	})
 
 	idmapResolved := core.ToMapAny(env["${PROJUPPER}_TEST_${envToken(entity.name)}_ENTID"])
@@ -307,10 +328,22 @@ ${allSteps.length > 0 ? '\t\tclient := setup.client\n\n' : ''}`)
 
     Content(`
 	if env["${PROJUPPER}_TEST_LIVE"] == "TRUE" {
+		// An empty map, not a nil one: Merge returns nil when its last entry
+		// is nil, and BasicSetup is normally called with no extras - so a
+		// bare nil silently discarded the apikey and server values below.
+		extraOpts := extra
+		if extraOpts == nil {
+			extraOpts = map[string]any{}
+		}
+
 		mergedOpts := vs.Merge([]any{
-			map[string]any{${apikeyLiveField}
+			// liveClientOptions() FIRST, so the generated fields below win:
+			// sdk-test-control.json's test.client.options adds to the live
+			// client, it does not redirect it.
+			liveClientOptions(),
+			map[string]any{${apikeyLiveField}${serverLiveField}
 			},
-			extra,
+			extraOpts,
 		})
 		client = sdk.New${model.const.Name}SDK(core.ToMapAny(mergedOpts))
 	}
@@ -361,11 +394,11 @@ const generateCreate: OpGen = (ctx, step, index) => {
   // Load data from test data file
   if (hasDatvar) {
     Content(`		${datavar} = core.ToMapAny(vs.GetProp(
-			vs.GetPath([]any{"new", "${entity.name}"}, setup.data), "${ref}"))
+			vs.GetPath(setup.data, []any{"new", "${entity.name}"}), "${ref}"))
 `)
   } else {
     Content(`		${datavar} := core.ToMapAny(vs.GetProp(
-			vs.GetPath([]any{"new", "${entity.name}"}, setup.data), "${ref}"))
+			vs.GetPath(setup.data, []any{"new", "${entity.name}"}), "${ref}"))
 `)
   }
 
@@ -606,7 +639,7 @@ const generateLoad: OpGen = (ctx, step, index) => {
 `)
   }
   if (!hasSrcData && hasEntId) {
-    Content(`		${srcdatavar}Raw := vs.Items(core.ToMapAny(vs.GetPath("existing.${entity.name}", setup.data)))
+    Content(`		${srcdatavar}Raw := vs.Items(core.ToMapAny(vs.GetPath(setup.data, "existing.${entity.name}")))
 		var ${srcdatavar} map[string]any
 		if len(${srcdatavar}Raw) > 0 {
 			${srcdatavar} = core.ToMapAny(${srcdatavar}Raw[0][1])

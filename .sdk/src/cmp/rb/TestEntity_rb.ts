@@ -24,8 +24,12 @@ import {
   buildIdNames,
   getMatchEntries,
   isAuthActive,
-  entityDataIdField, envName, envToken
+  entityDataIdField, envName, envToken,
+  serverVarEnv,
+  serverVariables
 } from '@voxgig/sdkgen'
+
+import { formatRubyValue } from './utility_rb'
 
 
 // See TestEntity_ts.ts for the GenCtx/OpGen contract.
@@ -62,11 +66,24 @@ const TestEntity = cmp(function TestEntity(props: any) {
 
   const authActive = isAuthActive(model)
   const apikeyEnvEntry = authActive
-    ? `\n    "${PROJUPPER}_APIKEY" => "NONE",`
+    ? `\n    "${PROJUPPER}_APIKEY" => "",`
     : ''
   const apikeyLiveField = authActive
     ? `\n        "apikey" => env["${PROJUPPER}_APIKEY"],`
     : ''
+
+  // A templated server URL (OpenAPI server variables) makes a LIVE client
+  // impossible to construct without values: makeOptions raises rather than
+  // request a URL with a literal `{account_id}` in it. So the live suite
+  // takes them from the environment the same way it takes the apikey.
+  const svars = serverVariables(model)
+  const serverEnvEntry = svars
+    .map((v: any) => `\n    "${serverVarEnv(PROJUPPER, v.name)}" => ${formatRubyValue(v.dflt)},`).join('')
+  const serverLiveField = 0 === svars.length ? '' : `
+        "server" => {${svars
+      .map((v: any) => `
+          "${v.name}" => env["${serverVarEnv(PROJUPPER, v.name)}"],`).join('')}
+        },`
 
   const idnames = buildIdNames(entity, basicflow)
   const idnamesStr = idnames.map(n => `"${n}"`).join(', ')
@@ -227,7 +244,7 @@ end
   env = Runner.env_override({
     "${PROJUPPER}_TEST_${envToken(entity.name)}_ENTID" => idmap,
     "${PROJUPPER}_TEST_LIVE" => "FALSE",
-    "${PROJUPPER}_TEST_EXPLAIN" => "FALSE",${apikeyEnvEntry}
+    "${PROJUPPER}_TEST_EXPLAIN" => "FALSE",${apikeyEnvEntry}${serverEnvEntry}
   })
 
   idmap_resolved = Helpers.to_map(
@@ -248,7 +265,10 @@ end
     Content(`
   if env["${PROJUPPER}_TEST_LIVE"] == "TRUE"
     merged_opts = Vs.merge([
-      {${apikeyLiveField}
+      # FIRST, so the generated fields below win: sdk-test-control.json's
+      # test.client.options adds to the live client, it does not redirect it.
+      Runner.live_client_options,
+      {${apikeyLiveField}${serverLiveField}
       },
       extra || {},
     ])

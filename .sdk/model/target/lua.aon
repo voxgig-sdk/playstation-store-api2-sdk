@@ -9,6 +9,31 @@ main: kit: target: lua: {
   package: '@voxgig/sdkgen'
   srcfeature: false
 
+  # Applicability (docs/design/feature-tags.md). A vendored sekreto port
+  # lives in this target's feature container (tm/lua/feature/secrets/), so
+  # a feature that resolves secrets through sekreto can apply here.
+  #
+  # What lua ships: the four built-in kinds (env, memory, dotenv, file) in
+  # the vendored core, and every plugin kind as a trimmable group. The
+  # plugin kinds reach `sekreto.plugins.net`, which runs a small COMPILED
+  # helper (feature/secrets/native/sekretonet.c, -lssl -lcrypto) because
+  # Lua 5.4 has no sockets and no TLS. The helper is vendored with the
+  # feature and built by the generated Makefile ONLY when a plugin group is
+  # active (Main_lua emits feature/secrets/native.mk then), so an SDK
+  # without secrets - or with the built-in chain alone - runs no compiler
+  # and links no OpenSSL. `sekreto.plugins.net` finds the binary through
+  # its own adapted helperpath() (vendor/routes.json), at
+  # feature/secrets/native/sekreto-net.
+  provides: { sekreto: true }
+
+  # Files earlier toolchains generated that this target has RETIRED
+  # (vendor-tag rollout): the struct-corpus runner (test/runner.lua is
+  # support-only and RETAINED). `doctor` reports leftovers; `doctor
+  # prune` deletes them.
+  superseded: [
+    'test/struct_runner.lua'
+  ]
+
   deps: &: {
     kind: *'prod' | string
   }

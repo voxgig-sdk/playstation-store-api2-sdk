@@ -1,5 +1,5 @@
 
-import { cmp, each, Content, isAuthActive, isHttpBasicAuth, packageName, envName, opRequestShape, entityIdField, entityDataIdField, entityOps, safeVarName, exampleVarName, jsKey, matchArg, idLiteral } from '@voxgig/sdkgen'
+import { cmp, each, Content, isAuthActive, isHttpBasicAuth, packageName, envName, serverVariables, opRequestShape, entityIdField, entityDataIdField, entityOps, safeVarName, exampleVarName, jsKey, matchArg, idLiteral } from '@voxgig/sdkgen'
 
 import {
   KIT,
@@ -40,10 +40,23 @@ const ReadmeQuick = cmp(function ReadmeQuick(props: any) {
       !it.optional && it.name !== entityIdField(e))
   ) as any
 
-  const ctor = isAuthActive(model)
-    ? `new ${model.const.Name}SDK({\n  apikey: process.env.${envName(model)}_APIKEY,${
-      isHttpBasicAuth(model) ? `\n  secret: process.env.${envName(model)}_SECRET,` : ''}\n})`
-    : `new ${model.const.Name}SDK()`
+  // Server variables (a templated server URL) are REQUIRED at construction
+  // — makeOptions refuses rather than request a URL with a literal
+  // `{account_id}` in it — so a quickstart that omits them is a quickstart
+  // that throws on its first line.
+  const svarLines = serverVariables(model)
+    .map((v: any) => `\n    ${v.name}: '<${v.name}>',`).join('')
+  const serverField = '' === svarLines ? '' :
+    `\n  // Required: this API's server URL is templated on these.\n  server: {${svarLines}\n  },`
+
+  const ctorFields = (isAuthActive(model)
+    ? `\n  apikey: process.env.${envName(model)}_APIKEY,${
+      isHttpBasicAuth(model) ? `\n  secret: process.env.${envName(model)}_SECRET,` : ''}`
+    : '') + serverField
+
+  const ctor = '' === ctorFields
+    ? `new ${model.const.Name}SDK()`
+    : `new ${model.const.Name}SDK({${ctorFields}\n})`
 
   Content(`### 1. Create a client
 

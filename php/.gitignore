@@ -1,5 +1,7 @@
-# Composer
-vendor/
+# Composer (the package root only: test/vendor/ is the vendored
+# omni test runner, generated output that a checkout must carry, and an
+# unanchored vendor/ silently kept it out of every commit and so out of CI)
+/vendor/
 composer.phar
 
 # PHPUnit

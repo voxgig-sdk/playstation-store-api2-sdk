@@ -86,7 +86,16 @@ function scriptedFetcher(res: any[]) {
 
 
 function makeClient(kase: any): any {
+  // `test: { active: true }` is the OPTION, not the `test` FEATURE.
+  //
+  // It says "this client is not live", which is what makes a REQUIRED
+  // OpenAPI server variable resolve to a deterministic `test-<name>`
+  // rather than refuse to construct (see makeOptions). It installs no
+  // transport, so the scripted fetcher below still stands — the FEATURE
+  // is transport: 'base' and would shadow it, which is why this cannot
+  // just turn the feature on.
   return new (SDK as any)({
+    test: { active: true },
     feature: kase.feature,
     utility: { fetcher: scriptedFetcher(kase.res || [{ status: 200, body: {} }]) },
   })

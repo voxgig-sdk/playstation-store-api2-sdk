@@ -146,6 +146,46 @@ function runner.is_control_skipped(kind, name, mode)
 end
 
 
+-- Extra SDK options every LIVE client is constructed with, read from
+-- sdk-test-control.json `test.client.options`.
+--
+-- The generated live client knows two things: the base URL (from the spec)
+-- and the credential (from the environment). Everything else about how a
+-- particular API wants to be talked to - which features to switch on, and
+-- with what settings - is a property of THAT API, known to the project and
+-- to nothing in the toolchain.
+--
+-- Merged UNDER the generated fields, so the suite's own base/apikey/server
+-- values win: this ADDS to the live client, it does not redirect it.
+--
+-- Reserved fields are stripped HERE rather than at each merge site: the
+-- generated table only names a field when the model calls for one, so a
+-- "base" in this block would face no competing value and would silently
+-- redirect the whole suite - credential included - to another host.
+local LIVE_RESERVED = {
+  base = true, prefix = true, suffix = true,
+  server = true, apikey = true, secret = true,
+}
+
+function runner.live_client_options()
+  local ctrl = runner.load_test_control()
+  local test = ctrl.test
+  if type(test) ~= "table" then return {} end
+  local client = test.client
+  if type(client) ~= "table" then return {} end
+  local opts = client.options
+  if type(opts) ~= "table" then return {} end
+
+  local out = {}
+  for k, v in pairs(opts) do
+    if not LIVE_RESERVED[k] then
+      out[k] = v
+    end
+  end
+  return out
+end
+
+
 -- Per-test live pacing delay (ms); default 500.
 function runner.live_delay_ms()
   local ctrl = runner.load_test_control()

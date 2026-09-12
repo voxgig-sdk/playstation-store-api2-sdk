@@ -2,8 +2,14 @@
 
 # Run the WHOLE suite (entity, direct, utility, and readme-example tests) —
 # a single-file invocation here leaves the rest of test/ silently unrun.
+#
+# RECURSIVE (`**`), because the gated per-feature suites live one level
+# down, in the `test/feature/<name>/` container `target add` trims: a
+# single-level glob SHIPS them and never RUNS them, which is a vacuously
+# green suite — the worst outcome available. `**/` matches zero directories
+# too, so every existing top-level test is still found.
 test:
-	ruby -Ilib -Itest -e 'Dir.glob("./test/*_test.rb").each { |f| require f }'
+	ruby -Ilib -Itest -e 'Dir.glob("./test/**/*_test.rb").each { |f| require f }'
 
 build:
 	@echo "No build step for Ruby"

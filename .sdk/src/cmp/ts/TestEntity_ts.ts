@@ -30,8 +30,12 @@ import {
   cmp,
   each,
   isAuthActive,
+  serverVarEnv,
+  serverVariables,
   isHttpBasicAuth,
-  entityDataIdField, envName, envToken
+  entityDataIdField, envName, envToken,
+  jsKey,
+  jsProp
 } from '@voxgig/sdkgen'
 
 
@@ -67,13 +71,32 @@ const TestEntity = cmp(function TestEntity(props: any) {
   const authActive = isAuthActive(model)
   const authBasic = authActive && isHttpBasicAuth(model)
   const apikeyEnvEntry = authActive
-    ? `\n    '${PROJENVNAME}_APIKEY': 'NONE',${authBasic ? `\n    '${PROJENVNAME}_SECRET': 'NONE',` : ''}`
+    ? `\n    '${PROJENVNAME}_APIKEY': '',${authBasic ? `\n    '${PROJENVNAME}_SECRET': '',` : ''}`
     : ''
   const apikeyLiveField = authActive
     ? `
         apikey: env.${PROJENVNAME}_APIKEY,${authBasic ? `
         secret: env.${PROJENVNAME}_SECRET,` : ''}`
     : ''
+
+  // A templated server URL (OpenAPI server variables) makes a LIVE client
+  // impossible to construct without values: makeOptions raises rather than
+  // request a URL with a literal `{account_id}` in it. So the live suite
+  // takes them from the environment the same way it takes the apikey.
+  //
+  // Keys are quoted and the env read is bracketed via jsKey/jsProp: a server
+  // variable name is spec-derived and need not be a JS identifier — the URL
+  // grammar admits a leading digit ({2fa}), and a declared-but-unreferenced
+  // variable ({edge-zone}) is not constrained at all. Bare `name:` and
+  // `env.PROJ_SERVER_EDGE-ZONE` are both syntax errors.
+  const svars = serverVariables(model)
+  const serverEnvEntry = svars
+    .map((v: any) => `\n    '${serverVarEnv(PROJENVNAME, v.name)}': ${JSON.stringify(v.dflt)},`).join('')
+  const serverLiveField = 0 === svars.length ? '' : `
+        server: {${svars
+      .map((v: any) => `
+          ${jsKey(v.name)}: ${jsProp('env', serverVarEnv(PROJENVNAME, v.name))},`).join('')}
+        },`
 
   // TODO: should be a utility function
   const ff = projectPath('src/cmp/ts/fragment/')
@@ -156,7 +179,7 @@ function basicSetup(extra?: any) {
   const env = envOverride({
     '${PROJENVNAME}_TEST_${ENTENVNAME}_ENTID': idmap,
     '${PROJENVNAME}_TEST_LIVE': 'FALSE',
-    '${PROJENVNAME}_TEST_EXPLAIN': 'FALSE',${apikeyEnvEntry}
+    '${PROJENVNAME}_TEST_EXPLAIN': 'FALSE',${apikeyEnvEntry}${serverEnvEntry}
   })
 
   idmap = env['${PROJENVNAME}_TEST_${ENTENVNAME}_ENTID']
@@ -165,9 +188,17 @@ function basicSetup(extra?: any) {
 
   if (live) {
     client = new ${model.Name}SDK(merge([
-      {${apikeyLiveField}
+      // FIRST, so the generated fields below win: sdk-test-control.json's
+      // test.client.options adds to the live client, it does not redirect it.
+      liveClientOptions(),
+      {${apikeyLiveField}${serverLiveField}
       },
-      extra
+      // 'extra || {}', not a bare 'extra': struct.merge returns UNDEFINED when the
+      // last entry is undefined, and basicSetup is normally called with no
+      // argument at all - so a bare 'extra' silently discarded the apikey
+      // and server values above and handed the SDK undefined. Harmless
+      // while there was nothing in that object; not harmless now.
+      extra || {}
     ]))
   }
 

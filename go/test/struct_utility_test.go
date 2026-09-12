@@ -5,6 +5,7 @@
 package sdktest
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"reflect"
@@ -58,11 +59,11 @@ func TestStructUtility(t *testing.T) {
 			"getelem": voxgigstruct.GetElem,
 			"getprop": voxgigstruct.GetProp,
 
-			"getpath":  voxgigstruct.GetPath,
-			"haskey":   voxgigstruct.HasKey,
-			"inject":   voxgigstruct.Inject,
-			"isempty":  voxgigstruct.IsEmpty,
-			"isfunc":   voxgigstruct.IsFunc,
+			"getpath": voxgigstruct.GetPath,
+			"haskey":  voxgigstruct.HasKey,
+			"inject":  voxgigstruct.Inject,
+			"isempty": voxgigstruct.IsEmpty,
+			"isfunc":  voxgigstruct.IsFunc,
 
 			"iskey":  voxgigstruct.IsKey,
 			"islist": voxgigstruct.IsList,
@@ -70,18 +71,18 @@ func TestStructUtility(t *testing.T) {
 			"isnode": voxgigstruct.IsNode,
 			"items":  voxgigstruct.Items,
 
-			"joinurl":   voxgigstruct.JoinUrl,
-			"jsonify":   voxgigstruct.Jsonify,
-			"keysof":    voxgigstruct.KeysOf,
-			"merge":     voxgigstruct.Merge,
-			"pad":       voxgigstruct.Pad,
-			"pathify":   voxgigstruct.Pathify,
+			"joinurl": voxgigstruct.JoinUrl,
+			"jsonify": voxgigstruct.Jsonify,
+			"keysof":  voxgigstruct.KeysOf,
+			"merge":   voxgigstruct.Merge,
+			"pad":     voxgigstruct.Pad,
+			"pathify": voxgigstruct.Pathify,
 
-			"select":    voxgigstruct.Select,
-			"setpath":   voxgigstruct.SetPath,
-			"size":      voxgigstruct.Size,
-			"slice":     voxgigstruct.Slice,
-			"setprop":   voxgigstruct.SetProp,
+			"select":  voxgigstruct.Select,
+			"setpath": voxgigstruct.SetPath,
+			"size":    voxgigstruct.Size,
+			"slice":   voxgigstruct.Slice,
+			"setprop": voxgigstruct.SetProp,
 
 			"strkey":    voxgigstruct.StrKey,
 			"stringify": voxgigstruct.Stringify,
@@ -159,18 +160,42 @@ func TestStructUtility(t *testing.T) {
 	})
 
 	t.Run("minor-escurl", func(t *testing.T) {
-		structRunSet(t, minorSpec["escurl"], func(in string) string {
-			return strings.ReplaceAll(voxgigstruct.EscUrl(fmt.Sprint(in)), "+", "%20")
-		})
+		// Passed BARE, like every other minor subject. This used to wrap
+		// EscUrl in ReplaceAll(..., "+", "%20") because the vendored copy
+		// implemented it with net/url.QueryEscape, which form-encodes: a
+		// space became '+' rather than '%20'. The workaround made the
+		// shared corpus pass while make_url.go still emitted '+' into real
+		// paths and query strings. Upstream's EscUrl matches the reference
+		// encodeURIComponent exactly, so there is nothing left to paper over.
+		structRunSet(t, minorSpec["escurl"], voxgigstruct.EscUrl)
 	})
 
 	t.Run("minor-stringify", func(t *testing.T) {
 		structRunSet(t, minorSpec["stringify"], func(v any) any {
 			m := v.(map[string]any)
-			val := m["val"]
+			val, hasVal := m["val"]
 
 			if "__NULL__" == val {
 				val = "null"
+			}
+
+			// Go has no `undefined`. Upstream Stringify renders nil as
+			// "null" ON PURPOSE - in Go nil IS JSON null, and
+			// JSON.stringify(null) is "null" - so the corpus's two
+			// separate cases,
+			//
+			//   {"val": null} -> "null"      and      {} -> ""
+			//
+			// both arrive here as a nil val and cannot be told apart by
+			// VALUE. They can be told apart by PRESENCE: the second case
+			// is the JavaScript stringify(undefined), and an absent key
+			// is the only thing Go has that means undefined.
+			//
+			// The runner is the right place for this: it is the seam
+			// between a language-neutral corpus and one language's type
+			// system, and it already bridges the same gap for pathify.
+			if !hasVal {
+				return ""
 			}
 
 			max, hasMax := m["max"]
@@ -323,6 +348,53 @@ func TestStructUtility(t *testing.T) {
 
 	t.Run("minor-keysof", func(t *testing.T) {
 		structRunSet(t, minorSpec["keysof"], voxgigstruct.KeysOf)
+	})
+
+	// The struct.nullsem section: does a PRESENT key holding a JSON null
+	// read as "no value"? Opt-in per target (create-sdkgen ships it; an
+	// older project corpus may predate it - the skip below says so OUT
+	// LOUD rather than passing vacuously). All lanes run {null: false}.
+	t.Run("nullsem", func(t *testing.T) {
+		nullsemRaw, has := spec["nullsem"]
+		if !has {
+			t.Skip("corpus predates struct.nullsem - refresh .sdk/test/struct from create-sdkgen")
+		}
+		nullsemSpec := nullsemRaw.(map[string]any)
+
+		structRunSetFlags(t, nullsemSpec["getprop"], map[string]bool{"null": false},
+			func(v any) any {
+				m := v.(map[string]any)
+				alt, hasAlt := m["alt"]
+				if !hasAlt {
+					return voxgigstruct.GetProp(m["val"], m["key"])
+				}
+				return voxgigstruct.GetProp(m["val"], m["key"], alt)
+			})
+
+		structRunSetFlags(t, nullsemSpec["getelem"], map[string]bool{"null": false},
+			func(v any) any {
+				m := v.(map[string]any)
+				alt, hasAlt := m["alt"]
+				if !hasAlt {
+					return voxgigstruct.GetElem(m["val"], m["key"])
+				}
+				return voxgigstruct.GetElem(m["val"], m["key"], alt)
+			})
+
+		structRunSetFlags(t, nullsemSpec["getpath"], map[string]bool{"null": false},
+			func(v any) any {
+				m := v.(map[string]any)
+				return voxgigstruct.GetPath(m["store"], m["path"])
+			})
+
+		structRunSetFlags(t, nullsemSpec["haskey"], map[string]bool{"null": false},
+			func(v any) any {
+				m := v.(map[string]any)
+				return voxgigstruct.HasKey(m["src"], m["key"])
+			})
+
+		structRunSetFlags(t, nullsemSpec["keysof"], map[string]bool{"null": false},
+			voxgigstruct.KeysOf)
 	})
 
 	t.Run("minor-filter", func(t *testing.T) {
@@ -585,9 +657,21 @@ func TestStructUtility(t *testing.T) {
 			} else {
 				ks = *k
 			}
+
+			// The ROOT node has no parent. The reference passes
+			// `undefined` there and logs `p=`; Go has only nil, which
+			// Stringify renders as "null" (its documented choice - see
+			// minor-stringify above). Rendering the absent parent as ""
+			// keeps the log identical to the reference's, which is what
+			// the corpus records.
+			ps := ""
+			if nil != p {
+				ps = voxgigstruct.Stringify(p)
+			}
+
 			entry := "k=" + voxgigstruct.Stringify(ks) +
 				", v=" + voxgigstruct.Stringify(v) +
-				", p=" + voxgigstruct.Stringify(p) +
+				", p=" + ps +
 				", t=" + voxgigstruct.Pathify(t)
 			return entry
 		}
@@ -840,7 +924,7 @@ func TestStructUtility(t *testing.T) {
 			path := m["path"]
 			store := m["store"]
 
-			return voxgigstruct.GetPath(path, store)
+			return voxgigstruct.GetPath(store, path)
 		})
 	})
 
@@ -862,7 +946,7 @@ func TestStructUtility(t *testing.T) {
 				Dpath:   dpath,
 			}
 
-			return voxgigstruct.GetPath(path, store, inj)
+			return voxgigstruct.GetPath(store, path, inj)
 		})
 	})
 
@@ -884,10 +968,10 @@ func TestStructUtility(t *testing.T) {
 						inj.Meta = metaMap
 					}
 				}
-				return voxgigstruct.GetPath(path, store, inj)
+				return voxgigstruct.GetPath(store, path, inj)
 			}
 
-			return voxgigstruct.GetPath(path, store)
+			return voxgigstruct.GetPath(store, path)
 		})
 	})
 
@@ -947,14 +1031,14 @@ func TestStructUtility(t *testing.T) {
 		data := inVal["data"]
 		spec := inVal["spec"]
 		outVal := subtest["out"]
-		result := voxgigstruct.Transform(data, spec)
+		result, _ := voxgigstruct.Transform(data, spec)
 		if !reflect.DeepEqual(result, outVal) {
 			t.Errorf("Expected: %v, Got: %v", outVal, result)
 		}
 	})
 
 	t.Run("transform-paths", func(t *testing.T) {
-		structRunSet(t, transformSpec["paths"], func(v any) any {
+		structRunSet(t, transformSpec["paths"], func(v any) (any, error) {
 			m := v.(map[string]any)
 			data := m["data"]
 			spec := m["spec"]
@@ -963,7 +1047,7 @@ func TestStructUtility(t *testing.T) {
 	})
 
 	t.Run("transform-cmds", func(t *testing.T) {
-		structRunSet(t, transformSpec["cmds"], func(v any) any {
+		structRunSet(t, transformSpec["cmds"], func(v any) (any, error) {
 			m := v.(map[string]any)
 			data := m["data"]
 			spec := m["spec"]
@@ -972,7 +1056,7 @@ func TestStructUtility(t *testing.T) {
 	})
 
 	t.Run("transform-each", func(t *testing.T) {
-		structRunSet(t, transformSpec["each"], func(v any) any {
+		structRunSet(t, transformSpec["each"], func(v any) (any, error) {
 			m := v.(map[string]any)
 			data := m["data"]
 			spec := m["spec"]
@@ -981,7 +1065,7 @@ func TestStructUtility(t *testing.T) {
 	})
 
 	t.Run("transform-pack", func(t *testing.T) {
-		structRunSet(t, transformSpec["pack"], func(v any) any {
+		structRunSet(t, transformSpec["pack"], func(v any) (any, error) {
 			m := v.(map[string]any)
 			data := m["data"]
 			spec := m["spec"]
@@ -990,7 +1074,7 @@ func TestStructUtility(t *testing.T) {
 	})
 
 	t.Run("transform-ref", func(t *testing.T) {
-		structRunSet(t, transformSpec["ref"], func(v any) any {
+		structRunSet(t, transformSpec["ref"], func(v any) (any, error) {
 			m := v.(map[string]any)
 			data := m["data"]
 			spec := m["spec"]
@@ -999,7 +1083,7 @@ func TestStructUtility(t *testing.T) {
 	})
 
 	t.Run("transform-format", func(t *testing.T) {
-		structRunSetFlags(t, transformSpec["format"], map[string]bool{"null": false}, func(v any) any {
+		structRunSetFlags(t, transformSpec["format"], map[string]bool{"null": false}, func(v any) (any, error) {
 			m := v.(map[string]any)
 			data := m["data"]
 			spec := m["spec"]
@@ -1021,7 +1105,7 @@ func TestStructUtility(t *testing.T) {
 	})
 
 	t.Run("transform-edge-apply", func(t *testing.T) {
-		result := voxgigstruct.Transform(
+		result, _ := voxgigstruct.Transform(
 			map[string]any{},
 			[]any{"`$APPLY`", func(v any) any { return 1 + v.(int) }, 1},
 		)
@@ -1105,25 +1189,25 @@ func TestStructUtility(t *testing.T) {
 	t.Run("transform-funcval", func(t *testing.T) {
 		f0 := func() int { return 22 }
 
-		result1 := voxgigstruct.Transform(map[string]any{}, map[string]any{"x": 1})
+		result1, _ := voxgigstruct.Transform(map[string]any{}, map[string]any{"x": 1})
 		expected1 := map[string]any{"x": 1}
 		if !reflect.DeepEqual(expected1, result1) {
 			t.Errorf("Expected simple value transform result")
 		}
 
-		result2 := voxgigstruct.Transform(map[string]any{}, map[string]any{"x": f0})
+		result2, _ := voxgigstruct.Transform(map[string]any{}, map[string]any{"x": f0})
 		var fr0 = result2.(map[string]any)["x"].(func() int)
 		if f0() != fr0() {
 			t.Errorf("Expected x to be f0")
 		}
 
-		result3 := voxgigstruct.Transform(map[string]any{"a": 1}, map[string]any{"x": "`a`"})
+		result3, _ := voxgigstruct.Transform(map[string]any{"a": 1}, map[string]any{"x": "`a`"})
 		expected3 := map[string]any{"x": 1}
 		if !reflect.DeepEqual(expected3, result3) {
 			t.Errorf("Expected value lookup transform to work")
 		}
 
-		result4 := voxgigstruct.Transform(map[string]any{"f0": f0}, map[string]any{"x": "`f0`"})
+		result4, _ := voxgigstruct.Transform(map[string]any{"f0": f0}, map[string]any{"x": "`f0`"})
 		var fr4 = result4.(map[string]any)["x"].(func() int)
 		if 22 != fr4() {
 			t.Errorf("Expected function to be preserved")
@@ -1347,22 +1431,22 @@ func TestStructUtility(t *testing.T) {
 
 	t.Run("json-builder", func(t *testing.T) {
 		expected0 := "{\n  \"a\": 1\n}"
-		result0 := voxgigstruct.Jsonify(voxgigstruct.Jo("a", 1))
+		result0 := voxgigstruct.Jsonify(voxgigstruct.Jm("a", 1))
 		if result0 != expected0 {
 			t.Errorf("Expected: %v, Got: %v", expected0, result0)
 		}
 
 		expected1 := "[\n  \"b\",\n  2\n]"
-		result1 := voxgigstruct.Jsonify(voxgigstruct.Ja("b", 2))
+		result1 := voxgigstruct.Jsonify(voxgigstruct.Jt("b", 2))
 		if result1 != expected1 {
 			t.Errorf("Expected: %v, Got: %v", expected1, result1)
 		}
 
 		expected2 := "{\n  \"c\": \"C\",\n  \"d\": {\n    \"x\": true\n  },\n  \"e\": [\n    null,\n    false\n  ]\n}"
-		result2 := voxgigstruct.Jsonify(voxgigstruct.Jo(
+		result2 := voxgigstruct.Jsonify(voxgigstruct.Jm(
 			"c", "C",
-			"d", voxgigstruct.Jo("x", true),
-			"e", voxgigstruct.Ja(nil, false),
+			"d", voxgigstruct.Jm("x", true),
+			"e", voxgigstruct.Jt(nil, false),
 		))
 		if result2 != expected2 {
 			t.Errorf("Expected:\n%v\nGot:\n%v", expected2, result2)
@@ -1397,7 +1481,7 @@ func TestStructUtility(t *testing.T) {
 				},
 			}
 
-			return voxgigstruct.GetPath(path, store, inj)
+			return voxgigstruct.GetPath(store, path, inj)
 		})
 	})
 }
@@ -1420,4 +1504,263 @@ func IsSameFunc(target any, candidate any) bool {
 	}
 
 	return reflect.ValueOf(target).Pointer() == reflect.ValueOf(candidate).Pointer()
+}
+
+// ---------------------------------------------------------------------
+// Struct-corpus SUPPORT, retained from the retired struct_runner_test.go
+// (its engine half is superseded by the vendored omni runner driven
+// through omniresolver_test.go). The StructSDK below is the client the
+// runner wraps for the struct sections; NullModifier names struct's own
+// *voxgigstruct.Injection and so cannot live in the language-neutral
+// resolver; Fdt/ToJSONString are debug helpers, not runner API.
+
+type StructUtility struct {
+	IsNode     func(val any) bool
+	Clone      func(val any) any
+	CloneFlags func(val any, flags map[string]bool) any
+	GetPath    func(store any, path any, injdefs ...*voxgigstruct.Injection) any
+	Inject     func(val any, store any, injdefs ...*voxgigstruct.Injection) any
+	Items      func(val any) [][2]any
+	Stringify  func(val any, maxlen ...int) string
+	Walk       func(val any, apply voxgigstruct.WalkApply, opts ...any) any
+
+	DelProp   func(parent any, key any) any
+	EscRe     func(s string) string
+	EscUrl    func(s string) string
+	Filter    func(val any, check func([2]any) bool) []any
+	Flatten   func(list any, depths ...int) any
+	GetDef    func(val any, alt any) any
+	GetElem   func(val any, key any, alts ...any) any
+	GetProp   func(val any, key any, alts ...any) any
+	HasKey    func(val any, key any) bool
+	IsEmpty   func(val any) bool
+	IsFunc    func(val any) bool
+	IsKey     func(val any) bool
+	IsList    func(val any) bool
+	IsMap     func(val any) bool
+	Join      func(arr []any, args ...any) string
+	Jsonify   func(val any, flags ...map[string]any) string
+	KeysOf    func(val any) []string
+	Merge     func(val any, maxdepths ...int) any
+	Pad       func(str any, args ...any) string
+	Pathify   func(val any, from ...int) string
+	Select    func(children any, query any) []any
+	SetPath   func(store any, path any, val any, injdefs ...map[string]any) any
+	SetProp   func(parent any, key any, newval any) any
+	Size      func(val any) int
+	Slice     func(val any, args ...any) any
+	StrKey    func(key any) string
+	Transform func(data any, spec any, injdefs ...*voxgigstruct.Injection) (any, error)
+	Typify    func(value any) int
+	Typename  func(t int) string
+	Validate  func(data any, spec any, injdefs ...*voxgigstruct.Injection) (any, error)
+
+	SKIP   any
+	DELETE any
+
+	Jm func(kv ...any) map[string]any
+	Jt func(v ...any) []any
+
+	CheckPlacement func(modes int, ijname string, parentTypes int, inj *voxgigstruct.Injection) bool
+	InjectorArgs   func(argTypes []int, args []any) []any
+	InjectChild    func(child any, store any, inj *voxgigstruct.Injection) *voxgigstruct.Injection
+}
+
+func NullModifier(
+	val any,
+	key any,
+	parent any,
+	inj *voxgigstruct.Injection,
+	store any,
+) {
+	switch v := val.(type) {
+	case string:
+		if NULLMARK == v {
+			_ = voxgigstruct.SetProp(parent, key, nil)
+		} else if UNDEFMARK == v {
+			_ = voxgigstruct.SetProp(parent, key, nil)
+		} else if EXISTSMARK == v {
+			// For EXISTSMARK, no transform needed
+		} else {
+			_ = voxgigstruct.SetProp(parent, key,
+				strings.ReplaceAll(v, NULLMARK, "null"))
+		}
+	}
+}
+
+func Fdt(data any) string {
+	return fdti(data, "")
+}
+
+func fdti(data any, indent string) string {
+	result := ""
+
+	switch v := data.(type) {
+	case map[string]any:
+		result += indent + "{\n"
+		for key, value := range v {
+			result += fmt.Sprintf("%s  \"%s\": %s", indent, key, fdti(value, indent+"  "))
+		}
+		result += indent + "}\n"
+
+	case []any:
+		result += indent + "[\n"
+		for _, value := range v {
+			result += fmt.Sprintf("%s  - %s", indent, fdti(value, indent+"  "))
+		}
+		result += indent + "]\n"
+
+	default:
+		result += fmt.Sprintf("%v (%s)\n", v, reflect.TypeOf(v))
+	}
+
+	return result
+}
+
+func ToJSONString(data any) string {
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	return string(jsonBytes)
+}
+
+// StructSDK is the test SDK client for the struct runner
+type StructSDK struct {
+	opts    map[string]any
+	utility *StructSDKUtility
+}
+
+// StructSDKUtility is the utility container the resolver reaches by
+// reflection (Struct / Contextify / Check).
+type StructSDKUtility struct {
+	sdk     *StructSDK
+	structu *StructUtility
+}
+
+// Struct returns the StructUtility
+func (u *StructSDKUtility) Struct() *StructUtility {
+	return u.structu
+}
+
+// Contextify implements the contextify function
+func (u *StructSDKUtility) Contextify(ctxmap map[string]any) map[string]any {
+	return ctxmap
+}
+
+// Check implements the check function
+func (u *StructSDKUtility) Check(ctx map[string]any) map[string]any {
+	zed := "ZED"
+	if u.sdk.opts != nil {
+		if foo, ok := u.sdk.opts["foo"]; ok && foo != nil {
+			zed += fmt.Sprint(foo)
+		}
+	}
+	zed += "_"
+
+	if ctx == nil {
+		zed += "0"
+	} else if meta, ok := ctx["meta"].(map[string]any); ok && meta != nil {
+		if bar, ok := meta["bar"]; ok && bar != nil {
+			zed += fmt.Sprint(bar)
+		} else {
+			zed += "0"
+		}
+	} else {
+		zed += "0"
+	}
+
+	return map[string]any{
+		"zed": zed,
+	}
+}
+
+// NewStructSDK creates a new StructSDK instance with the given options
+func NewStructSDK(opts map[string]any) *StructSDK {
+	if opts == nil {
+		opts = map[string]any{}
+	}
+
+	sdk := &StructSDK{
+		opts: opts,
+	}
+
+	// Create the StructUtility
+	structUtil := &StructUtility{
+		IsNode:     voxgigstruct.IsNode,
+		Clone:      voxgigstruct.Clone,
+		CloneFlags: voxgigstruct.CloneFlags,
+		GetPath:    voxgigstruct.GetPath,
+		Inject:     voxgigstruct.Inject,
+		Items:      voxgigstruct.Items,
+		Stringify:  voxgigstruct.Stringify,
+		Walk:       voxgigstruct.Walk,
+
+		DelProp:   voxgigstruct.DelProp,
+		EscRe:     voxgigstruct.EscRe,
+		EscUrl:    voxgigstruct.EscUrl,
+		Filter:    voxgigstruct.Filter,
+		Flatten:   voxgigstruct.Flatten,
+		GetDef:    voxgigstruct.GetDef,
+		GetElem:   voxgigstruct.GetElem,
+		GetProp:   voxgigstruct.GetProp,
+		HasKey:    voxgigstruct.HasKey,
+		IsEmpty:   voxgigstruct.IsEmpty,
+		IsFunc:    voxgigstruct.IsFunc,
+		IsKey:     voxgigstruct.IsKey,
+		IsList:    voxgigstruct.IsList,
+		IsMap:     voxgigstruct.IsMap,
+		Join:      voxgigstruct.Join,
+		Jsonify:   voxgigstruct.Jsonify,
+		KeysOf:    voxgigstruct.KeysOf,
+		Merge:     voxgigstruct.Merge,
+		Pad:       voxgigstruct.Pad,
+		Pathify:   voxgigstruct.Pathify,
+		Select:    voxgigstruct.Select,
+		SetPath:   voxgigstruct.SetPath,
+		SetProp:   voxgigstruct.SetProp,
+		Size:      voxgigstruct.Size,
+		Slice:     voxgigstruct.Slice,
+		StrKey:    voxgigstruct.StrKey,
+		Transform: voxgigstruct.Transform,
+		Typify:    voxgigstruct.Typify,
+		Typename:  voxgigstruct.Typename,
+		Validate:  voxgigstruct.Validate,
+
+		SKIP:   voxgigstruct.SKIP,
+		DELETE: voxgigstruct.DELETE,
+
+		Jm: voxgigstruct.Jm,
+		Jt: voxgigstruct.Jt,
+
+		CheckPlacement: voxgigstruct.CheckPlacement,
+		InjectorArgs:   voxgigstruct.InjectorArgs,
+		InjectChild:    voxgigstruct.InjectChild,
+	}
+
+	// Create the utility
+	sdk.utility = &StructSDKUtility{
+		sdk:     sdk,
+		structu: structUtil,
+	}
+
+	return sdk
+}
+
+// MakeTestStructSDK creates a new StructSDK instance for testing
+func MakeTestStructSDK(opts map[string]any) (*StructSDK, error) {
+	return NewStructSDK(opts), nil
+}
+
+// Tester creates a new StructSDK instance with options or default options
+func (s *StructSDK) Tester(opts map[string]any) (*StructSDK, error) {
+	if opts == nil {
+		opts = s.opts
+	}
+	return NewStructSDK(opts), nil
+}
+
+// Utility returns the utility object
+func (s *StructSDK) Utility() *StructSDKUtility {
+	return s.utility
 }

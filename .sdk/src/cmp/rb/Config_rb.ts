@@ -16,6 +16,7 @@ import {
   rawStringLiteral,
   resolveAuthPrefix,
   serverVariables,
+  targetFeatures,
 } from '@voxgig/sdkgen'
 
 
@@ -28,9 +29,76 @@ import {
 
 
 import {
-  clean,
   formatRubyHash,
 } from './utility_rb'
+
+
+// PLUGIN DEFINITION REQUIRES AND THE FEATURE_PLUGINS MAP (the ruby peer of
+// cmp/py/Config_py.ts's pluginImports/pluginDefs).
+//
+// Upstream sekreto replaced its self-registration registry with
+// voxgig/plugin definitions: a provider kind the caller did not pass in via
+// `plugins: [...]` is unknown to that Sekreto. So config requires each
+// active plugin's module and names its exported definition CONSTANT (the
+// model's `def.rb` map), handing the list to the feature through
+// FEATURE_PLUGINS.
+//
+// The `def` map is declared in the model rather than derived from filenames
+// because one module may export several definitions (sekreto's aws.rb
+// exports AWSSECRETS and AWSPARAMS) - hence the de-duplication by path, so
+// a two-definition module yields ONE require. A def value is the module's
+// path under tm/rb, which is this target's root, so the require_relative is
+// that path without its extension.
+//
+// GATED, unlike go and py: the whole block is emitted only when an active
+// feature DECLARES a plugin catalogue for this target. An SDK that does not
+// carry the secrets feature must be byte-identical to what it was before
+// the feature existed, and an unread constant is not a thing a simple SDK
+// should have to explain.
+function rbPlugins(model: any, feature: any) {
+  // path -> [constant, ...], so one require serves a two-definition module.
+  const bypath: Record<string, string[]> = {}
+  const defs: Record<string, string[]> = {}
+  let declared = false
+
+  each(feature, (f: any) => {
+    // `only_active: false`, and this is the whole subtlety: the feature
+    // object a component is handed has ALREADY been filtered, so asking it
+    // whether a catalogue EXISTS answers no as soon as every group is off.
+    // (Same trap helpers/featureSource documents one level down.)
+    const all = getModelPath(model, `main.${KIT}.feature.${f.name}.plugin`,
+      { required: false, only_active: false }) || {}
+
+    if (0 < Object.keys(all).length) {
+      declared = true
+    }
+
+    const syms: string[] = []
+
+    each(f.plugin, (plugin: any) => {
+      // Filter on `active` HERE rather than trusting the feature object to
+      // arrive filtered: getting it wrong in this direction emits a require
+      // for a module the plugin trim just deleted - an SDK that does not
+      // load, rather than one that merely carries too much.
+      if (false === plugin.active || null == plugin.active) return
+
+      for (const [sym, one] of Object.entries(plugin.def?.rb || {})) {
+        const path = String(one)
+        ; (bypath[path] = bypath[path] || []).push(sym)
+        syms.push(sym)
+      }
+    })
+
+    if (0 < syms.length) {
+      defs[f.name] = syms.sort()
+    }
+  })
+
+  const requires = Object.keys(bypath).sort().map(
+    (path: string) => `require_relative '${path.replace(/\.rb$/, '')}'`)
+
+  return { requires, defs, declared }
+}
 
 
 const Config = cmp(async function Config(props: any) {
@@ -40,7 +108,10 @@ const Config = cmp(async function Config(props: any) {
   const model: Model = ctx$.model
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  const feature = getModelPath(model, `main.${KIT}.feature`)
+  // Gated by the applicability tags, so this target never imports or
+  // registers a feature it has no source for. One rule, one place:
+  // helpers/applicability.
+  const feature = targetFeatures(model, target)
 
   const headers = getModelPath(model, `main.${KIT}.config.headers`) || {}
 
@@ -77,12 +148,34 @@ const Config = cmp(async function Config(props: any) {
   const { def: configDef, json: configJson } = configDefinition(model, target.name)
   const asData = isConfigData(configJson, configReprSetting(model))
 
+  const { requires, defs, declared } = rbPlugins(model, feature)
+
+  const pluginRequireBlock = 0 === requires.length ? '' :
+    '\n' + requires.join('\n') + '\n'
+
+  // Emitted whenever a catalogue is declared, even with every group off:
+  // the feature module reads the map unconditionally, and an SDK whose
+  // chain is all built-ins still has to answer with an empty list.
+  const featurePluginsBlock = !declared ? '' :
+    `  # The sekreto plugin DEFINITIONS the model selected per feature,
+  # required above from the modules the catalogue's active \`plugin.def\`
+  # entries declare. Handed to each feature (secrets builds its Sekreto
+  # with them): a provider kind not listed here is unknown to this SDK.
+  FEATURE_PLUGINS = {
+` +
+    Object.keys(defs).sort().map((fname: string) =>
+      `    "${fname}" => [${defs[fname].join(', ')}],\n`).join('') +
+    `  }.freeze
+
+
+`
+
   File({ name: 'config.' + target.ext }, () => {
 
     Content(`# ${model.const.Name} SDK configuration
-${asData ? "\nrequire 'json'\n" : ''}
+${asData ? "\nrequire 'json'\n" : ''}${pluginRequireBlock}
 module ${model.const.Name}Config
-  # Return the process-wide config, built once on first use. The SDK reads
+${featurePluginsBlock}  # Return the process-wide config, built once on first use. The SDK reads
   # the config on every request and never writes to it, so one instance is
   # shared by every client rather than rebuilt per client.
   #
@@ -161,12 +254,7 @@ ${serverBlock}${authBlock}        "headers" => ${formatRubyHash(headers, 4)},
     Content(`        },
       },
       "entity" => ${formatRubyHash(
-      Object.values(entity).reduce((a: any, n: any) => (a[n.name] = clean({
-        fields: n.fields,
-        name: n.name,
-        op: n.op,
-        relations: n.relations,
-      }, true), a), {}), 3)},
+configDef.entity, 3)},
     }
   end
 `)

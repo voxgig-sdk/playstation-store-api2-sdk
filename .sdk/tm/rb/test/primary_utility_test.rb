@@ -1,19 +1,87 @@
 # PlaystationStoreApi2 SDK primary utility test
+#
+# Corpus sections run through the vendored omni runner, via the resolver
+# in test/omni.rb (struct-runner shape over native voxgig_omni). The
+# inline corpus engine this file used to carry is retired: omni resolves
+# arguments, applies the null rules, and enforces out/err/match - the
+# subjects below only adapt each utility's calling convention.
+#
+# Two conventions to know when adding a section:
+#
+# - Utilities that answer as a `return value, err` TUPLE go through
+#   `unwrap`, which raises the err so omni can match it against `err:`
+#   expectations. Utilities that answer bare values (or raise) are passed
+#   straight in.
+#
+# - `match: {ctx: ...}` assertions read the LIVE context after the
+#   subject ran - the resolver's ObjView takes care of presenting the
+#   context object as the map omni walks, camelCase keys included.
 
 require "minitest/autorun"
 require "json"
 require_relative "../PlaystationStoreApi2_sdk"
-require_relative "runner"
+require_relative "omni"
 
 class PrimaryUtilityTest < Minitest::Test
 
-  def setup
-    @spec = load_test_spec
-    @primary = get_spec(@spec, "primary")
-    assert @primary, "primary section not found in test.json"
+  # Resolved against test/omni.rb's own directory, so the suite works
+  # from any working directory.
+  TEST_JSON_FILE = "../../.sdk/test/test.json"
 
-    @client = PlaystationStoreApi2SDK.test(nil, nil)
+  # Sections deliberately left empty in the shared corpus
+  # (.sdk/test/primary/<name>.aon carries a PENDING header). Everything
+  # else MUST contribute cases.
+  PENDING = %w[
+    fetcher makeFetchDef makeResult
+    featureAdd featureHook featureInit
+  ].freeze
+
+  def setup
+    @runner = PlaystationStoreApi2Omni.make_runner(TEST_JSON_FILE, PlaystationStoreApi2SDK.test(nil, nil))
+    @run = @runner.call("primary")
+
+    @spec = @run[:spec]
+    @runset = @run[:runset]
+    @runsetflags = @run[:runsetflags]
+
+    # Under the old inline runner the suite drove the SDK directly; under
+    # omni the runpack's client is the provider wrapping it. This suite
+    # treats the client as the SDK - so unwrap the real instance
+    # (mirrors ts).
+    @client = @run[:client][:sdk]
     @utility = @client.get_utility
+  end
+
+  # Run one corpus section, failing loudly when it would run ZERO cases.
+  # A renamed section or a fixture that compiled to an empty `set` used
+  # to pass silently, which defeats the point of a shared oracle. EVERY
+  # corpus-backed test goes through here (mirrors ts).
+  def runsection(name, subject)
+    section = @spec.is_a?(Hash) ? @spec[name] : nil
+    refute_nil section,
+      "test corpus section '#{name}' missing - check the name against .sdk/test/primary/"
+    basic = section.is_a?(Hash) ? section["basic"] : nil
+    assert basic.is_a?(Hash) && basic["set"].is_a?(Array),
+      "test corpus section '#{name}' has no basic.set list"
+    if basic["set"].empty? && !PENDING.include?(name)
+      flunk "test corpus section '#{name}' is EMPTY - zero cases would run; " \
+            "add cases, or mark the fixture PENDING in .sdk/test/primary/"
+    end
+    @runset.call(basic, subject)
+  end
+
+  # `return value, err` tuple convention -> value-or-raise, omni's shape.
+  def unwrap(pair)
+    value, err = pair
+    raise err unless err.nil?
+    value
+  end
+
+  def err_from_map(m)
+    return nil unless m.is_a?(Hash)
+    msg = m["message"]
+    return nil unless msg.is_a?(String) && !msg.empty?
+    PlaystationStoreApi2Error.new(m["code"] || "", msg)
   end
 
 
@@ -58,39 +126,28 @@ class PrimaryUtilityTest < Minitest::Test
     ctx = make_test_ctx(@client, @utility, nil)
     val = { "key" => "secret123", "name" => "test" }
     cleaned = @utility.clean.call(ctx, val)
-    assert cleaned, "cleaned should not be nil"
+    assert cleaned, "clean should return a value"
   end
 
 
   # === done ===
 
   def test_done_basic
-    runset(get_spec(@primary, "done", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-      fixctx(ctx, @client)
-      @utility.done.call(ctx)
-    end
+    runsection("done", ->(ctx) { @utility.done.call(ctx) })
   end
 
 
   # === makeError ===
 
   def test_make_error_basic
-    runset(get_spec(@primary, "makeError", "basic")) do |entry|
-      args = entry["args"] || [{}]
-
-      ctxmap = args[0].is_a?(Hash) ? args[0] : {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-      fixctx(ctx, @client)
-
-      err = nil
-      if args.length > 1 && args[1].is_a?(Hash)
-        err = err_from_map(args[1])
-      end
-
+    subject = lambda do |ctx, errmap = nil|
+      err = errmap.is_a?(Hash) ? err_from_map(errmap) : nil
+      # make_error raises the constructed exception on the default
+      # (throw) path; omni matches it against the entry's err.
       @utility.make_error.call(ctx, err)
     end
+
+    runsection("makeError", subject)
   end
 
   def test_make_error_no_throw
@@ -101,10 +158,11 @@ class PrimaryUtilityTest < Minitest::Test
       "resdata" => { "id" => "safe01" },
     })
 
-    # Opt-out path: throw_err disabled -> returns the bare result data, no raise.
+    # throw_err is false: make_error returns the bare result data instead
+    # of raising (the result-object / no-throw escape hatch).
     out = @utility.make_error.call(ctx, ctx.make_error("test_code", "test message"))
-    assert out.is_a?(Hash), "expected hash result, got: #{out.class}"
-    assert_equal "safe01", out["id"], "expected id=safe01"
+    assert out.is_a?(Hash)
+    assert_equal "safe01", out["id"]
   end
 
 
@@ -117,8 +175,7 @@ class PrimaryUtilityTest < Minitest::Test
     feature = PlaystationStoreApi2BaseFeature.new
     @utility.feature_add.call(ctx, feature)
 
-    assert_equal start_len + 1, @client.features.length,
-      "expected #{start_len + 1} features, got #{@client.features.length}"
+    assert_equal start_len + 1, @client.features.length
   end
 
 
@@ -134,7 +191,7 @@ class PrimaryUtilityTest < Minitest::Test
     hook_client.features = [hook_feature]
 
     hook_utility.feature_hook.call(ctx, "TestHook")
-    assert called, "expected TestHook to be called"
+    assert called, "hook should have been called"
   end
 
 
@@ -148,11 +205,10 @@ class PrimaryUtilityTest < Minitest::Test
       "initfeat" => { "active" => true },
     }
 
-    init_called = false
-    feature = TestInitFeature.new("initfeat", true) { init_called = true }
-
+    called = false
+    feature = TestInitFeature.new("initfeat", true) { called = true }
     init_utility.feature_init.call(ctx, feature)
-    assert init_called, "expected init to be called"
+    assert called, "init should have been called"
   end
 
   def test_feature_init_inactive
@@ -163,11 +219,10 @@ class PrimaryUtilityTest < Minitest::Test
       "nofeat" => { "active" => false },
     }
 
-    init_called = false
-    feature = TestInitFeature.new("nofeat", false) { init_called = true }
-
+    called = false
+    feature = TestInitFeature.new("nofeat", false) { called = true }
     init_utility.feature_init.call(ctx, feature)
-    refute init_called, "expected init NOT to be called for inactive feature"
+    assert_equal false, called, "init should not have been called"
   end
 
 
@@ -176,13 +231,14 @@ class PrimaryUtilityTest < Minitest::Test
   def test_fetcher_live
     calls = []
     live_client = PlaystationStoreApi2SDK.new({
-      # Concrete base: a live construction must satisfy any server variables
-      # a templated base URL declares; a literal base sidesteps the requirement.
+      # Concrete base: a live construction must satisfy any server
+      # variables a templated base URL declares; a literal base sidesteps
+      # the requirement.
       "base" => "http://localhost:8080",
       "system" => {
-        "fetch" => ->(url, fetchdef) {
+        "fetch" => lambda { |url, fetchdef|
           calls << { "url" => url, "init" => fetchdef }
-          return { "status" => 200, "statusText" => "OK" }, nil
+          [{ "status" => 200, "statusText" => "OK" }, nil]
         },
       },
     })
@@ -195,8 +251,8 @@ class PrimaryUtilityTest < Minitest::Test
 
     fetchdef = { "method" => "GET", "headers" => {} }
     _, err = live_utility.fetcher.call(ctx, "http://example.com/test", fetchdef)
-    assert_nil err, "expected no error, got: #{err}"
-    assert_equal 1, calls.length, "expected 1 call, got #{calls.length}"
+    assert_nil err
+    assert_equal 1, calls.length
     assert_equal "http://example.com/test", calls[0]["url"]
   end
 
@@ -204,9 +260,7 @@ class PrimaryUtilityTest < Minitest::Test
     blocked_client = PlaystationStoreApi2SDK.new({
       "base" => "http://localhost:8080",
       "system" => {
-        "fetch" => ->(url, fetchdef) {
-          return {}, nil
-        },
+        "fetch" => lambda { |_url, _fetchdef| [{}, nil] },
       },
     })
     blocked_client.mode = "test"
@@ -220,28 +274,29 @@ class PrimaryUtilityTest < Minitest::Test
 
     fetchdef = { "method" => "GET", "headers" => {} }
     _, err = blocked_utility.fetcher.call(ctx, "http://example.com/test", fetchdef)
-    assert err, "expected error for test mode fetch"
-    assert_match(/blocked/, err.to_s, "expected error containing 'blocked'")
+    assert err, "expected blocked error"
+    assert_includes err.to_s.downcase, "blocked"
   end
 
 
   # === makeContext ===
 
   def test_make_context_basic
-    runset(get_spec(@primary, "makeContext", "basic")) do |entry|
-      in_val = entry["in"]
-      if in_val.is_a?(Hash)
-        ctx = @utility.make_context.call(in_val, nil)
-        out = { "id" => ctx.id }
-        if ctx.op
-          out["op"] = {
-            "name" => ctx.op.name,
-            "input" => ctx.op.input,
-          }
-        end
-        out
+    subject = lambda do |vin|
+      next nil unless vin.is_a?(Hash)
+
+      ctx = @utility.make_context.call(vin, nil)
+      out = { "id" => ctx.id }
+      if ctx.op
+        out["op"] = {
+          "name" => ctx.op.name,
+          "input" => ctx.op.input,
+        }
       end
+      out
     end
+
+    runsection("makeContext", subject)
   end
 
 
@@ -299,67 +354,32 @@ class PrimaryUtilityTest < Minitest::Test
   # === makeOptions ===
 
   def test_make_options_basic
-    runset(get_spec(@primary, "makeOptions", "basic")) do |entry|
-      in_val = entry["in"] || {}
+    subject = lambda do |vin|
+      vin = {} unless vin.is_a?(Hash)
       ctx = @utility.make_context.call({
-        "options" => in_val["options"],
-        "config" => in_val["config"],
+        "options" => vin["options"],
+        "config" => vin["config"],
       }, nil)
       ctx.client = @client
       ctx.utility = @utility
       @utility.make_options.call(ctx)
     end
+
+    runsection("makeOptions", subject)
   end
 
 
   # === makeRequest ===
 
   def test_make_request_basic
-    runset(get_spec(@primary, "makeRequest", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-      ctx.options = @client.options_map
-
-      _, err = @utility.make_request.call(ctx)
-      raise err if err
-
-      # Update entry ctx for match checking
-      entry_ctx = entry["ctx"]
-      if entry_ctx.is_a?(Hash)
-        entry_ctx["response"] = "exists" if ctx.response
-        entry_ctx["result"] = "exists" if ctx.result
-      end
-
-      nil
-    end
+    runsection("makeRequest", ->(ctx) { unwrap(@utility.make_request.call(ctx)) })
   end
 
 
   # === makeResponse ===
 
   def test_make_response_basic
-    runset(get_spec(@primary, "makeResponse", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-      fixctx(ctx, @client)
-
-      _, err = @utility.make_response.call(ctx)
-      raise err if err
-
-      # Update entry ctx for match checking with result data
-      entry_ctx = entry["ctx"]
-      if entry_ctx.is_a?(Hash) && ctx.result
-        entry_ctx["result"] = {
-          "ok" => ctx.result.ok,
-          "status" => ctx.result.status,
-          "statusText" => ctx.result.status_text,
-          "headers" => ctx.result.headers,
-          "body" => ctx.result.body,
-        }
-      end
-
-      nil
-    end
+    runsection("makeResponse", ->(ctx) { unwrap(@utility.make_response.call(ctx)) })
   end
 
 
@@ -418,41 +438,35 @@ class PrimaryUtilityTest < Minitest::Test
   # === makeSpec ===
 
   def test_make_spec_basic
-    setup_opts = get_spec(@primary, "makeSpec", "DEF", "setup", "a")
+    setup_opts = @spec.dig("makeSpec", "DEF", "setup", "a")
     spec_client = PlaystationStoreApi2SDK.test(nil, setup_opts)
-    spec_utility = spec_client.get_utility
 
-    runset(get_spec(@primary, "makeSpec", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, spec_client, spec_utility)
+    subject = lambda do |ctx|
+      ctx.client = spec_client
       ctx.options = spec_client.options_map
-
-      _, err = @utility.make_spec.call(ctx)
-      raise err if err
-
-      # Update entry ctx for match
-      entry_ctx = entry["ctx"]
-      if entry_ctx.is_a?(Hash) && ctx.spec
-        entry_ctx["spec"] = {
-          "base" => ctx.spec.base,
-          "prefix" => ctx.spec.prefix,
-          "suffix" => ctx.spec.suffix,
-          "method" => ctx.spec.method,
-          "params" => ctx.spec.params,
-          "query" => ctx.spec.query,
-          "headers" => ctx.spec.headers,
-          "step" => ctx.spec.step,
-        }
-      end
-
-      nil
+      unwrap(@utility.make_spec.call(ctx))
     end
+
+    runsection("makeSpec", subject)
   end
 
 
   # === makePoint ===
 
   def test_make_point_basic
+    # Driven from the corpus like every other section. The corpus asserts
+    # refusals by code (`match: {out: {code: ...}}`), so an error is the
+    # RESULT here - answered as its attribute map, because the vendored
+    # runner's own errify keeps only {name,message} (see test/omni.rb).
+    subject = lambda do |ctx|
+      point, err = @utility.make_point.call(ctx)
+      err.nil? ? point : PlaystationStoreApi2Omni.errify(err)
+    end
+
+    runsection("makePoint", subject)
+  end
+
+  def test_make_point_single
     ctx = make_test_ctx(@client, @utility, nil)
     point = {
       "parts" => ["items", "{id}"],
@@ -474,21 +488,21 @@ class PrimaryUtilityTest < Minitest::Test
   # === makeUrl ===
 
   def test_make_url_basic
-    runset(get_spec(@primary, "makeUrl", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
+    subject = lambda do |ctx|
       ctx.result = PlaystationStoreApi2Result.new({}) unless ctx.result
-      @utility.make_url.call(ctx)
+      unwrap(@utility.make_url.call(ctx))
     end
+
+    runsection("makeUrl", subject)
   end
 
 
   # === operator ===
 
   def test_operator_basic
-    runset(get_spec(@primary, "operator", "basic")) do |entry|
-      in_val = entry["in"] || {}
-      op = PlaystationStoreApi2Operation.new(in_val)
+    subject = lambda do |vin|
+      vin = {} unless vin.is_a?(Hash)
+      op = PlaystationStoreApi2Operation.new(vin)
       {
         "entity" => op.entity,
         "name" => op.name,
@@ -496,131 +510,65 @@ class PrimaryUtilityTest < Minitest::Test
         "points" => op.points,
       }
     end
+
+    runsection("operator", subject)
   end
 
 
   # === param ===
 
   def test_param_basic
-    runset(get_spec(@primary, "param", "basic")) do |entry|
-      args = entry["args"] || []
-      next nil if args.length < 2
-
-      ctxmap = args[0].is_a?(Hash) ? args[0] : {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-      paramdef = args[1]
-
-      result = @utility.param.call(ctx, paramdef)
-
-      # Update entry ctx for match
-      if entry["match"].is_a?(Hash)
-        ctx_match = entry["match"]["ctx"]
-        if ctx_match.is_a?(Hash)
-          entry_ctx = entry["ctx"]
-          if entry_ctx.nil?
-            entry_ctx = {}
-            entry["ctx"] = entry_ctx
-          end
-          spec_match = ctx_match["spec"]
-          if spec_match.is_a?(Hash) && ctx.spec
-            entry_ctx["spec"] = {} unless entry_ctx["spec"]
-            if spec_match["alias"]
-              entry_ctx["spec"] = {
-                "alias" => ctx.spec.alias_map,
-              }
-            end
-          end
-        end
-      end
-
-      result
-    end
+    runsection("param", ->(ctx, name = nil) { @utility.param.call(ctx, name) })
   end
 
 
   # === prepareAuth ===
 
   def test_prepare_auth_basic
-    setup_opts = get_spec(@primary, "prepareAuth", "DEF", "setup", "a")
+    setup_opts = @spec.dig("prepareAuth", "DEF", "setup", "a")
     auth_client = PlaystationStoreApi2SDK.test(nil, setup_opts)
-    auth_utility = auth_client.get_utility
 
-    runset(get_spec(@primary, "prepareAuth", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, auth_client, auth_utility)
-      fixctx(ctx, auth_client)
-
-      _, err = @utility.prepare_auth.call(ctx)
-      raise err if err
-
-      # Update entry ctx for match
-      entry_ctx = entry["ctx"]
-      if entry_ctx.is_a?(Hash) && ctx.spec
-        entry_ctx["spec"] = {
-          "headers" => ctx.spec.headers,
-        }
-      end
-
-      nil
+    subject = lambda do |ctx|
+      ctx.client = auth_client
+      unwrap(@utility.prepare_auth.call(ctx))
     end
+
+    runsection("prepareAuth", subject)
   end
 
 
   # === prepareBody ===
 
   def test_prepare_body_basic
-    runset(get_spec(@primary, "prepareBody", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-      fixctx(ctx, @client)
-      @utility.prepare_body.call(ctx)
-    end
+    runsection("prepareBody", ->(ctx) { @utility.prepare_body.call(ctx) })
   end
 
 
   # === prepareHeaders ===
 
   def test_prepare_headers_basic
-    runset(get_spec(@primary, "prepareHeaders", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-      @utility.prepare_headers.call(ctx)
-    end
+    runsection("prepareHeaders", ->(ctx) { @utility.prepare_headers.call(ctx) })
   end
 
 
   # === prepareMethod ===
 
   def test_prepare_method_basic
-    runset(get_spec(@primary, "prepareMethod", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-      @utility.prepare_method.call(ctx)
-    end
+    runsection("prepareMethod", ->(ctx) { @utility.prepare_method.call(ctx) })
   end
 
 
   # === prepareParams ===
 
   def test_prepare_params_basic
-    runset(get_spec(@primary, "prepareParams", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-      @utility.prepare_params.call(ctx)
-    end
+    runsection("prepareParams", ->(ctx) { @utility.prepare_params.call(ctx) })
   end
 
 
   # === preparePath ===
 
   def test_prepare_path_basic
-    # Was hand-written cases that had drifted out of the shared corpus
-    # (the preparePath fixture shipped as an empty `set: []`).
-    runset(get_spec(@primary, "preparePath", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-      @utility.prepare_path.call(ctx)
-    end
+    runsection("preparePath", ->(ctx) { @utility.prepare_path.call(ctx) })
   end
 
   def test_prepare_path_single
@@ -638,328 +586,56 @@ class PrimaryUtilityTest < Minitest::Test
   # === prepareQuery ===
 
   def test_prepare_query_basic
-    runset(get_spec(@primary, "prepareQuery", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-      @utility.prepare_query.call(ctx)
-    end
+    runsection("prepareQuery", ->(ctx) { @utility.prepare_query.call(ctx) })
   end
 
 
   # === resultBasic ===
 
   def test_result_basic_basic
-    runset(get_spec(@primary, "resultBasic", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-      fixctx(ctx, @client)
-
+    subject = lambda do |ctx|
       result = @utility.result_basic.call(ctx)
-
       out = {
         "status" => result.status,
         "statusText" => result.status_text,
       }
-      if result.err
-        out["err"] = {
-          "message" => result.err.to_s,
-        }
-      end
-
+      out["err"] = { "message" => result.err.to_s } if result.err
       out
     end
+
+    runsection("resultBasic", subject)
   end
 
 
   # === resultBody ===
 
   def test_result_body_basic
-    runset(get_spec(@primary, "resultBody", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-
-      @utility.result_body.call(ctx)
-
-      # Update entry ctx for match
-      entry_ctx = entry["ctx"]
-      if entry_ctx.is_a?(Hash) && ctx.result
-        entry_ctx["result"] = {
-          "body" => ctx.result.body,
-        }
-      end
-
-      nil
-    end
+    runsection("resultBody", ->(ctx) { @utility.result_body.call(ctx) })
   end
 
 
   # === resultHeaders ===
 
   def test_result_headers_basic
-    runset(get_spec(@primary, "resultHeaders", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-
-      @utility.result_headers.call(ctx)
-
-      # Update entry ctx for match
-      entry_ctx = entry["ctx"]
-      if entry_ctx.is_a?(Hash) && ctx.result
-        entry_ctx["result"] = {
-          "headers" => ctx.result.headers,
-        }
-      end
-
-      nil
-    end
+    runsection("resultHeaders", ->(ctx) { @utility.result_headers.call(ctx) })
   end
 
 
   # === transformRequest ===
 
   def test_transform_request_basic
-    runset(get_spec(@primary, "transformRequest", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-
-      result = @utility.transform_request.call(ctx)
-
-      # Update entry ctx for match (step changed)
-      entry_ctx = entry["ctx"]
-      if entry_ctx.is_a?(Hash) && ctx.spec
-        spec_map = entry_ctx["spec"]
-        spec_map["step"] = ctx.spec.step if spec_map.is_a?(Hash)
-      end
-
-      result
-    end
+    runsection("transformRequest", ->(ctx) { @utility.transform_request.call(ctx) })
   end
 
 
   # === transformResponse ===
 
   def test_transform_response_basic
-    runset(get_spec(@primary, "transformResponse", "basic")) do |entry|
-      ctxmap = entry["ctx"] || {}
-      ctx = make_ctx_from_map(ctxmap, @client, @utility)
-
-      result = @utility.transform_response.call(ctx)
-
-      # Update entry ctx for match (step changed)
-      entry_ctx = entry["ctx"]
-      if entry_ctx.is_a?(Hash) && ctx.spec
-        spec_map = entry_ctx["spec"]
-        spec_map["step"] = ctx.spec.step if spec_map.is_a?(Hash)
-      end
-
-      result
-    end
+    runsection("transformResponse", ->(ctx) { @utility.transform_response.call(ctx) })
   end
 
 
   private
-
-  # === Helper: load test spec ===
-  def load_test_spec
-    path = File.join(__dir__, '../../.sdk/test/test.json')
-    data = File.read(path)
-    JSON.parse(data)
-  end
-
-  # === Helper: get nested spec ===
-  def get_spec(spec, *keys)
-    cur = spec
-    keys.each do |key|
-      return nil unless cur.is_a?(Hash)
-      cur = cur[key]
-    end
-    cur.is_a?(Hash) ? cur : nil
-  end
-
-  # === Helper: runset ===
-  def runset(testspec, &subject)
-    return unless testspec
-    set = testspec["set"]
-    return unless set.is_a?(Array)
-
-    set.each_with_index do |entry, i|
-      next unless entry.is_a?(Hash)
-
-      mark = entry["mark"] ? " (mark=#{entry["mark"]})" : ""
-
-      begin
-        result, err = subject.call(entry)
-
-        expected_err = entry["err"]
-
-        if err
-          if expected_err
-            err_msg = err.to_s
-            if expected_err.is_a?(String)
-              unless match_string(expected_err, err_msg)
-                flunk "entry #{i}#{mark}: error mismatch: got #{err_msg.inspect}, want contains #{expected_err.inspect}"
-              end
-            elsif expected_err == true
-              # err: true means any error is acceptable
-            end
-            if entry["match"].is_a?(Hash)
-              result_map = {
-                "in" => entry["in"],
-                "out" => json_normalize(result),
-                "err" => { "message" => err.to_s },
-              }
-              match_deep(i, mark, entry["match"], result_map, "")
-            end
-            next
-          end
-          flunk "entry #{i}#{mark}: unexpected error: #{err}"
-          next
-        end
-
-        if expected_err
-          flunk "entry #{i}#{mark}: expected error containing #{expected_err.inspect} but got result: #{json_str(result)}"
-          next
-        end
-
-        matched = false
-        if entry["match"].is_a?(Hash)
-          result_map = {
-            "in" => entry["in"],
-            "out" => json_normalize(result),
-          }
-          if entry["args"]
-            result_map["args"] = entry["args"]
-          elsif entry["in"]
-            result_map["args"] = [entry["in"]]
-          end
-          result_map["ctx"] = entry["ctx"] if entry["ctx"]
-          match_deep(i, mark, entry["match"], result_map, "")
-          matched = true
-        end
-
-        expected_out = entry["out"]
-        next if expected_out.nil? && matched
-
-        if expected_out
-          norm_result = json_normalize(result)
-          norm_expected = json_normalize(expected_out)
-          unless deep_equal(norm_result, norm_expected)
-            flunk "entry #{i}#{mark}: output mismatch:\n  got:  #{json_str(norm_result)}\n  want: #{json_str(norm_expected)}"
-          end
-        end
-
-      rescue => e
-        expected_err = entry["err"]
-        if expected_err
-          err_msg = e.to_s
-          if expected_err.is_a?(String)
-            unless match_string(expected_err, err_msg)
-              flunk "entry #{i}#{mark}: error mismatch: got #{err_msg.inspect}, want contains #{expected_err.inspect}"
-            end
-          elsif expected_err == true
-            # err: true means any error is acceptable
-          end
-          if entry["match"].is_a?(Hash)
-            result_map = {
-              "in" => entry["in"],
-              "out" => json_normalize(nil),
-              "err" => { "message" => e.to_s },
-            }
-            match_deep(i, mark, entry["match"], result_map, "")
-          end
-          next
-        end
-        raise
-      end
-    end
-  end
-
-  # === Helper: json_normalize ===
-  def json_normalize(val)
-    return nil if val.nil?
-    j = JSON.generate(val)
-    JSON.parse(j)
-  rescue
-    val
-  end
-
-  # === Helper: json_str ===
-  def json_str(val)
-    JSON.generate(val)
-  rescue
-    val.to_s
-  end
-
-  # === Helper: match_deep ===
-  def match_deep(entry_idx, mark, check, base, path)
-    return if check.nil?
-
-    if check.is_a?(Hash)
-      check.each do |key, check_val|
-        child_path = "#{path}.#{key}"
-        base_val = base.is_a?(Hash) ? base[key] : nil
-        match_deep(entry_idx, mark, check_val, base_val, child_path)
-      end
-    elsif check.is_a?(Array)
-      check.each_with_index do |check_val, ci|
-        child_path = "#{path}[#{ci}]"
-        base_val = (base.is_a?(Array) && ci < base.length) ? base[ci] : nil
-        match_deep(entry_idx, mark, check_val, base_val, child_path)
-      end
-    else
-      if check.is_a?(String) && check == "__EXISTS__"
-        if base.nil?
-          flunk "entry #{entry_idx}#{mark}: match #{path}: expected value to exist but got nil"
-        end
-        return
-      end
-      if check.is_a?(String) && check == "__UNDEF__"
-        if base != nil
-          flunk "entry #{entry_idx}#{mark}: match #{path}: expected nil but got #{base.inspect}"
-        end
-        return
-      end
-
-      norm_check = json_normalize(check)
-      norm_base = json_normalize(base)
-
-      unless deep_equal(norm_check, norm_base)
-        if check.is_a?(String) && !check.empty?
-          base_str = base.nil? ? "" : base.to_s
-          return if match_string(check, base_str)
-        end
-        flunk "entry #{entry_idx}#{mark}: match #{path}: got #{json_str(norm_base)}, want #{json_str(norm_check)}"
-      end
-    end
-  end
-
-  # === Helper: match_string ===
-  def match_string(pattern, val)
-    if pattern.length >= 2 && pattern[0] == '/' && pattern[-1] == '/'
-      re = Regexp.new(pattern[1..-2])
-      return re.match?(val)
-    end
-    val.downcase.include?(pattern.downcase)
-  end
-
-  # === Helper: deep_equal ===
-  def deep_equal(a, b)
-    normalize = lambda { |v|
-      case v
-      when Hash
-        sorted = {}
-        v.keys.sort.each { |k| sorted[k] = normalize.call(v[k]) }
-        sorted
-      when Array
-        v.map { |e| normalize.call(e) }
-      else
-        v
-      end
-    }
-    JSON.generate(normalize.call(a)) == JSON.generate(normalize.call(b))
-  rescue
-    a == b
-  end
 
   # === Helper: make_test_ctx ===
   def make_test_ctx(client, utility, overrides)
@@ -989,68 +665,6 @@ class PrimaryUtilityTest < Minitest::Test
     ctx.match = { "id" => "item01" }
     ctx.reqmatch = { "id" => "item01" }
     ctx
-  end
-
-  # === Helper: make_ctx_from_map ===
-  def make_ctx_from_map(ctxmap, client, utility)
-    ctxmap = {} unless ctxmap.is_a?(Hash)
-
-    ctx = PlaystationStoreApi2Context.new(ctxmap, nil)
-
-    if client
-      ctx.client = client
-      ctx.utility = utility
-    end
-    if ctx.options.nil? && client
-      ctx.options = client.options_map
-    end
-
-    # Handle spec from JSON map
-    if ctxmap["spec"].is_a?(Hash)
-      ctx.spec = PlaystationStoreApi2Spec.new(ctxmap["spec"])
-    end
-
-    # Handle result from JSON map
-    if ctxmap["result"].is_a?(Hash)
-      res_map = ctxmap["result"]
-      ctx.result = PlaystationStoreApi2Result.new(res_map)
-      if res_map["err"].is_a?(Hash) && res_map["err"]["message"].is_a?(String)
-        ctx.result.err = PlaystationStoreApi2Error.new("", res_map["err"]["message"])
-      end
-    end
-
-    # Handle response from JSON map
-    if ctxmap["response"].is_a?(Hash)
-      resp_map = ctxmap["response"]
-      ctx.response = PlaystationStoreApi2Response.new(resp_map)
-      if resp_map["body"]
-        body_copy = resp_map["body"]
-        ctx.response.json_func = -> { body_copy }
-      end
-      if resp_map["headers"].is_a?(Hash)
-        lower_headers = {}
-        resp_map["headers"].each { |k, v| lower_headers[k.downcase] = v }
-        ctx.response.headers = lower_headers
-      end
-    end
-
-    ctx
-  end
-
-  # === Helper: fixctx ===
-  def fixctx(ctx, client)
-    if ctx && ctx.client && ctx.options.nil?
-      ctx.options = ctx.client.options_map
-    end
-  end
-
-  # === Helper: err_from_map ===
-  def err_from_map(m)
-    return nil unless m.is_a?(Hash)
-    msg = m["message"]
-    return nil unless msg.is_a?(String) && !msg.empty?
-    code = m["code"] || ""
-    PlaystationStoreApi2Error.new(code, msg)
   end
 end
 

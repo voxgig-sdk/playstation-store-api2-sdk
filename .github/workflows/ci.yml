@@ -84,7 +84,7 @@ jobs:
       - if: hashFiles('go-mcp/go.mod') != ''
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
-          go-version: '1.24'
+          go-version: '1.25'
       - if: hashFiles('go-mcp/go.mod') != ''
         run: |
           cd go-mcp
@@ -369,7 +369,10 @@ jobs:
         with:
           ocaml-compiler: '5.2'
       - if: hashFiles('ocaml/Makefile') != ''
-        run: make -C ocaml test
+        # setup-ocaml installs the compiler into an opam switch; without
+        # `opam exec` the switch is not on PATH and make dies with
+        # `ocamlc: No such file or directory` (exit 127).
+        run: opam exec -- make -C ocaml test
 
   haskell:
     runs-on: ubuntu-latest

@@ -95,7 +95,16 @@ def _client(kase):
     transport: 'base' and REPLACES the transport, so a client in test mode
     would shadow the script.
     """
-    opts = {"utility": {"fetcher": _scripted_fetcher(kase.get("res"))}}
+    # "test" here is the OPTION, not the `test` FEATURE. It says "this
+    # client is not live", which is what makes a REQUIRED OpenAPI server
+    # variable resolve to a deterministic test-<name> rather than raise at
+    # construction (see make_options). It installs no transport, so the
+    # scripted fetcher still stands - the FEATURE is transport: 'base' and
+    # would shadow it, which is why this cannot just turn the feature on.
+    opts = {
+        "test": {"active": True},
+        "utility": {"fetcher": _scripted_fetcher(kase.get("res"))},
+    }
     if kase.get("feature") is not None:
         opts["feature"] = kase["feature"]
     return PlaystationStoreApi2SDK(opts)

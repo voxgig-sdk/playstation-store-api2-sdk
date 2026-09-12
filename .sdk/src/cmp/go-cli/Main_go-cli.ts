@@ -70,10 +70,23 @@ const Main = cmp(function Main(props: any) {
 
   const FRAGMENT = Path.normalize(__dirname + '/../../../src/cmp/go-cli/fragment')
 
-  // .gitignore — build output (dist/) and any stray top-level binaries.
+  // .gitignore — build output (dist/), any stray top-level binaries, and
+  // jostraca's bookkeeping.
+  //
+  // `.jostraca/` matters only when this target is generated OUT OF TREE
+  // (`output: path`), which is a mode every target has: jostraca drops its
+  // meta log and a full duplicate of the last generated output at the output
+  // ROOT, and the destination is a different repository that nothing here
+  // puts under version control — so without this line the first regeneration
+  // leaves that repo dirty with hundreds of untracked files. In-tree the SDK
+  // repo's own ignore file already covers it, which is why this was missed:
+  // only `seneca-provider` was ever generated out of tree, and it was the
+  // only target whose ignore file carried the line. The other 21 targets
+  // still do not — see docs/design/seneca-provider-package.md.
   File({ name: '.gitignore' }, () => Content(`/dist/
 /${model.name}-cli
 /go-cli
+.jostraca/
 `))
 
   // ==========================================================================

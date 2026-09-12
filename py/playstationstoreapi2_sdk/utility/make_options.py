@@ -65,9 +65,25 @@ def make_options_util(ctx):
     if isinstance(options, dict) and options.get("extend") is not None:
         options = {k: v for k, v in options.items() if k != "extend"}
 
+    # `auth: None` is the documented way to disable auth outright, and
+    # prepare_auth honours it before it ever reads the apikey. It cannot
+    # survive validate: depending on the struct port a stored null is either
+    # REPLACED by the optspec default — transmitting the credential the
+    # caller withheld — or REJECTED outright. Withhold the key for validate,
+    # then put the null back. Same fix as ts/js/go make_options.
+    #
+    # Suppliedness cannot be recovered after validate, hence here, and it
+    # must tell an ABSENT auth from a present None: only the latter is a
+    # suppression.
+    authsuppressed = (
+        isinstance(options, dict) and "auth" in options and options["auth"] is None)
+
     opts = vs.clone(options)
     if not isinstance(opts, dict):
         opts = {}
+
+    if authsuppressed:
+        opts.pop("auth", None)
 
     # Feature add-order. options["feature"] may be given as an ordered LIST of
     # {name, active, ...opts} entries (the list position IS the order in which
@@ -161,6 +177,10 @@ def make_options_util(ctx):
     if not isinstance(validated, dict):
         validated = {}
     opts = validated
+
+    # Restore the suppression the optspec default would otherwise erase.
+    if authsuppressed:
+        opts["auth"] = None
 
     # Resolve a templated base URL (e.g. https://{tenant_id}.hanko.io).
     # Every placeholder must resolve to a non-empty value: from

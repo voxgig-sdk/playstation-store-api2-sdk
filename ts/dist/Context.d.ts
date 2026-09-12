@@ -1,0 +1,47 @@
+import { inspect } from 'node:util';
+import { PlaystationStoreApi2SDK } from './PlaystationStoreApi2SDK';
+import { PlaystationStoreApi2Error } from './PlaystationStoreApi2Error';
+import { Utility } from './utility/Utility';
+import { Operation } from './Operation';
+import { Response } from './Response';
+import { Result } from './Result';
+import { Spec } from './Spec';
+declare class Context {
+    id: string;
+    out: Record<string, any>;
+    current: WeakMap<String, any>;
+    ctrl: Record<string, any>;
+    meta: Record<string, any>;
+    client: PlaystationStoreApi2SDK;
+    utility: Utility;
+    op: Operation;
+    point: any;
+    config: Record<string, any>;
+    entopts: Record<string, any>;
+    options: Record<string, any>;
+    opmap: Record<string, Operation>;
+    response?: Response;
+    result?: Result;
+    spec?: Spec;
+    data?: any;
+    reqdata?: any;
+    match?: any;
+    reqmatch?: any;
+    entity?: any;
+    shared: WeakMap<String, any>;
+    constructor(ctxmap: Record<string, any>, basectx?: Context);
+    resolveOp(opname: string): Operation;
+    error(code: string, msg: string): PlaystationStoreApi2Error;
+    toJSON(): {
+        id: string;
+        op: Operation;
+        spec: Spec | undefined;
+        entity: any;
+        result: Result | undefined;
+        response: Response | undefined;
+        meta: Record<string, any>;
+    };
+    toString(): string;
+    [inspect.custom](): string;
+}
+export { Context, };

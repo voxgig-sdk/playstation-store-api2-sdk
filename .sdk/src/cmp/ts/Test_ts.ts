@@ -3,7 +3,8 @@ import type {
   ModelEntity
 } from '@voxgig/apidef'
 
-import { cmp, each, Folder, entityCollection } from '@voxgig/sdkgen'
+import { cmp, each, Folder, entityCollection,
+  TestControl } from '@voxgig/sdkgen'
 
 
 // import { Quick } from './Quick_ts'
@@ -19,6 +20,9 @@ const Test = cmp(function Test(props: any) {
   const { target } = props
 
   Folder({ name: 'test' }, () => {
+
+    // Write-once: a project's edited control file survives regeneration.
+    TestControl({ target, dir: 'test' })
     // Quick({ target })
     // TestMain({ target })
 

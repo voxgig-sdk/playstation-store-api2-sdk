@@ -9,6 +9,10 @@ module PlaystationStoreApi2Utilities
   PrepareMethod = ->(ctx) {
     method = VoxgigStruct.getprop(ctx.point, "method")
     next method.upcase if method.is_a?(String) && "" != method
-    METHOD_MAP[ctx.op.name] || "GET"
+    # No default: an op name outside the convention resolves to no method,
+    # exactly as the ts reference (`methodMap[key]` is undefined there).
+    # The silent-pass inline runner hid a stray "GET" fallback here; the
+    # shared corpus (prepareMethod, opname "bad" -> null) pins it now.
+    METHOD_MAP[ctx.op.name]
   }
 end

@@ -1,5 +1,5 @@
 
-import { cmp, each, Content, isAuthActive, isHttpBasicAuth } from '@voxgig/sdkgen'
+import { cmp, each, Content, isAuthActive, isHttpBasicAuth, serverVariables } from '@voxgig/sdkgen'
 
 import {
   KIT,
@@ -61,12 +61,24 @@ const ReadmeModel = cmp(function ReadmeModel(props: any) {
     ? '| `secret` | `string` | API secret for authentication. |\n'
     : ''
 
+  // Server variables are not one option among many: without them the
+  // constructor THROWS, because the base URL is a template. Documented
+  // first for that reason, and named individually so a reader knows what
+  // to supply without going back to the spec.
+  const svars = serverVariables(model)
+  const serverOptionType = 0 === svars.length ? '' :
+    `\n  server?: { ${svars.map((v: any) => `${v.name}: string`).join(', ')} }`
+  const serverOptionRow = 0 === svars.length ? '' :
+    '| `server` | `object` | **Required.** Values for the server-URL variables: ' +
+    svars.map((v: any) => '`' + v.name + '`').join(', ') +
+    '. The API base URL is a template over them. |\n'
+
   Content(`### ${model.const.Name}SDK
 
 #### Constructor
 
 \`\`\`ts
-new ${model.const.Name}SDK(options?: {${apikeyOptionType}${secretOptionType}
+new ${model.const.Name}SDK(options?: {${apikeyOptionType}${secretOptionType}${serverOptionType}
   base?: string
   prefix?: string
   suffix?: string
@@ -77,7 +89,7 @@ new ${model.const.Name}SDK(options?: {${apikeyOptionType}${secretOptionType}
 
 | Option | Type | Description |
 | --- | --- | --- |
-${apikeyOptionRow}${secretOptionRow}| \`base\` | \`string\` | Base URL of the API server. |
+${serverOptionRow}${apikeyOptionRow}${secretOptionRow}| \`base\` | \`string\` | Base URL of the API server. |
 | \`prefix\` | \`string\` | URL path prefix prepended to all requests. |
 | \`suffix\` | \`string\` | URL path suffix appended to all requests. |
 | \`feature\` | \`object\` | Feature activation flags (e.g. \`{ test: { active: true } }\`). |

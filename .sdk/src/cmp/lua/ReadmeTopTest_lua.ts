@@ -7,6 +7,8 @@ import {
   nom,
 } from '@voxgig/apidef'
 
+import { luaKey } from './utility_lua'
+
 
 // A type-correct Lua literal for a field's canonical type.
 function luaLit(type: any): string {
@@ -17,9 +19,6 @@ function luaLit(type: any): string {
   return '"example"'
 }
 
-function luaKey(name: string): string {
-  return /^[A-Za-z_]\w*$/.test(name) ? name : `["${name}"]`
-}
 
 
 const ReadmeTopTest = cmp(function ReadmeTopTest(props: any) {

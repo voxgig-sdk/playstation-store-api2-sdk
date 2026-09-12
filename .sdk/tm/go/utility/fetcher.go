@@ -118,13 +118,13 @@ func fetcherUtil(ctx *core.Context, fullurl string, fetchdef map[string]any) (an
 	}
 
 	options := ctx.Client.OptionsMap()
-	if vs.GetPath([]any{"feature", "test", "active"}, options) == true {
+	if vs.GetPath(options, []any{"feature", "test", "active"}) == true {
 		return nil, ctx.MakeError("fetch_test_block",
 			"Request blocked as test feature is active"+
 				" (URL was: \""+fullurl+"\")")
 	}
 
-	sysFetch := vs.GetPath([]any{"system", "fetch"}, options)
+	sysFetch := vs.GetPath(options, []any{"system", "fetch"})
 
 	if sysFetch == nil {
 		return defaultHTTPFetch(fullurl, fetchdef)

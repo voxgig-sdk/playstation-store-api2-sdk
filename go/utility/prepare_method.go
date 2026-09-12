@@ -30,5 +30,9 @@ func prepareMethodUtil(ctx *core.Context) string {
 	if m, ok := methodMap[opname]; ok {
 		return m
 	}
-	return "GET"
+
+	// An op the API does not define resolves NO method - ts answers
+	// undefined here, and "" is go's spelling of the same "no value"
+	// (the corpus pins this via primary.prepareMethod).
+	return ""
 }

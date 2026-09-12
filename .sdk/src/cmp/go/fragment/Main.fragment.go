@@ -35,7 +35,7 @@ func NewProjectNameSDK(options map[string]any) *ProjectNameSDK {
 
 	sdk.options = sdk.utility.MakeOptions(sdk.rootctx)
 
-	if vs.GetPath([]any{"feature", "test", "active"}, sdk.options) == true {
+	if vs.GetPath(sdk.options, []any{"feature", "test", "active"}) == true {
 		sdk.Mode = "test"
 	}
 
@@ -48,7 +48,7 @@ func NewProjectNameSDK(options map[string]any) *ProjectNameSDK {
 	// must be added before them to sit at the base of the chain.
 	featureOpts := ToMapAny(vs.GetProp(sdk.options, "feature"))
 	if featureOpts != nil {
-		if fo, ok := vs.GetPath([]any{"__derived__", "featureorder"}, sdk.options).([]any); ok {
+		if fo, ok := vs.GetPath(sdk.options, []any{"__derived__", "featureorder"}).([]any); ok {
 			for _, n := range fo {
 				fname, _ := n.(string)
 				fopts := ToMapAny(featureOpts[fname])
@@ -188,12 +188,12 @@ func (sdk *ProjectNameSDK) Direct(fetchargs map[string]any) (map[string]any, err
 
 // Is this raw-access op permitted by the SDK's allow.op option?
 func (sdk *ProjectNameSDK) opAllowed(op string) bool {
-	allowOp, _ := vs.GetPath([]any{"allow", "op"}, sdk.options).(string)
+	allowOp, _ := vs.GetPath(sdk.options, []any{"allow", "op"}).(string)
 	return strings.Contains(allowOp, op)
 }
 
 func (sdk *ProjectNameSDK) opDenied(op string) map[string]any {
-	allowOp, _ := vs.GetPath([]any{"allow", "op"}, sdk.options).(string)
+	allowOp, _ := vs.GetPath(sdk.options, []any{"allow", "op"}).(string)
 	return map[string]any{
 		"ok": false,
 		"err": fmt.Errorf("ProjectNameSDK: %s: operation not allowed by"+
@@ -322,7 +322,7 @@ func (sdk *ProjectNameSDK) Graphql(
 	// body, and the raw path represents a non-2xx as ok:false with no err —
 	// so returning early on status would discard the server's own
 	// diagnostics, which are the only useful part of that response.
-	errors, _ := vs.GetPath([]any{"data", "errors"}, res).([]any)
+	errors, _ := vs.GetPath(res, []any{"data", "errors"}).([]any)
 
 	if 0 < len(errors) {
 		msg, _ := vs.GetProp(errors[0], "message").(string)

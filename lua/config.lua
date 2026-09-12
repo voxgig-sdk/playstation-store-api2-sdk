@@ -70,6 +70,20 @@ local function make_config()
             ["type"] = "`$ARRAY`",
           },
         },
+        ["id"] = {
+          ["field"] = "id",
+          ["from"] = {
+            ["age_limit"] = "age_limit",
+          },
+          ["name"] = "id",
+          ["parts"] = {
+            "country",
+            "language",
+            "age_limit",
+            "container_id",
+          },
+          ["sep"] = "/",
+        },
         ["name"] = "container",
         ["op"] = {
           ["load"] = {
@@ -169,12 +183,22 @@ local function make_config()
                 ["kind"] = "http",
                 ["method"] = "GET",
                 ["orig"] = "/container/{country}/{language}/{age_limit}/{container_id}",
-                ["parts"] = {
-                  "container",
-                  "{country}",
-                  "{language}",
-                  "{age_limit}",
-                  "{container_id}",
+                ["segments"] = {
+                  {
+                    ["lit"] = "container",
+                  },
+                  {
+                    ["var"] = "country",
+                  },
+                  {
+                    ["var"] = "language",
+                  },
+                  {
+                    ["var"] = "age_limit",
+                  },
+                  {
+                    ["var"] = "container_id",
+                  },
                 },
                 ["select"] = {
                   ["exist"] = {
@@ -195,6 +219,13 @@ local function make_config()
                 ["transform"] = {
                   ["req"] = "`reqdata`",
                   ["res"] = "`body`",
+                },
+                ["parts"] = {
+                  "container",
+                  "{country}",
+                  "{language}",
+                  "{age_limit}",
+                  "{container_id}",
                 },
               },
             },

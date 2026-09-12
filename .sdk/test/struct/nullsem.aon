@@ -1,0 +1,172 @@
+
+# STORED-NULL SEMANTICS.
+#
+# One question, asked of every reader: when a key is PRESENT and holds a JSON
+# null, is that "no value" (the same as an absent key) or is it a value?
+#
+# Nothing in the corpus asked it before. `minor.getprop` and `minor.haskey`
+# have ~50 cases each and not one stores a null: every entry is an absent key
+# or a non-null value. So the ports diverged silently, and they HAVE:
+#
+#   port   getprop({x:null},'x','ALT')   haskey({x:null},'x')
+#   ────   ───────────────────────────   ────────────────────
+#   go     'ALT'                         false
+#   py     'ALT'                         false
+#   perl   'ALT'                         false
+#   rb      null                         true
+#   php     null                         true
+#   js      null                         true
+#
+# That is not academic. It is the direct cause of the `auth: null` bug family:
+# `auth: null` is the documented way to suppress auth outright, and where a
+# stored null reads as "no value" the optspec `auth` default fires, the
+# suppression becomes "use the default auth", and the credential the caller
+# withheld goes out on the wire.
+#
+# 0.3.2 answers "no value" — the top three rows. This section pins that.
+#
+#
+# THIS SECTION IS OPT-IN, AND DELIBERATELY SO.
+#
+# Half the tree still vendors a struct that answers the other way. Putting
+# these cases in `minor` would red those targets today and gate the whole
+# corpus on finishing the struct migration everywhere first. Instead a target
+# wires this section up as it migrates:
+#
+#   runsetflags(nullsemSpec["getprop"], {"null": False}, getprop_wrapper)
+#
+# so the section becomes that target's null-semantics gate, and a target that
+# has not migrated simply does not reference it yet.
+#
+#
+# `null: false` IS NOT OPTIONAL HERE.
+#
+# The runner's default fixJSON rewrites every JSON null - on BOTH the `in` and
+# `out` sides - to the string '__NULL__' before the subject ever sees it. Run
+# without the flag, every case below would pass the STRING '__NULL__' as the
+# stored value, which is not a null and is not the question. The section would
+# then pass on every port while asserting nothing about null at all - the
+# exact "green while checking nothing" failure the corpus guards exist to
+# prevent. `minor.getelem` and `minor.clone` already run with the flag for the
+# same reason.
+#
+# With the flag, an entry with NO `out` expects a null result, and `out:` with
+# a value expects that value.
+#
+#
+# VERIFIED AGAINST THE REFERENCE, NOT GUESSED.
+#
+# All 33 cases below were run against upstream @voxgig/struct 0.3.2
+# (typescript/src/StructUtility.ts, the canonical port) and all 33 pass. They
+# are what the reference DOES, not what it was assumed to do.
+#
+# That mattered on the first run: `getprop([null], 0, 'ALT')` was assumed to
+# be a formality and turned out to be a live defect in the py port's vendored
+# copy. Canonical getprop tests `isnode(val)` - map AND list - and then
+# applies the null rule once to whatever it read. The py copy branches on
+# ismap/islist and its list branch does `return val[key]`, an early return
+# that skips the null check entirely, so it hands back the stored null where
+# every other reader would substitute the alt. Its map path is correct, which
+# is why nothing noticed.
+#
+# So py cannot opt in to this section until its vendored struct is resynced.
+# That is the section working as intended: it says "not yet" in a test result
+# instead of in a comment.
+
+
+# Does the ALT fire for a stored null, as it does for an absent key?
+getprop: {
+  set: [
+    # THE CASE. Absent and stored-null must answer alike.
+    { in: { val: {x:null}, key: x, alt: 'ALT' }, out: 'ALT' }
+    { in: { val: {},       key: x, alt: 'ALT' }, out: 'ALT' }
+
+    # No alt: a stored null reads back as null either way, so this pins that
+    # the rule does not turn a null into something else.
+    { in: { val: {x:null}, key: x } }
+
+    # A stored null must not leak past its own key.
+    { in: { val: {x:null, y:1}, key: y, alt: 'ALT' }, out: 1 }
+    { in: { val: {x:1, y:null}, key: x, alt: 'ALT' }, out: 1 }
+
+    # false, 0 and '' are VALUES, not absence. A port that collapses "nullish"
+    # to "falsy" passes every case above and fails these.
+    { in: { val: {x:false}, key: x, alt: 'ALT' }, out: false }
+    { in: { val: {x:0},     key: x, alt: 'ALT' }, out: 0 }
+    { in: { val: {x:''},    key: x, alt: 'ALT' }, out: '' }
+
+    # Lists too: index 0 holding a null is the list-shaped form of the same
+    # question, and a port can easily fix one and not the other.
+    { in: { val: [null], key: 0, alt: 'ALT' }, out: 'ALT' }
+    { in: { val: [null, 1], key: 1, alt: 'ALT' }, out: 1 }
+  ]
+}
+
+
+# getelem is the list-index reader. Same rule, different entry point - and it
+# is a separate function in every port, so it needs its own cases.
+getelem: {
+  set: [
+    { in: { val: [null], key: 0, alt: 'ALT' }, out: 'ALT' }
+    { in: { val: [10, null, 30], key: 1, alt: 'ALT' }, out: 'ALT' }
+    { in: { val: [10, null, 30], key: 2, alt: 'ALT' }, out: 30 }
+
+    # Negative indices are getelem's whole reason for existing; a stored null
+    # at a negative index is the case a port is most likely to miss.
+    { in: { val: [10, null], key: -1, alt: 'ALT' }, out: 'ALT' }
+    { in: { val: [null, 20], key: -1, alt: 'ALT' }, out: 20 }
+
+    { in: { val: [false], key: 0, alt: 'ALT' }, out: false }
+  ]
+}
+
+
+# A path that lands on a stored null, and - the case that actually bites - a
+# path that must TRAVERSE one. Traversal through a null is not the same
+# question as reading one, and a port can get the leaf right and still walk
+# into a null parent.
+getpath: {
+  set: [
+    { in: { path: 'a', store: {a:null} } }
+    { in: { path: 'a.b', store: {a:null} } }
+    { in: { path: 'a.b.c', store: {a:{b:null}} } }
+    { in: { path: 'a.b', store: {a:{b:null}} } }
+    { in: { path: 'a.b', store: {a:{b:1}} }, out: 1 }
+    { in: { path: 'a.b', store: {a:{b:false}} }, out: false }
+  ]
+}
+
+
+# Presence, asked directly. This is the reader the auth-null fix needs in
+# every port, and the one whose answer splits the tree.
+haskey: {
+  set: [
+    { in: { src: {x:null}, key: x }, out: false }
+    { in: { src: {},       key: x }, out: false }
+    { in: { src: {x:1},    key: x }, out: true }
+
+    # Again: falsy is not absent.
+    { in: { src: {x:false}, key: x }, out: true }
+    { in: { src: {x:0},     key: x }, out: true }
+    { in: { src: {x:''},    key: x }, out: true }
+
+    { in: { src: [null], key: 0 }, out: false }
+    { in: { src: [1],    key: 0 }, out: true }
+  ]
+}
+
+
+# The other direction, and the reason `auth: null` is expressible at all:
+# presence is STRUCTURAL. keysof lists a null-valued key, because the key IS
+# there - it is only the READERS above that treat its value as no value.
+#
+# A port that made haskey false by DELETING the key would pass every case
+# above and fail here, and it would also make the suppression unwritable:
+# there would be nothing left for makeOptions to detect.
+keysof: {
+  set: [
+    { in: {a:null}, out: [a] }
+    { in: {a:null, b:1}, out: [a, b] }
+    { in: {a:1, b:null}, out: [a, b] }
+  ]
+}

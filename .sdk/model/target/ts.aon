@@ -8,13 +8,33 @@ main: kit: target: ts: {
   base: 'node_modules/@voxgig/sdkgen/project/.sdk'
   package: '@voxgig/sdkgen'
 
+  # Applicability (docs/design/feature-tags.md). A vendored sekreto port
+  # lives in this target's feature container, so a feature that resolves
+  # secrets through sekreto can apply here.
+  provides: { sekreto: true }
+
+  # Files earlier toolchains generated that this target has RETIRED
+  # (vendor-tag rollout): the hand-written runner and the omni compat
+  # shim, and the pre-reshape sekreto shapes. `doctor` reports leftovers;
+  # `doctor prune` deletes them.
+  superseded: [
+    'test/runner.ts'
+    'test/vendor/omni/compat.ts'
+    'src/feature/secrets/sekreto/Providers.ts'
+    'src/feature/secrets/sekreto/Sigv4.ts'
+    'src/feature/secrets/sekreto/provider/Registry.ts'
+    'src/feature/secrets/sekreto/provider/http.ts'
+  ]
+
   deps: &: {
     # TODO: fix aontu disjunctions!
     kind: *'prod' | string # 'peer' |'dev'
   }
   
   deps: {
-    'dotenv': { active: true, version: '^17.4.2', kind: dev }
+    # dotenv was dropped when the generated entity tests moved to
+    # `loadEnvLocal` (tm/ts/test/utility.ts) — the SDK's last non-tooling
+    # dependency of any kind.
     'typescript': { active: true, version: '^5.9.3', kind: dev }
     '@types/node': { active: true, version: '^25.6.0', kind: dev }
   }

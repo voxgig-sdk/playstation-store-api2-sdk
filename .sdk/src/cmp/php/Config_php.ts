@@ -16,6 +16,7 @@ import {
   rawStringLiteral,
   resolveAuthPrefix,
   serverVariables,
+  targetFeatures,
 } from '@voxgig/sdkgen'
 
 
@@ -28,9 +29,79 @@ import {
 
 
 import {
-  clean,
   formatPhpArray,
 } from './utility_php'
+
+
+// PLUGIN DEFINITION REQUIRES AND THE feature_plugins ACCESSOR (the php peer
+// of cmp/rb/Config_rb.ts's rbPlugins and cmp/py/Config_py.ts's
+// pluginImports/pluginDefs).
+//
+// Upstream sekreto replaced its self-registration registry with
+// voxgig/plugin definitions: a provider kind the caller did not pass in via
+// `plugins: [...]` is unknown to that Sekreto. So config names each active
+// plugin's exported DEFINITION FUNCTION (the model's `def.php` map) and
+// hands the list to the feature.
+//
+// A METHOD rather than a constant, and this is php's own constraint: a
+// plugin definition holds CLOSURES (sekreto's Providers.php says so where
+// it declares `builtins()`), and php has no constant that can. The
+// `require_once` calls live INSIDE the method for the same reason upstream
+// puts them inside plugins.php's own accessors - a plugin file is read only
+// when a feature actually asks for its definitions.
+//
+// The `def` map is declared in the model rather than derived from filenames
+// because one file may export several definitions (sekreto's aws.php
+// exports awssecrets AND awsparams) - hence the de-duplication by path, so
+// a two-definition file yields ONE require_once. A def value is the file's
+// path under tm/php, which is this target's root and also config.php's own
+// directory, so the require is that path verbatim.
+//
+// GATED, like rb: the whole block is emitted only when an active feature
+// DECLARES a plugin catalogue for this target. An SDK that does not carry
+// the secrets feature must be byte-identical to what it was before the
+// feature existed, and an unread accessor is not a thing a simple SDK
+// should have to explain. The feature reads it through `method_exists`, so
+// its absence is not a load error.
+function phpPlugins(model: any, feature: any) {
+  const defs: Record<string, { paths: string[], syms: string[] }> = {}
+  let declared = false
+
+  each(feature, (f: any) => {
+    // `only_active: false`, and this is the whole subtlety: the feature
+    // object a component is handed has ALREADY been filtered, so asking it
+    // whether a catalogue EXISTS answers no as soon as every group is off.
+    // (Same trap helpers/featureSource documents one level down.)
+    const all = getModelPath(model, `main.${KIT}.feature.${f.name}.plugin`,
+      { required: false, only_active: false }) || {}
+
+    if (0 < Object.keys(all).length) {
+      declared = true
+    }
+
+    const paths: Record<string, true> = {}
+    const syms: string[] = []
+
+    each(f.plugin, (plugin: any) => {
+      // Filter on `active` HERE rather than trusting the feature object to
+      // arrive filtered: getting it wrong in this direction emits a
+      // require_once for a file the plugin trim just deleted - an SDK that
+      // does not load, rather than one that merely carries too much.
+      if (false === plugin.active || null == plugin.active) return
+
+      for (const [sym, one] of Object.entries(plugin.def?.php || {})) {
+        paths[String(one)] = true
+        syms.push(sym)
+      }
+    })
+
+    if (0 < syms.length) {
+      defs[f.name] = { paths: Object.keys(paths).sort(), syms: syms.sort() }
+    }
+  })
+
+  return { defs, declared }
+}
 
 
 const Config = cmp(async function Config(props: any) {
@@ -40,7 +111,10 @@ const Config = cmp(async function Config(props: any) {
   const model: Model = ctx$.model
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  const feature = getModelPath(model, `main.${KIT}.feature`)
+  // Gated by the applicability tags, so this target never imports or
+  // registers a feature it has no source for. One rule, one place:
+  // helpers/applicability.
+  const feature = targetFeatures(model, target)
 
   const headers = getModelPath(model, `main.${KIT}.config.headers`) || {}
 
@@ -75,6 +149,39 @@ const Config = cmp(async function Config(props: any) {
   // both representations below carry them, keeping the reps interchangeable.
   const { def: configDef, json: configJson } = configDefinition(model, target.name)
   const asData = isConfigData(configJson, configReprSetting(model))
+
+  const { defs: pluginDefs, declared: pluginDeclared } = phpPlugins(model, feature)
+  const pluginFeatures = Object.keys(pluginDefs).sort()
+
+  // Emitted whenever a catalogue is declared, even with every group off:
+  // the feature asks for the list unconditionally, and an SDK whose chain
+  // is all built-ins still has to be answered with an empty one.
+  const featurePluginsBlock = !pluginDeclared ? '' : `
+    /**
+     * The sekreto plugin DEFINITIONS the model selected per feature, from
+     * the files the catalogue's active \`plugin.def\` entries declare.
+     * Handed to each feature (secrets builds its Sekreto with them): a
+     * provider kind not listed here is unknown to this SDK.
+     *
+     * A method rather than a constant: a definition holds closures, and PHP
+     * has no constant that can. The requires are INSIDE it, so a plugin
+     * file is read only when a feature asks for its definitions.
+     */
+    public static function feature_plugins(string $name): array
+    {
+` + (0 === pluginFeatures.length ? '' : `        switch ($name) {
+` + pluginFeatures.map((fname: string) => `            case "${fname}":
+` + pluginDefs[fname].paths.map(
+    (one: string) => `                require_once __DIR__ . '/${one}';\n`).join('') +
+`                return [
+` + pluginDefs[fname].syms.map(
+    (sym: string) => `                    \\Voxgig\\Sekreto\\Plugins\\${sym}(),\n`).join('') +
+`                ];
+`).join('') + `        }
+
+`) + `        return [];
+    }
+`
 
   File({ name: 'config.' + target.ext }, () => {
 
@@ -235,12 +342,7 @@ ${serverBlock}${authBlock}                "headers" => ${formatPhpArray(headers,
     Content(`                ],
             ],
             "entity" => ${formatPhpArray(
-      Object.values(entity).reduce((a: any, n: any) => (a[n.name] = clean({
-        fields: n.fields,
-        name: n.name,
-        op: n.op,
-        relations: n.relations,
-      }, true), a), {}), 3)},
+configDef.entity, 3)},
         ];
 `)
     }
@@ -250,7 +352,7 @@ ${serverBlock}${authBlock}                "headers" => ${formatPhpArray(headers,
     }
 
     Content(`
-
+${featurePluginsBlock}
     public static function make_feature(string $name)
     {
         require_once __DIR__ . '/features.php';

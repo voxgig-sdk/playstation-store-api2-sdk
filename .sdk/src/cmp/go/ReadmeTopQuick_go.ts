@@ -1,5 +1,5 @@
 
-import { cmp, Content, isAuthActive, envName, entityIdField, entityOps, opRequestShape, goModule } from '@voxgig/sdkgen'
+import { cmp, Content, isAuthActive, envName, entityIdField, entityOps, opRequestShape, goModule , serverVariables} from '@voxgig/sdkgen'
 
 import {
   KIT,
@@ -20,9 +20,22 @@ const ReadmeTopQuick = cmp(function ReadmeTopQuick(props: any) {
   const exampleEntity = Object.values(entity).find((e: any) => e.active !== false) as any
 
   const authActive = isAuthActive(model)
+  
+  // Server variables (a templated server URL) are REQUIRED at construction
+  // - the SDK refuses rather than request a URL with a literal
+  // {account_id} in it - so a quickstart that omits them is a quickstart
+  // that fails on its first line.
+  const svars = serverVariables(model)
+  const goServerField = 0 === svars.length ? '' :
+    `\n    "server": map[string]any{` +
+    svars.map((v: any) => `\n        "${v.name}": "<${v.name}>",`).join('') +
+    `\n    },`
+
   const ctor = authActive
-    ? `sdk.New${model.const.Name}SDK(map[string]any{\n    "apikey": os.Getenv("${envName(model)}_APIKEY"),\n})`
-    : `sdk.New()`
+    ? `sdk.New${model.const.Name}SDK(map[string]any{\n    "apikey": os.Getenv("${envName(model)}_APIKEY"),${goServerField}\n})`
+    : ('' === goServerField
+      ? `sdk.New()`
+      : `sdk.New${model.const.Name}SDK(map[string]any{${goServerField}\n})`)
 
   Content(`\`\`\`go
 import sdk "${gomodule}"

@@ -85,6 +85,16 @@ function ProjectNameSDK.new(options)
     end
   end
 
+  -- CONSUMED, not kept. `extend` holds feature INSTANCES, and every shipped
+  -- feature's init stores `self.client = ctx.client` - so leaving the list
+  -- in self.options makes the options map CYCLIC (client.options.extend[1]
+  -- .client == client), and options_map()'s vs.clone, which has no cycle
+  -- guard, blew the stack on the first prepare_auth of any client built with
+  -- an extend feature. The instances live on self.features from here on,
+  -- which is the only place anything reads them; the SAME table is
+  -- self._rootctx.options, so the root context loses the key too.
+  self.options["extend"] = nil
+
   -- Initialize features.
   for _, f in ipairs(self.features) do
     utility.feature_init(self._rootctx, f)

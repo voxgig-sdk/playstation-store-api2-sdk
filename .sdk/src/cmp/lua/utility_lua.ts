@@ -147,7 +147,30 @@ function luaLongString(s: string): string {
   return '[' + eq + '[' + s + ']' + eq + ']'
 }
 
+// Lua reserved words. These MATCH the identifier pattern but are illegal as a
+// bare table key: `{ end = 1 }` is a syntax error, `{ ["end"] = 1 }` is not.
+// An API is free to name a parameter `end` (aareguru's /v2018 range query does),
+// so every emitted table key must be checked against this list and not just
+// against the identifier shape. `goto` is reserved from 5.2 on; bracketing it
+// is valid in 5.1 too, so it is listed unconditionally.
+const LUA_RESERVED = new Set([
+  'and', 'break', 'do', 'else', 'elseif', 'end', 'false', 'for', 'function',
+  'goto', 'if', 'in', 'local', 'nil', 'not', 'or', 'repeat', 'return', 'then',
+  'true', 'until', 'while',
+])
+
+
+// `name` as a Lua table key: bare when it is a plain identifier that is not
+// reserved, bracketed and quoted otherwise.
+function luaKey(name: string): string {
+  return /^[A-Za-z_]\w*$/.test(name) && !LUA_RESERVED.has(name)
+    ? name
+    : `["${name}"]`
+}
+
+
 export {
+  luaKey,
   luaLongString,
   clean,
   formatLuaTable,

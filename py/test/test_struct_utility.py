@@ -1,18 +1,21 @@
-# Vendored from voxgig/struct/py
-# RUN: python -m unittest discover -s tests
-# RUN-SOME: python -m unittest discover -s tests -k getpath
+# VERSION: @voxgig/struct 0.1.1 (vendored; driven via test/omni.py)
+# RUN: python -m unittest discover -s test
+# RUN-SOME: python -m unittest discover -s test -k getpath
 
 import os
 import unittest
 
-from test.struct_runner import (
+# The vendored omni runner, presented in the struct-runner shape this
+# suite has always used (test/struct_runner.py is retired - see
+# docs/design/vendor-tag-rollout.md).
+from test.omni import (
     makeRunner,
     nullModifier,
     NULLMARK,
     UNDEFMARK,
-    StructTestClient,
 )
 
+from playstationstoreapi2_sdk import PlaystationStoreApi2SDK
 from playstationstoreapi2_sdk.utility.voxgig_struct import voxgig_struct as vs
 from playstationstoreapi2_sdk.utility.voxgig_struct.voxgig_struct import (
     T_noval, T_scalar, T_function, T_symbol, T_any, T_node, T_instance, T_null,
@@ -22,8 +25,8 @@ from playstationstoreapi2_sdk.utility.voxgig_struct.voxgig_struct import (
 STRUCT_TEST_JSON = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '../../.sdk/test/test.json')
 
-sdk_client = StructTestClient.test()
-runner = makeRunner(STRUCT_TEST_JSON, sdk_client)
+# The struct corpus drives the LIVE SDK's struct utilities, as ts does.
+runner = makeRunner(STRUCT_TEST_JSON, PlaystationStoreApi2SDK.test(None, None))
 runparts = runner('struct')
 
 spec = runparts["spec"]
@@ -51,8 +54,9 @@ islist = struct_utils.islist
 ismap = struct_utils.ismap
 isnode = struct_utils.isnode
 items = struct_utils.items
-ja = struct_utils.ja
-jo = struct_utils.jo
+# Upstream removed the jo/ja aliases: jm/jt are the definitions.
+jm = struct_utils.jm
+jt = struct_utils.jt
 joinurl = struct_utils.joinurl
 jsonify = struct_utils.jsonify
 keysof = struct_utils.keysof
@@ -159,6 +163,35 @@ class TestStructUtility(unittest.TestCase):
         self.assertEqual({"a":f0}, clone({"a":f0}))
 
 
+    def test_nullsem(self):
+        # The struct.nullsem section: does a PRESENT key holding a JSON
+        # null read as "no value"? Opt-in per target (create-sdkgen ships
+        # it; an older project corpus may predate it - the skip says so
+        # OUT LOUD rather than passing vacuously). All lanes {null: False}.
+        nullsem = spec.get("nullsem")
+        if nullsem is None:
+            self.skipTest(
+                "corpus predates struct.nullsem - refresh .sdk/test/struct"
+                " from create-sdkgen")
+
+        def prop_subject(vin):
+            if "alt" in vin:
+                return getprop(vin["val"], vin["key"], vin["alt"])
+            return getprop(vin["val"], vin["key"])
+
+        def elem_subject(vin):
+            if "alt" in vin:
+                return getelem(vin["val"], vin["key"], vin["alt"])
+            return getelem(vin["val"], vin["key"])
+
+        runsetflags(nullsem["getprop"], {"null": False}, prop_subject)
+        runsetflags(nullsem["getelem"], {"null": False}, elem_subject)
+        runsetflags(nullsem["getpath"], {"null": False},
+                    lambda vin: getpath(vin["store"], vin["path"]))
+        runsetflags(nullsem["haskey"], {"null": False},
+                    lambda vin: haskey(vin["src"], vin["key"]))
+        runsetflags(nullsem["keysof"], {"null": False}, keysof)
+
     def test_minor_escre(self):
         runset(minorSpec["escre"], escre)
 
@@ -168,9 +201,16 @@ class TestStructUtility(unittest.TestCase):
 
 
     def test_minor_stringify(self):
-        runset(minorSpec["stringify"],
-               lambda vin: stringify("null" if NULLMARK == vin.get('val') else
-                                     vin.get('val'), vin.get('max')))
+        # An entry with NO `val` is canonical stringify(undefined) == ''.
+        # python cannot spell absence: the resynced struct answers 'null'
+        # for None (the 0.3.2 null rule), so the wrapper answers for the
+        # absent case itself.
+        def stringify_wrapper(vin):
+            if 'val' not in vin:
+                return ''
+            val = "null" if NULLMARK == vin.get('val') else vin.get('val')
+            return stringify(val, vin.get('max'))
+        runset(minorSpec["stringify"], stringify_wrapper)
 
     def test_minor_jsonify(self):
         runsetflags(minorSpec["jsonify"], {"null": False},
@@ -247,11 +287,15 @@ class TestStructUtility(unittest.TestCase):
 
     def test_minor_pathify(self):
         def pathify_wrapper(vin=None):
+            # An entry with NO `path` is canonical pathify(undefined) ==
+            # '<unknown-path>'. python cannot spell absence - the resynced
+            # struct reads None as the JSON null ('<unknown-path:null>') -
+            # so the wrapper answers for the absent case itself.
+            if "path" not in vin:
+                return "<unknown-path>"
             path = vin.get("path")
             path = None if NULLMARK == path else path
-            pathstr = pathify(path, vin.get("from")).replace("__NULL__.","")
-            pathstr = pathstr.replace(">", ":null>") if NULLMARK == vin.get('path') else pathstr
-            return pathstr
+            return pathify(path, vin.get("from")).replace("__NULL__.", "")
         runsetflags(minorSpec["pathify"], {"null": True}, pathify_wrapper)
 
 
@@ -355,9 +399,12 @@ class TestStructUtility(unittest.TestCase):
         log = []
 
         def walklog(key, val, parent, path):
-            log.append('k=' + stringify(key) +
+            # The root call has NO key/parent: canonical logs '' there
+            # (stringify(undefined)); the resynced stringify(None) answers
+            # 'null', so absence is spelled here.
+            log.append('k=' + ('' if key is None else stringify(key)) +
                       ', v=' + stringify(val) +
-                      ', p=' + stringify(parent) +
+                      ', p=' + ('' if parent is None else stringify(parent)) +
                       ', t=' + pathify(path))
             return val
 
@@ -717,27 +764,27 @@ class TestStructUtility(unittest.TestCase):
     # -------------------------------------------------
 
     def test_json_builder(self):
-        self.assertEqual(jsonify(jo('a', 1)), '{\n  "a": 1\n}')
+        self.assertEqual(jsonify(jm('a', 1)), '{\n  "a": 1\n}')
 
-        self.assertEqual(jsonify(ja('b', 2)), '[\n  "b",\n  2\n]')
+        self.assertEqual(jsonify(jt('b', 2)), '[\n  "b",\n  2\n]')
 
-        self.assertEqual(jsonify(jo(
+        self.assertEqual(jsonify(jm(
             'c', 'C',
-            'd', jo('x', True),
-            'e', ja(None, False)
+            'd', jm('x', True),
+            'e', jt(None, False)
         )), '{\n  "c": "C",\n  "d": {\n    "x": true\n  },\n  "e": [\n    null,\n    false\n  ]\n}')
 
-        self.assertEqual(jsonify(ja(
-            3.3, jo(
+        self.assertEqual(jsonify(jt(
+            3.3, jm(
                 'f', True,
                 'g', False,
                 'h', None,
-                'i', ja('y', 0),
-                'j', jo('z', -1),
+                'i', jt('y', 0),
+                'j', jm('z', -1),
                 'k')
         )), '[\n  3.3,\n  {\n    "f": true,\n    "g": false,\n    "h": null,\n    "i": [\n      "y",\n      0\n    ],\n    "j": {\n      "z": -1\n    },\n    "k": null\n  }\n]')
 
-        self.assertEqual(jsonify(jo(
+        self.assertEqual(jsonify(jm(
             True, 1,
             False, 2,
             None, 3,

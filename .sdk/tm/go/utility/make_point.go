@@ -66,7 +66,7 @@ func makePointUtil(ctx *core.Context) (map[string]any, error) {
 	op := ctx.Op
 	options := ctx.Options
 
-	allowOp, _ := vs.GetPath([]any{"allow", "op"}, options).(string)
+	allowOp, _ := vs.GetPath(options, []any{"allow", "op"}).(string)
 	if !strings.Contains(allowOp, op.Name) {
 		return nil, ctx.MakeError("point_op_allow",
 			"Operation \""+op.Name+

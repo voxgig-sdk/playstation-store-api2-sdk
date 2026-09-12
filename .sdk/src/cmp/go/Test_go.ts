@@ -3,7 +3,8 @@ import type {
   ModelEntity
 } from '@voxgig/apidef'
 
-import { cmp, each, Folder, File, Content, goModule, entityCollection } from '@voxgig/sdkgen'
+import { cmp, each, Folder, File, Content, goModule, entityCollection,
+  TestControl } from '@voxgig/sdkgen'
 
 
 import { TestEntity } from './TestEntity_go'
@@ -20,6 +21,9 @@ const Test = cmp(function Test(props: any) {
   const gomodule = goModule(model, target.name)
 
   Folder({ name: 'test' }, () => {
+
+    // Write-once: a project's edited control file survives regeneration.
+    TestControl({ target, dir: 'test' })
 
     // Generate exists_test.go programmatically to avoid duplication
     // with any scaffolded test file (e.g. projectname_sdk_test.go).

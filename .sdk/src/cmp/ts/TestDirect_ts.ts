@@ -17,9 +17,13 @@ import {
   cmp,
   snakify,
   isAuthActive,
+  serverVarEnv,
+  serverVariables,
   isHttpBasicAuth,
   jsProp,
-  jsOptProp, envName, envToken, liveStrict
+  jsOptProp, envName, envToken, liveStrict,
+  jsKey,
+  pointParts,
 } from '@voxgig/sdkgen'
 
 
@@ -47,13 +51,32 @@ const TestDirect = cmp(function TestDirect(props: any) {
   const authActive = isAuthActive(model)
   const authBasic = authActive && isHttpBasicAuth(model)
   const apikeyEnvEntry = authActive
-    ? `\n    '${PROJECTNAME}_APIKEY': 'NONE',${authBasic ? `\n    '${PROJECTNAME}_SECRET': 'NONE',` : ''}`
+    ? `\n    '${PROJECTNAME}_APIKEY': '',${authBasic ? `\n    '${PROJECTNAME}_SECRET': '',` : ''}`
     : ''
   const apikeyLiveField = authActive
     ? `
       apikey: env.${PROJECTNAME}_APIKEY,${authBasic ? `
       secret: env.${PROJECTNAME}_SECRET,` : ''}`
     : ''
+
+  // A templated server URL (OpenAPI server variables) makes a LIVE client
+  // impossible to construct without values: makeOptions raises rather than
+  // request a URL with a literal `{account_id}` in it. Taken from the
+  // environment, the same way the apikey is.
+  //
+  // Keys are quoted and the env read is bracketed via jsKey/jsProp: a server
+  // variable name is spec-derived and need not be a JS identifier — the URL
+  // grammar admits a leading digit ({2fa}), and a declared-but-unreferenced
+  // variable ({edge-zone}) is not constrained at all. Bare `name:` and
+  // `env.PROJ_SERVER_EDGE-ZONE` are both syntax errors.
+  const svars = serverVariables(model)
+  const serverEnvEntry = svars
+    .map((v: any) => `\n    '${serverVarEnv(PROJECTNAME, v.name)}': ${JSON.stringify(v.dflt)},`).join('')
+  const serverLiveField = 0 === svars.length ? '' : `
+      server: {${svars
+      .map((v: any) => `
+        ${jsKey(v.name)}: ${jsProp('env', serverVarEnv(PROJECTNAME, v.name))},`).join('')}
+      },`
 
   const opnames = Object.keys(entity.op || {})
   const hasLoad = opnames.includes('load')
@@ -86,14 +109,17 @@ function directSetup(mockres?: any) {
 
   const env = envOverride({
     '${entidEnvVar}': {},
-    '${PROJECTNAME}_TEST_LIVE': 'FALSE',${apikeyEnvEntry}
+    '${PROJECTNAME}_TEST_LIVE': 'FALSE',${apikeyEnvEntry}${serverEnvEntry}
   })
 
   const live = 'TRUE' === env.${PROJECTNAME}_TEST_LIVE
 
   if (live) {
-    const client = new ${nom(model.const, 'Name')}SDK({${apikeyLiveField}
-    })
+    // Merged so the generated fields win: sdk-test-control.json's
+    // test.client.options adds to the live client, it does not redirect it.
+    const client = new ${nom(model.const, 'Name')}SDK(
+      Object.assign({}, liveClientOptions(), {${apikeyLiveField}${serverLiveField}
+      }))
 
     let idmap: any = env['${entidEnvVar}']
     if ('string' === typeof idmap && idmap.startsWith('{')) {
@@ -210,7 +236,21 @@ function generateDirectGraphql(
 ${varAsserts}`
 
   const checks = strict ?
-    offlineChecks.replace(/^ {6}/gm, '    ').replace(/^ {4}$/gm, '') :
+    `    if (setup.live) {
+      // STRICT live mode: a non-2xx is a real failure - this project owns
+      // the server it points at, so there is nothing to be lenient about.
+      //
+      // What is NOT asserted here is the MOCK's own fixtures. \`direct01\`
+      // is a scripted id and \`calls\` records the mock transport; neither
+      // exists on a live run, so asserting them made strict mode mean
+      // "compare the live server against the mock's script" - a suite that
+      // could not pass against any real API, including this project's own.
+      assert(result.ok === true,
+        'live request failed: ' + result.status + ' ' + JSON.stringify(result.data))
+      assert(result.status >= 200 && result.status < 300)
+      assert(null != result.data)
+    } else {
+${offlineChecks}    }` :
     `    if (setup.live) {
       // Live mode is lenient: synthetic ids frequently fail server-side
       // validation. Skip rather than fail when the call doesn't come back
@@ -256,7 +296,7 @@ function generateDirectLoad(model: Model, entity: ModelEntity, strict: boolean) 
   }
 
   const allLoadParams = loadPoint.args?.params || []
-  const loadPath = normalizePathParams(loadPoint.parts || [], allLoadParams, loadPoint.rename?.param)
+  const loadPath = normalizePathParams(pointParts(loadPoint), allLoadParams, loadPoint.rename?.param)
 
   // Some upstream OpenAPI specs declare a parameter as `in: path` even when
   // that path has no `{name}` placeholder for it. Only path params that
@@ -264,7 +304,7 @@ function generateDirectLoad(model: Model, entity: ModelEntity, strict: boolean) 
   // setup and URL-substitution asserts; otherwise the SDK silently drops
   // them and the URL-includes assert fails.
   const pathPlaceholders = new Set<string>()
-  for (const part of (loadPoint.parts || [])) {
+  for (const part of pointParts(loadPoint)) {
     if (typeof part === 'string' && part.startsWith('{') && part.endsWith('}')) {
       pathPlaceholders.add(part.slice(1, -1))
     }
@@ -298,7 +338,7 @@ function generateDirectLoad(model: Model, entity: ModelEntity, strict: boolean) 
   const listOp = entity.op?.list
   const listPoint = listOp?.points?.[0]
   const listParams = listPoint?.args?.params || []
-  const listPath = listPoint ? normalizePathParams(listPoint.parts || [], listParams, listPoint.rename?.param) : ''
+  const listPath = listPoint ? normalizePathParams(pointParts(listPoint), listParams, listPoint.rename?.param) : ''
   const hasList = null != listPoint
 
   // Ancestor params (not 'id') for live mode
@@ -429,7 +469,21 @@ ${loadParams.map((p: any, i: number) => `      ${jsProp('params', p.name)} = 'di
 ${paramAsserts}`
 
   const loadChecks = strict ?
-    offlineChecks.replace(/^ {6}/gm, '    ').replace(/^ {4}$/gm, '') :
+    `    if (setup.live) {
+      // STRICT live mode: a non-2xx is a real failure - this project owns
+      // the server it points at, so there is nothing to be lenient about.
+      //
+      // What is NOT asserted here is the MOCK's own fixtures. \`direct01\`
+      // is a scripted id and \`calls\` records the mock transport; neither
+      // exists on a live run, so asserting them made strict mode mean
+      // "compare the live server against the mock's script" - a suite that
+      // could not pass against any real API, including this project's own.
+      assert(result.ok === true,
+        'live request failed: ' + result.status + ' ' + JSON.stringify(result.data))
+      assert(result.status >= 200 && result.status < 300)
+      assert(null != result.data)
+    } else {
+${offlineChecks}    }` :
     `    if (setup.live) {
       // Live mode is lenient: synthetic IDs frequently 4xx. Skip rather
       // than fail when the load endpoint isn't reachable with the IDs we
@@ -477,7 +531,7 @@ function generateDirectList(model: Model, entity: ModelEntity, strict: boolean) 
   }
 
   const listParams = listPoint.args?.params || []
-  const listPath = normalizePathParams(listPoint.parts || [], listParams, listPoint.rename?.param)
+  const listPath = normalizePathParams(pointParts(listPoint), listParams, listPoint.rename?.param)
 
   // Required query params with spec-provided examples — needed to satisfy
   // the API contract in live mode (see generateDirectLoad for rationale).
@@ -543,7 +597,21 @@ ${mockLines}
 ${paramAsserts}`
 
   const listChecks = strict ?
-    offlineChecks.replace(/^ {6}/gm, '    ').replace(/^ {4}$/gm, '') :
+    `    if (setup.live) {
+      // STRICT live mode: a non-2xx is a real failure - this project owns
+      // the server it points at, so there is nothing to be lenient about.
+      //
+      // What is NOT asserted here is the MOCK's own fixtures. \`direct01\`
+      // is a scripted id and \`calls\` records the mock transport; neither
+      // exists on a live run, so asserting them made strict mode mean
+      // "compare the live server against the mock's script" - a suite that
+      // could not pass against any real API, including this project's own.
+      assert(result.ok === true,
+        'live request failed: ' + result.status + ' ' + JSON.stringify(result.data))
+      assert(result.status >= 200 && result.status < 300)
+      assert(null != result.data)
+    } else {
+${offlineChecks}    }` :
     `    if (setup.live) {
       // Live mode is lenient: synthetic IDs frequently 4xx and the list-
       // response shape varies wildly across public APIs. Skip rather than

@@ -8,7 +8,6 @@ import {
   Fragment,
   Line,
   cmp,
-  clean,
   configDefinition,
   configReprSetting,
   each,
@@ -18,6 +17,7 @@ import {
   isHttpBasicAuth,
   resolveAuthPrefix,
   serverVariables,
+  targetFeatures,
 } from '@voxgig/sdkgen'
 
 
@@ -41,7 +41,10 @@ const Config = cmp(async function Config(props: any) {
   const model: Model = ctx$.model
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  const feature = getModelPath(model, `main.${KIT}.feature`)
+  // Gated by the applicability tags, so this target never imports or
+  // registers a feature it has no source for. One rule, one place:
+  // helpers/applicability.
+  const feature = targetFeatures(model, target)
 
   const ff = Path.normalize(__dirname + '/../../../src/cmp/ts/fragment/')
 
@@ -95,14 +98,19 @@ const Config = cmp(async function Config(props: any) {
 
         replace: {
 
-          '// #ImportFeatures': () => each(feature, (f: any) => {
-            Line(`import { ${nom(f, 'Name')}Feature } from ` +
-              `'./feature/${f.name}/${nom(f, 'Name')}Feature'`)
-          }),
+          '// #ImportFeatures': () => {
+            each(feature, (f: any) => {
+              Line(`import { ${nom(f, 'Name')}Feature } from ` +
+                `'./feature/${f.name}/${nom(f, 'Name')}Feature'`)
+            })
+            pluginImports(feature)
+          },
 
           '// #FeatureClasses': () => each(feature, (f: any) => {
             Line(` ${f.name}: ${nom(f, 'Name')}Feature,`)
           }),
+
+          '// #FeaturePlugins': () => pluginDefs(feature),
 
           // A JS string literal, so the JSON survives verbatim. JSON.stringify
           // escapes the quotes and backslashes the model contains (values like
@@ -126,10 +134,13 @@ const Config = cmp(async function Config(props: any) {
 
         "'HEADERS'": indent(JSON.stringify(headers, null, 2), 4).trim(),
 
-        '// #ImportFeatures': () => each(feature, (f: any) => {
-          Line(`import { ${nom(f, 'Name')}Feature } from ` +
-            `'./feature/${f.name}/${nom(f, 'Name')}Feature'`)
-        }),
+        '// #ImportFeatures': () => {
+          each(feature, (f: any) => {
+            Line(`import { ${nom(f, 'Name')}Feature } from ` +
+              `'./feature/${f.name}/${nom(f, 'Name')}Feature'`)
+          })
+          pluginImports(feature)
+        },
 
         // Values from configDefinition's def, not re-derived here, so the
         // literal rep and the data rep cannot disagree on identity.
@@ -144,6 +155,8 @@ const Config = cmp(async function Config(props: any) {
           // must be comma-separated (a single feature hid this until now).
           Line(` ${f.name}: ${nom(f, 'Name')}Feature,`)
         }),
+
+        '// #FeaturePlugins': () => pluginDefs(feature),
 
         // Rendered from configDefinition's def, not from f.config, so the
         // literal carries the feature's `transport` role (station design
@@ -160,18 +173,75 @@ const Config = cmp(async function Config(props: any) {
 `)
         }),
 
-        "'ENTITYMAP'": formatJson(Object.values(entity)
-          .reduce((a: any, n: any) => (a[n.name] = clean({
-            fields: n.fields,
-            name: n.name,
-            op: n.op,
-            relations: n.relations,
-          }, true), a), {}), { margin: 2 }).trim(),
+        // configDefinition's `def.entity` verbatim, NOT rebuilt here. This
+        // reduce was a second copy of that function's entityDefs loop, and
+        // when configDefinition started reconstructing a point's `parts`
+        // from apidef's segment vector (its ADR-003), only the data
+        // representation got it — the literal one emitted empty paths. The
+        // config-repr equivalence test caught it, which is what it is for.
+        "'ENTITYMAP'": formatJson(configDef.entity, { margin: 2 }).trim(),
       }
     })
   })
 })
 
+
+
+// PLUGIN DEFINITION IMPORTS AND THE FEATURE_PLUGINS MAP.
+//
+// Upstream sekreto replaced its self-registration registry with
+// voxgig/plugin definitions: a provider kind the caller did not pass in
+// via `plugins: [...]` is unknown to that Sekreto. So Config no longer
+// imports provider modules for their side effects — it imports each
+// active plugin's exported Definition BY NAME (the model's `def` map)
+// and hands the list to the feature through FEATURE_PLUGINS.
+//
+// Emitted here because Config already imports every active feature from
+// the model, and this is the same list one level down. The `def` map is
+// declared in the model rather than derived from filenames because one
+// file may export several definitions (sekreto's aws.ts exports
+// awssecrets AND awsparams).
+function pluginImports(feature: any) {
+  each(feature, (f: any) => {
+    // path -> [symbol, ...], so one import line serves a two-definition
+    // module.
+    const bypath: Record<string, string[]> = {}
+
+    each(f.plugin, (plugin: any) => {
+      // Filter on `active` HERE rather than trusting the feature object to
+      // arrive filtered. Whether a model path was read with `only_active`
+      // varies by call site, and getting it wrong in this direction emits
+      // an import for a module the trim just deleted — an SDK that does
+      // not compile, rather than one that merely carries too much.
+      if (false === plugin.active || null == plugin.active) return
+
+      for (const [sym, one] of Object.entries(plugin.def?.ts || {})) {
+        const path = String(one)
+        ; (bypath[path] = bypath[path] || []).push(sym)
+      }
+    })
+
+    for (const path of Object.keys(bypath).sort()) {
+      const spec = './' + path.replace(/^src\//, '').replace(/\.ts$/, '')
+      Line(`import { ${bypath[path].sort().join(', ')} } from '${spec}'`)
+    }
+  })
+}
+
+// The FEATURE_PLUGINS entries: one line per feature that has any active
+// plugin definitions, listing the imported symbols.
+function pluginDefs(feature: any) {
+  each(feature, (f: any) => {
+    const syms: string[] = []
+    each(f.plugin, (plugin: any) => {
+      if (false === plugin.active || null == plugin.active) return
+      syms.push(...Object.keys(plugin.def?.ts || {}))
+    })
+    if (0 < syms.length) {
+      Line(` ${f.name}: [${syms.sort().join(', ')}],`)
+    }
+  })
+}
 
 export {
   Config
