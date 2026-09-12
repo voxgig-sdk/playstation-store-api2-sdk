@@ -1,13 +1,11 @@
 
-import { cmp, each, Content, isAuthActive, envName, canonKey, canonScalarKey, opRequestShape, entityIdField, entityDataIdField, entityOps, safeVarName, exampleVarName } from '@voxgig/sdkgen'
+import { cmp, each, Content, isAuthActive, envName, canonKey, canonScalarKey, opRequestShape, entityIdField, entityDataIdField, entityOps, safeVarName, exampleVarName, luaKey } from '@voxgig/sdkgen'
 
 import {
   KIT,
   getModelPath,
   nom,
 } from '@voxgig/apidef'
-
-import { luaKey } from './utility_lua'
 
 
 const ReadmeQuick = cmp(function ReadmeQuick(props: any) {
@@ -67,6 +65,7 @@ local client = ${ctor}
       if ('ARRAY' === k || 'OBJECT' === k) return '{}'
       return `"${placeholder}"`
     }
+
     // MODEL-DRIVEN display field: the list example must reference a field
     // the entity actually has, not a hardcoded "name". Pick the entity's
     // first non-id string field (falling back to the first non-id field of

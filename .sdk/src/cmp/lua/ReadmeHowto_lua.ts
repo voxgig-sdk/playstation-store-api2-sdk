@@ -1,13 +1,11 @@
 
-import { cmp, Content, isAuthActive, envName, canonKey, canonScalarKey, entityIdField, pickExampleEntity, opRequestShape } from '@voxgig/sdkgen'
+import { cmp, Content, isAuthActive, envName, canonKey, canonScalarKey, entityIdField, pickExampleEntity, opRequestShape, luaKey } from '@voxgig/sdkgen'
 
 import {
   KIT,
   getModelPath,
   nom,
 } from '@voxgig/apidef'
-
-import { luaKey } from './utility_lua'
 
 
 // A type-correct Lua literal for a field's canonical type.
@@ -18,7 +16,6 @@ function luaLit(type: any): string {
   if ('ARRAY' === k || 'OBJECT' === k) return '{}'
   return '"example"'
 }
-
 
 
 const ReadmeHowto = cmp(function ReadmeHowto(props: any) {
