@@ -22,3 +22,16 @@
 # A published package name that does not follow the derivation:
 #
 #   main: kit: target: ts: publish: registry: package: '@scope/name'
+
+
+# --- npm package names: the -sdk suffix (managed) ---
+#
+# The published npm name carries an -sdk suffix, which the derived name does
+# not: packageName appends it only when the origin does NOT already end in
+# '-sdk', and this origin is 'voxgig-sdk'. Declared per repo rather than
+# changed in the toolchain. The suffix goes LAST, after any language marker,
+# so a js target is <slug>-js-sdk.
+#
+# Only npm targets. pypi, rubygems, luarocks and packagist name themselves.
+main: kit: target: ts: publish: registry: package: '@voxgig-sdk/playstation-store-api2-sdk'
+# --- end npm package names ---

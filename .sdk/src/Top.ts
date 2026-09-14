@@ -3,6 +3,7 @@
 import {
   cmp,
   Deploy,
+  PublishWorkflow,
   ReadmeTop,
   AgentGuideTop,
   License,
@@ -30,6 +31,13 @@ const Top = cmp(function Top(props: any) {
   // credentials injected by the aql key vault) plus an all-targets
   // `make deploy-dry` rehearsal.
   Deploy({})
+
+  // Publishing an npm target from CI with no token: a dispatch workflow per
+  // npm target using GitHub OIDC trusted publishing, and the one-time
+  // set-up a maintainer must do, written to `.sdk/PUBLISHING.md` — beside
+  // the generator rather than into the target's own docs, which describe
+  // the SDK to the people who install it.
+  PublishWorkflow({})
 })
 
 

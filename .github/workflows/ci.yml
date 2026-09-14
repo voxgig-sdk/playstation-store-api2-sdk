@@ -306,17 +306,20 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      # 0.13, NOT 0.14+: the generated build.zig.zon declares `.name` as a
-      # plain string, which 0.14 rejects ("expected enum literal"). Package_zig
-      # says the string form matches the target's toolchain pin — keep the two
-      # in step, or move both to the enum-literal + fingerprint form together.
+      # 0.16, matching the generated build.zig.zon's enum-literal `.name` +
+      # `.fingerprint` form and the rest of the voxgig toolchain: struct,
+      # omni and sekreto all pin 0.16 too. This pin and Package_zig.ts move
+      # TOGETHER — the zon form 0.16 requires is exactly what 0.13 cannot
+      # parse, so a split leaves the generated SDK unbuildable on one side
+      # or the other. It was 0.13 until the target was ported, which is
+      # what let omni's zig port be vendored at all.
       # NODE24 EXCEPTION: setup-zig has no node24 release — v1 and v2 are both
       # node20 — so it stays on v1 and will emit a deprecation warning.
       # Revisit when upstream ships one.
       - if: hashFiles('zig/build.zig') != ''
         uses: mlugg/setup-zig@53fc45b17fe98b52f92ee5ea08ff48a85a3e7eb7 # v1
         with:
-          version: '0.13.0'
+          version: '0.16.0'
       - if: hashFiles('zig/build.zig') != ''
         run: make -C zig test
 

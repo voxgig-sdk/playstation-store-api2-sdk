@@ -105,7 +105,7 @@ local result, err = client:Container():load({ age_limit = "example", container_i
 
 | Language | Package | Install |
 | --- | --- | --- |
-| TypeScript | `@voxgig-sdk/playstation-store-api2` | publish pending — [install from git tag](https://github.com/voxgig-sdk/playstation-store-api2-sdk/releases) |
+| TypeScript | `@voxgig-sdk/playstation-store-api2-sdk` | publish pending — [install from git tag](https://github.com/voxgig-sdk/playstation-store-api2-sdk/releases) |
 | Python | `voxgig-sdk-playstation-store-api2` | publish pending — [install from git tag](https://github.com/voxgig-sdk/playstation-store-api2-sdk/releases) |
 | PHP | `voxgig-sdk/playstation-store-api2` | publish pending — [install from git tag](https://github.com/voxgig-sdk/playstation-store-api2-sdk/releases) |
 | Golang | `github.com/voxgig-sdk/playstation-store-api2-sdk/go` | `go get github.com/voxgig-sdk/playstation-store-api2-sdk/go@latest` |
@@ -119,7 +119,7 @@ local result, err = client:Container():load({ age_limit = "example", container_i
 ### TypeScript
 
 ```ts
-import { PlaystationStoreApi2SDK } from '@voxgig-sdk/playstation-store-api2'
+import { PlaystationStoreApi2SDK } from '@voxgig-sdk/playstation-store-api2-sdk'
 
 const client = new PlaystationStoreApi2SDK()
 

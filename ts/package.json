@@ -1,5 +1,5 @@
 {
-  "name": "@voxgig-sdk/playstation-store-api2",
+  "name": "@voxgig-sdk/playstation-store-api2-sdk",
   "version": "0.0.1",
   "description": "Unofficial generated TypeScript SDK for the PlayStation Store public API. Not affiliated with or endorsed by the upstream API provider.",
   "keywords": [
