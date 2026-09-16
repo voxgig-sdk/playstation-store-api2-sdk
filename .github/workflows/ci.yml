@@ -289,7 +289,14 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      # gcc/make are preinstalled on ubuntu-latest — no setup step needed.
+      # gcc/make are preinstalled on ubuntu-latest, but the secrets feature's
+      # generated feature/secrets/kinds.mk adds `-lssl -lcrypto -lcurl` when a
+      # plugin group is active, and feature/secrets/kinds.c includes
+      # <curl/curl.h>. The runner image ships neither header set, so the build
+      # stopped at `fatal error: curl/curl.h: No such file or directory`.
+      # A model with no active plugin group links libc alone and this is inert.
+      - if: hashFiles('c/Makefile') != ''
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev
       - if: hashFiles('c/Makefile') != ''
         run: make -C c test
 
@@ -313,13 +320,25 @@ jobs:
       # parse, so a split leaves the generated SDK unbuildable on one side
       # or the other. It was 0.13 until the target was ported, which is
       # what let omni's zig port be vendored at all.
-      # NODE24 EXCEPTION: setup-zig has no node24 release — v1 and v2 are both
-      # node20 — so it stays on v1 and will emit a deprecation warning.
-      # Revisit when upstream ships one.
+      # INSTALLED FROM ziglang.org, NOT setup-zig. That action resolves the
+      # toolchain through community mirrors, and they failed every run: 404
+      # from zig.linus.dev, 503 from zig.nekos.space, 502 from
+      # zigmirror.hryx.net, with no fallback to the official host. The job had
+      # not gone green once. ziglang.org serves the same tarball and answers
+      # 200; `--retry` covers an ordinary blip. This also drops the node20
+      # deprecation warning that pinned the action to v1.
       - if: hashFiles('zig/build.zig') != ''
-        uses: mlugg/setup-zig@53fc45b17fe98b52f92ee5ea08ff48a85a3e7eb7 # v1
-        with:
-          version: '0.16.0'
+        run: |
+          set -euo pipefail
+          version=0.16.0
+          curl -fsSL --retry 5 --retry-all-errors \
+            -o /tmp/zig.tar.xz \
+            "https://ziglang.org/download/${version}/zig-x86_64-linux-${version}.tar.xz"
+          sudo mkdir -p /opt/zig
+          sudo tar -xJf /tmp/zig.tar.xz -C /opt/zig --strip-components=1
+          echo /opt/zig >> "$GITHUB_PATH"
+      - if: hashFiles('zig/build.zig') != ''
+        run: zig version
       - if: hashFiles('zig/build.zig') != ''
         run: make -C zig test
 

@@ -13,7 +13,7 @@ import {
   PUBLISHER_URL,
   packageVersion,
   authorInfo,
-  targetFeatures,
+  targetFeatures, envName,
 } from '@voxgig/sdkgen'
 
 
@@ -83,6 +83,10 @@ const Package = cmp(async function Package(props: any) {
     // are always included by npm and need no entry.
     files: ['dist', 'src'],
     scripts: {
+      ...(Object.values(model.main.kit.entity || {}).some((e: any) => Object.values(e.op || {}).some((o: any) => (o.points || []).some((p: any) => p.contract && JSON.parse(p.contract.json).live))) ? {
+        'test:live': `npm run build && ${envName(model)}_TEST_LIVE=TRUE node --test dist-test/live.test.js`,
+      } : {}),
+
       // `test` and `test-coverage` run the COMPILED suite in dist-test/, which
       // a fresh clone does not have — the glob then matches nothing and the
       // run reports "tests 0, pass 0, fail 0" and exits 0. A green suite that

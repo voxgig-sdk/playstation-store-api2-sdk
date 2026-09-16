@@ -38,11 +38,65 @@ class PlaystationStoreApi2Config
                 "target" => "php",
             ],
             "feature" => [
+                "ratelimit" => [
+          'options' => [
+            'active' => false,
+            'burst' => 5,
+            'rate' => 5,
+          ],
+          'optspec' => [
+            'now' => '`$FUNCTION`',
+            'sleep' => '`$FUNCTION`',
+          ],
+          'strict' => false,
+          'transport' => 'wrap',
+        ],
+                "retry" => [
+          'options' => [
+            'active' => false,
+            'factor' => 2,
+            'maxDelay' => 2000,
+            'minDelay' => 50,
+            'retries' => 2,
+            'statuses' => [
+              408,
+              425,
+              429,
+              500,
+              502,
+              503,
+              504,
+            ],
+          ],
+          'optspec' => [
+            'jitter' => '`$BOOLEAN`',
+            'sleep' => '`$FUNCTION`',
+          ],
+          'strict' => false,
+          'transport' => 'wrap',
+        ],
                 "test" => [
           'options' => [
             'active' => false,
           ],
+          'optspec' => [
+            'entity' => '`$MAP`',
+            'net' => '`$MAP`',
+          ],
+          'strict' => false,
           'transport' => 'base',
+        ],
+                "timeout" => [
+          'options' => [
+            'active' => false,
+            'ms' => 30000,
+          ],
+          'optspec' => [
+            'clearTimer' => '`$FUNCTION`',
+            'setTimer' => '`$FUNCTION`',
+          ],
+          'strict' => false,
+          'transport' => 'wrap',
         ],
             ],
             "options" => [

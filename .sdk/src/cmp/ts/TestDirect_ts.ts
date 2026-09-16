@@ -104,6 +104,7 @@ const TestDirect = cmp(function TestDirect(props: any) {
 
         Slot({ name: 'directSetup' }, () => {
           Content(`
+function liveScenariosActive() { return ${Object.values(model.main.kit.entity || {}).some((e: any) => Object.values(e.op || {}).some((o: any) => (o.points || []).some((p: any) => p.contract && JSON.parse(p.contract.json).live)))} && process.env.${PROJECTNAME}_TEST_LIVE === 'TRUE' }
 function directSetup(mockres?: any) {
   const calls: any[] = []
 
@@ -115,10 +116,11 @@ function directSetup(mockres?: any) {
   const live = 'TRUE' === env.${PROJECTNAME}_TEST_LIVE
 
   if (live) {
+    const transport = createLiveTransport()
     // Merged so the generated fields win: sdk-test-control.json's
     // test.client.options adds to the live client, it does not redirect it.
     const client = new ${nom(model.const, 'Name')}SDK(
-      Object.assign({}, liveClientOptions(), {${apikeyLiveField}${serverLiveField}
+      Object.assign({}, liveClientOptions(), { system: { fetch: transport.fetch },${apikeyLiveField}${serverLiveField}
       }))
 
     let idmap: any = env['${entidEnvVar}']
@@ -126,7 +128,7 @@ function directSetup(mockres?: any) {
       idmap = JSON.parse(idmap)
     }
 
-    return { client, calls, live, idmap }
+    return { client, calls, live, idmap, transport }
   }
 
   const mockFetch = async (url: string, init: any) => {
@@ -246,7 +248,7 @@ ${varAsserts}`
       // "compare the live server against the mock's script" - a suite that
       // could not pass against any real API, including this project's own.
       assert(result.ok === true,
-        'live request failed: ' + result.status + ' ' + JSON.stringify(result.data))
+        'Live request failed: HTTP ' + result.status)
       assert(result.status >= 200 && result.status < 300)
       assert(null != result.data)
     } else {
@@ -263,6 +265,7 @@ ${offlineChecks}    }`
 
   Content(`
   test('direct-${opname}-${entity.name}', async (t: any) => {
+    if (liveScenariosActive()) { t.skip('Covered by live operation scenarios'); return }
     const setup = directSetup()
     if (maybeSkipControl(t, 'direct', 'direct-${opname}-${entity.name}', setup.live)) return
 ${skipMissingLine}    const { client, calls } = setup
@@ -418,16 +421,15 @@ ${liveQueryPrefix}      const listResult: any = await client.direct({
 ${listParamLines}
         },
       })
-      if (!listResult.ok) {
-        return // skip: list call failed (likely synthetic IDs against live API)
-      }
+      assert(listResult.ok && listResult.status >= 200 && listResult.status < 300,
+        'Live list discovery failed')
       const listArr = unwrapListData(listResult.data)
       if (null == listArr || listArr.length === 0) {
-        return // skip: no entities to load in live mode
+        throw new Error('Live load blocked: discovery returned no entities')
       }
       const candidateId = ${jsOptProp('listArr[0]', idParamName)} ?? listArr[0]?.id
       if (null == candidateId) {
-        return // skip: list response shape does not expose load identifier
+        throw new Error('Live load blocked: discovery returned no usable identity')
       }
       ${jsProp('params', idParamName)} = candidateId
 ${ancestorParamLines}
@@ -479,7 +481,7 @@ ${paramAsserts}`
       // "compare the live server against the mock's script" - a suite that
       // could not pass against any real API, including this project's own.
       assert(result.ok === true,
-        'live request failed: ' + result.status + ' ' + JSON.stringify(result.data))
+        'Live request failed: HTTP ' + result.status)
       assert(result.status >= 200 && result.status < 300)
       assert(null != result.data)
     } else {
@@ -496,6 +498,7 @@ ${offlineChecks}    }`
 
   Content(`
   test('direct-load-${entity.name}', async (t: any) => {
+    if (liveScenariosActive()) { t.skip('Covered by live operation scenarios'); return }
     const setup = directSetup({ id: 'direct01' })
     if (maybeSkipControl(t, 'direct', 'direct-load-${entity.name}', setup.live)) return
 ${skipMissingLine}    const { client, calls } = setup
@@ -607,9 +610,9 @@ ${paramAsserts}`
       // "compare the live server against the mock's script" - a suite that
       // could not pass against any real API, including this project's own.
       assert(result.ok === true,
-        'live request failed: ' + result.status + ' ' + JSON.stringify(result.data))
+        'Live request failed: HTTP ' + result.status)
       assert(result.status >= 200 && result.status < 300)
-      assert(null != result.data)
+      assert(Array.isArray(unwrapListData(result.data)), 'Expected live list response')
     } else {
 ${offlineChecks}    }` :
     `    if (setup.live) {
@@ -628,6 +631,7 @@ ${offlineChecks}    }`
 
   Content(`
   test('direct-list-${entity.name}', async (t: any) => {
+    if (liveScenariosActive()) { t.skip('Covered by live operation scenarios'); return }
     const setup = directSetup([{ id: 'direct01' }, { id: 'direct02' }])
     if (maybeSkipControl(t, 'direct', 'direct-list-${entity.name}', setup.live)) return
 ${skipMissingLine}    const { client, calls } = setup

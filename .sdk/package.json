@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "PlaystationStoreApi2 SDK Project",
   "scripts": {
-    "generate": "tsc --build src && voxgig-model model/sdk.aon && voxgig-model test/test.aon",
+    "generate": "node build/docgen.js && tsc --build src && voxgig-model model/sdk.aon && voxgig-model test/test.aon",
     "watch-generate": "voxgig-model -w model/sdk.aon",
     "dry-generate": "tsc --build src && voxgig-model -y model/sdk.aon",
     "watch-dry-generate": "voxgig-model -w -y model/sdk.aon",
@@ -17,19 +17,24 @@
     "add-target": "voxgig-sdkgen target add",
     "dry-add-target": "voxgig-sdkgen -y target add",
     "add-feature": "voxgig-sdkgen feature add",
-    "dry-add-feature": "voxgig-sdkgen -y feature add"
+    "dry-add-feature": "voxgig-sdkgen -y feature add",
+    "add-edition": "voxgig-sdkgen edition add",
+    "text-qa": "cd .. && voxgig-docgen qa",
+    "postinstall": "node build/docgen.js",
+    "status": "bash admin/status.sh"
   },
   "author": "PlaystationStoreApi2",
   "license": "MIT",
   "devDependencies": {
     "@types/node": ">=25.6",
     "typescript": ">=6.0",
-    "@voxgig/apidef": ">=8.0",
+    "@voxgig/apidef": ">=8.6.0",
     "@voxgig/model": ">=10.0",
-    "@voxgig/sdkgen": ">=4.0",
+    "@voxgig/sdkgen": ">=4.17.0",
     "@voxgig/util": ">=0.5",
     "@voxgig/struct": ">=0.2",
     "jostraca": ">=0.33.1",
-    "aontu": ">=0.52"
+    "aontu": ">=0.52",
+    "@voxgig/docgen": ">=0.10.1"
   }
 }

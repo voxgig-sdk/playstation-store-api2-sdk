@@ -27,6 +27,9 @@ build = {
     ["config_plugins"] = "config_plugins.lua",
     ["features"] = "features.lua",
     ["feature.base_feature"] = "feature/base_feature.lua",
+    ["feature.ratelimit_feature"] = "feature/ratelimit_feature.lua",
+    ["feature.retry_feature"] = "feature/retry_feature.lua",
     ["feature.test_feature"] = "feature/test_feature.lua",
+    ["feature.timeout_feature"] = "feature/timeout_feature.lua",
   }
 }

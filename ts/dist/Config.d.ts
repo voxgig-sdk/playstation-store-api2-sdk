@@ -10,10 +10,56 @@ declare class Config {
         target: string;
     };
     feature: {
+        ratelimit: {
+            options: {
+                active: boolean;
+                burst: number;
+                rate: number;
+            };
+            optspec: {
+                now: string;
+                sleep: string;
+            };
+            strict: boolean;
+            transport: string;
+        };
+        retry: {
+            options: {
+                active: boolean;
+                factor: number;
+                maxDelay: number;
+                minDelay: number;
+                retries: number;
+                statuses: number[];
+            };
+            optspec: {
+                jitter: string;
+                sleep: string;
+            };
+            strict: boolean;
+            transport: string;
+        };
         test: {
             options: {
                 active: boolean;
             };
+            optspec: {
+                entity: string;
+                net: string;
+            };
+            strict: boolean;
+            transport: string;
+        };
+        timeout: {
+            options: {
+                active: boolean;
+                ms: number;
+            };
+            optspec: {
+                clearTimer: string;
+                setTimer: string;
+            };
+            strict: boolean;
             transport: string;
         };
     };

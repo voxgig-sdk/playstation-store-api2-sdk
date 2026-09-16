@@ -25,7 +25,7 @@ There are companion guides deeper in the tree: one per language
 | `rb` | `rb/` | [`rb/AGENTS.md`](./rb/AGENTS.md) |
 | `ts` | `ts/` | [`ts/AGENTS.md`](./ts/AGENTS.md) |
 
-**Features** (1): `test`.
+**Features** (4): `ratelimit`, `retry`, `test`, `timeout`.
 
 Each feature is generated into every SDK target — as a directory
 `<lang>/src/feature/<name>/` (ts/js) or a flat file in the `<lang>/feature/`
@@ -60,6 +60,36 @@ npm run generate
 Note: the `voxgig-sdkgen` CLI only *scaffolds* (`target add` /
 `feature add`). Generation itself runs via `npm run generate` (backed by
 `@voxgig/model`) — there is no `generate` CLI subcommand.
+
+### Two silent failure modes
+
+Generation has two ways of going wrong that **nothing reports**. Neither
+breaks a build or a test, so the only symptom is a tree that disagrees with
+the model — which is easy to commit past.
+
+**`voxgig-model --no-config` writes a REDUCED model.** The
+`.model-config` build is what registers the generator actions, and an SDK
+project loads `apidef` and `sdkgen` through exactly that mechanism:
+
+```
+sys: model: action: { apidef: load: 'build/apidef.js', sdkgen: load: 'build/sdkgen.js' }
+sys: model: order: action: 'apidef,sdkgen'
+```
+
+`--no-config` skips it, so those actions never run — and the model build
+still *writes* the model file, now missing whatever they contribute (the
+name case variants, and whole subtrees). A reduced model is a valid model,
+so nothing downstream complains. To inspect the model layer **without side
+effects**, use `npm run dry-generate` (`-y`, writes nothing). Never
+`--no-config` in anything whose output might be committed.
+
+**Regeneration never DELETES.** A file the generator has stopped emitting
+stays in the tree, and `git status` is silent because it is committed and
+unchanged. Narrowing a feature's plugin selection, or dropping a target, can
+leave whole modules behind that nothing references and no test covers.
+
+To find either, the target trees must be deleted and regenerated — a
+regeneration in place cannot see stale output at all.
 ## Adding a feature
 
 A **feature** is a pipeline extension: an object of hooks that fire at named

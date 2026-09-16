@@ -2,6 +2,7 @@
 
 import { test, describe, afterEach } from 'node:test'
 import assert from 'node:assert'
+import { createLiveTransport } from '../../live-runner'
 
 
 import { ProjectNameSDK } from '../../..'

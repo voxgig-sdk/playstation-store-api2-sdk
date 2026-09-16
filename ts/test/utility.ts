@@ -161,8 +161,7 @@ function skipIfMissingIds(t: any, setup: any, requiredKeys: string[]): boolean {
   if (!setup.live) return false
   const missing = requiredKeys.filter(k => null == setup.idmap?.[k])
   if (missing.length > 0) {
-    t.skip(`live test needs ${missing.join(', ')} via *_ENTID env var (synthetic IDs only)`)
-    return true
+    throw new Error(`Live test blocked: needs ${missing.join(', ')} via *_ENTID env var`)
   }
   return false
 }

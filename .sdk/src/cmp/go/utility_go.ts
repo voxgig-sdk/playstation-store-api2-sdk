@@ -127,7 +127,7 @@ function formatGoMap(obj: any, indent: number = 0): string {
       return 'map[string]any{}'
     }
     const items = entries
-      .map(([k, v]) => `${padInner}"${k}": ${formatGoValue(v, indent + 1)}`)
+      .map(([k, v]) => `${padInner}${formatGoString(k)}: ${formatGoValue(v, indent + 1)}`)
       .join(',\n')
     return `map[string]any{\n${items},\n${pad}}`
   }
@@ -136,12 +136,19 @@ function formatGoMap(obj: any, indent: number = 0): string {
 }
 
 
+// Go rejects a literal BOM anywhere after the start of a source file,
+// including inside strings. Preserve its value through an escaped literal.
+function formatGoString(value: string): string {
+  return JSON.stringify(value).replace(/\uFEFF/g, '\\ufeff')
+}
+
+
 function formatGoValue(val: any, indent: number = 0): string {
   if (val === null || val === undefined) {
     return 'nil'
   }
   if (typeof val === 'string') {
-    return `"${val.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+    return formatGoString(val)
   }
   if (typeof val === 'number') {
     if (Number.isInteger(val)) {
@@ -251,6 +258,7 @@ export {
   clean,
   exampleValue,
   formatGoMap,
+  formatGoString,
   formatGoValue,
   goVarName,
   projectPath,

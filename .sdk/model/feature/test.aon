@@ -31,3 +31,16 @@ main: kit: feature: test: {
 }
 
 
+# TYPES for the options this feature reads but does not default.
+#
+# `config.options` is the defaults map — what happens when you say nothing —
+# so it can only describe an option that HAS a default. A callback has none,
+# and an option the caller either supplies or does not has none either. Left
+# undeclared these were invisible twice over: the generated option spec could
+# not type them, and the README's option table could not list them.
+main: kit: feature: test: config: optspec: {
+  # seeded records, keyed by entity name
+  entity: '`$MAP`'
+  # netsim-shaped conditions for the mock transport
+  net: '`$MAP`'
+}

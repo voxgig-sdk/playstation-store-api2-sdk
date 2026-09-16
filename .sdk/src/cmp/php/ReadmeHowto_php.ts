@@ -21,7 +21,12 @@ const ReadmeHowto = cmp(function ReadmeHowto(props: any) {
   // Pick an entity with a real op (prefer a read op) — never fabricate a
   // `load` on an op-less entity like Cloudsmith's `Abort`. primaryOp is null
   // only when NO entity exposes any op (a direct()-only SDK).
-  const { entity: exampleEntity, primaryOp } = pickExampleEntity(entity)
+  // Prefer records that the offline store can seed and look up by ID.
+  // An ID-less singleton has no key for the mock transport to resolve.
+  const seedable = Object.fromEntries(Object.entries(entity).filter(
+    ([, value]: any) => entityIdField(value) && Object.keys(value.op || {}).length))
+  const { entity: exampleEntity, primaryOp } = pickExampleEntity(
+    Object.keys(seedable).length ? seedable : entity)
   const eName = exampleEntity ? nom(exampleEntity, 'Name') : 'Entity'
   // Model-driven id key: null when the entity has no id-like field.
   const idF = exampleEntity ? entityIdField(exampleEntity) : null
@@ -51,10 +56,10 @@ const ReadmeHowto = cmp(function ReadmeHowto(props: any) {
   // The op-driven test-mode line, shown only when the SDK has an entity op.
   // A direct()-only SDK (no ops anywhere) shows a direct() call instead.
   const testModeExample = primaryOp
-    ? `// Entity ops return the ENTITY (throws on error);
+    ? `// ${primaryOp === 'list' ? 'list() returns entity instances' : 'Entity ops return the ENTITY'} (throws on error);
 // call data_get() for the mock record.
 $${eName.toLowerCase()} = $client->${phpEntityAccessor(eName)}()->${primaryOp}(${testCallArg});
-print_r($${eName.toLowerCase()});`
+print_r(${primaryOp === 'list' ? `array_map(fn($item) => $item->data_get(), $${eName.toLowerCase()})` : `$${eName.toLowerCase()}->data_get()`});`
     : `$result = $client->direct(["path" => "/api/resource", "method" => "GET"]);
 print_r($result);`
 

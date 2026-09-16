@@ -190,6 +190,11 @@ Then run:
 cd ts && npm test
 \`\`\`
 
+Live entity tests continue independent operations after errors and attempt
+supported cleanup. Their final result reports failures and missing prerequisites
+after the remaining work completes. The model and test inputs determine which
+API operations the generated scenarios cover.
+
 `)
 
 })

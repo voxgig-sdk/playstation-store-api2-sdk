@@ -41,11 +41,65 @@ def make_config():
             "target": "py",
         },
         "feature": {
+            "ratelimit": {
+        "options": {
+          "active": False,
+          "burst": 5,
+          "rate": 5,
+        },
+        "optspec": {
+          "now": "`$FUNCTION`",
+          "sleep": "`$FUNCTION`",
+        },
+        "strict": False,
+        "transport": "wrap",
+      },
+            "retry": {
+        "options": {
+          "active": False,
+          "factor": 2,
+          "maxDelay": 2000,
+          "minDelay": 50,
+          "retries": 2,
+          "statuses": [
+            408,
+            425,
+            429,
+            500,
+            502,
+            503,
+            504,
+          ],
+        },
+        "optspec": {
+          "jitter": "`$BOOLEAN`",
+          "sleep": "`$FUNCTION`",
+        },
+        "strict": False,
+        "transport": "wrap",
+      },
             "test": {
         "options": {
           "active": False,
         },
+        "optspec": {
+          "entity": "`$MAP`",
+          "net": "`$MAP`",
+        },
+        "strict": False,
         "transport": "base",
+      },
+            "timeout": {
+        "options": {
+          "active": False,
+          "ms": 30000,
+        },
+        "optspec": {
+          "clearTimer": "`$FUNCTION`",
+          "setTimer": "`$FUNCTION`",
+        },
+        "strict": False,
+        "transport": "wrap",
       },
         },
         "options": {

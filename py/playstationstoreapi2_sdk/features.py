@@ -1,12 +1,18 @@
 # PlaystationStoreApi2 SDK feature factory
 
 from playstationstoreapi2_sdk.feature.base_feature import PlaystationStoreApi2BaseFeature
+from playstationstoreapi2_sdk.feature.ratelimit_feature import PlaystationStoreApi2RatelimitFeature
+from playstationstoreapi2_sdk.feature.retry_feature import PlaystationStoreApi2RetryFeature
 from playstationstoreapi2_sdk.feature.test_feature import PlaystationStoreApi2TestFeature
+from playstationstoreapi2_sdk.feature.timeout_feature import PlaystationStoreApi2TimeoutFeature
 
 
 _FEATURES = {
     "base": lambda: PlaystationStoreApi2BaseFeature(),
+    "ratelimit": lambda: PlaystationStoreApi2RatelimitFeature(),
+    "retry": lambda: PlaystationStoreApi2RetryFeature(),
     "test": lambda: PlaystationStoreApi2TestFeature(),
+    "timeout": lambda: PlaystationStoreApi2TimeoutFeature(),
 }
 
 

@@ -1,0 +1,2 @@
+const search=document.getElementById('search'),results=document.getElementById('results');
+search.addEventListener('input',()=>{results.replaceChildren();const q=search.value.trim().toLowerCase();if(q.length<2)return;for(const page of window.DOCGEN_SEARCH.filter(p=>(p.title+' '+p.text).toLowerCase().includes(q)).slice(0,12)){const a=document.createElement('a');a.href=search.dataset.base+page.path;a.textContent=page.title;results.append(a)}});

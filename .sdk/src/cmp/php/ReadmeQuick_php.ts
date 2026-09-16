@@ -81,9 +81,10 @@ $client = ${ctor};
 
 \`\`\`php
 try {
-    // list() returns an array of ${eName} records — iterate directly.
+    // list() returns entity instances; data_get() reads each record.
     $${eName.toLowerCase()}s = $client->${phpEntityAccessor(eName)}()->list();
-    foreach ($${eName.toLowerCase()}s as $item) {
+    foreach ($${eName.toLowerCase()}s as $record) {
+        $item = $record->data_get();
         echo ${itemPrint} . "\\n";
     }
 } catch (\\Throwable $err) {
@@ -122,7 +123,7 @@ ${neName} is nested under ${parentName}, so provide the \`${parentParam}\`.
 try {
     // load() returns the ENTITY — call data_get() for the ${neName} record (throws on error).
     $${neVar} = $client->${phpEntityAccessor(neName)}()->load([${neMatch.join(', ')}]);
-    print_r($${neVar});
+    print_r($${neVar}->data_get());
 } catch (\\Throwable $err) {
     echo "Error: " . $err->getMessage();
 }
@@ -150,7 +151,7 @@ try {
 try {
     // load() returns the ENTITY — call data_get() for the ${eName} record (throws on error).
     $${eName.toLowerCase()} = $client->${phpEntityAccessor(eName)}()->load(${loadArg});
-    print_r($${eName.toLowerCase()});
+    print_r($${eName.toLowerCase()}->data_get());
 } catch (\\Throwable $err) {
     echo "Error: " . $err->getMessage();
 }

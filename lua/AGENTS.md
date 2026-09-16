@@ -43,7 +43,10 @@ the runtime under `.sdk/tm/lua/feature/` and regenerate.
 
 | Feature | Runtime file | Active hooks |
 | --- | --- | --- |
+| **ratelimit** — Client-side rate limiting via a token bucket | `feature/ratelimit_feature.lua` | — |
+| **retry** — Automatic retry of transient failures with exponential backoff | `feature/retry_feature.lua` | — |
 | **test** — In-memory mock transport for testing without a live server | `feature/test_feature.lua` | `GetData`, `GetMatch`, `PostConstruct`, `PostConstructEntity`, `PrePoint`, `PreRequest`, `PreResponse`, `PreResult`, `PreSpec`, `SetData`, `SetMatch` |
+| **timeout** — Per-request timeout with transport abort | `feature/timeout_feature.lua` | — |
 
 ---
 

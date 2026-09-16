@@ -52,7 +52,7 @@ $client = ${ctor};
     if (opnames.includes('list')) {
       Content(`// List all ${eName.toLowerCase()}s (returns an array; throws on error)
 $${eName.toLowerCase()}s = $client->${phpEntityAccessor(eName)}()->list();
-print_r($${eName.toLowerCase()}s);
+print_r(array_map(fn($item) => $item->data_get(), $${eName.toLowerCase()}s));
 `)
       hasCall = true
     }
@@ -73,7 +73,7 @@ print_r($${eName.toLowerCase()}s);
       Content(`
 // Load a specific ${eName.toLowerCase()} (returns the ENTITY; call data_get() for the record; throws on error)
 $${eName.toLowerCase()} = $client->${phpEntityAccessor(eName)}()->load(${loadArg});
-print_r($${eName.toLowerCase()});
+print_r($${eName.toLowerCase()}->data_get());
 `)
       hasCall = true
     }

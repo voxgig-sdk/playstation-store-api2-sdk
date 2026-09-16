@@ -30,6 +30,7 @@ import {
 
 import {
   formatGoMap,
+  formatGoString,
   goFeatureName,
 } from './utility_go'
 
@@ -133,9 +134,8 @@ const Config = cmp(async function Config(props: any) {
     // 2.1x smaller. MakeConfig still returns the same map, so nothing
     // downstream can tell which representation it got.
     //
-    // JSON.stringify output is a valid Go interpreted string literal: JSON
-    // escapes are a subset of Go's, and Go source is UTF-8 so non-ASCII needs
-    // no escaping. A raw (backtick) literal could NOT be used - the model
+    // JSON escapes work in Go interpreted strings; formatGoString also
+    // escapes BOM characters that Go forbids literally inside source files. A raw (backtick) literal could NOT be used - the model
     // contains backticks in values like `$STRING`.
     if (asData) {
       Content(`package core
@@ -148,7 +148,7 @@ ${pluginImportBlock})
 
 // The API model, emitted as data rather than as a composite literal: see
 // sdkgen rung L1. Parsed by MakeConfig, and parsed once by SharedConfig.
-const configJSON = ${JSON.stringify(configJson)}
+const configJSON = ${formatGoString(configJson)}
 
 // json.Unmarshal decodes EVERY JSON number as float64, but the literal
 // representation emits an integer token as an untyped constant that lands in

@@ -113,6 +113,13 @@ function makeEntityTestData(_model: Model, entity: ModelEntity) {
   makeEntityTestFields(entity, i++, ent)
   delete ent.id
 
+  // Request contracts are separate from synthetic stored mock records.
+  data.requests = {}
+  for (const op of Object.values(entity.op || {}) as any[]) for (const point of op.points || []) {
+    if (point.contract) data.requests[point.contract.id] = {
+      provenance: 'operation-contract', contract: JSON.parse(point.contract.json),
+    }
+  }
   return data
 }
 
@@ -170,7 +177,7 @@ function makeEntityTestFields(entity: ModelEntity, start: number, entdata: Recor
     entdata[field.name] =
       field.name.endsWith('_id') ?
         field.name.substring(0, field.name.length - 3).toUpperCase() + '01' :
-        '`$NUMBER`' === field.type ? num :
+        ['`$NUMBER`', '`$INTEGER`'].includes(field.type) ? num :
           '`$BOOLEAN`' === field.type ? 0 === num % 2 :
             '`$OBJECT`' === field.type ? {} :
               '`$MAP`' === field.type ? {} :
