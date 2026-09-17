@@ -24,7 +24,7 @@ main: kit: target: lua: {
   # and links no OpenSSL. `sekreto.plugins.net` finds the binary through
   # its own adapted helperpath() (vendor/routes.json), at
   # feature/secrets/native/sekreto-net.
-  provides: { sekreto: true }
+  provides: { sekreto: true, schema: true }
 
   # Files earlier toolchains generated that this target has RETIRED
   # (vendor-tag rollout): the struct-corpus runner (test/runner.lua is

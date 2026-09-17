@@ -1,6 +1,6 @@
 "use strict";
 // VENDORED: @voxgig/struct 0.3.4 (typescript/src/StructUtility.ts)
-// Source: https://github.com/voxgig/struct @ abd93227e3295151f8dcd18597c3f3f2577af8b7  [tag: sdk-20260911-2013-0]
+// Source: https://github.com/voxgig/struct @ 3110e839a3f35b2fbdb047bf0c24f29d144027ea  [tag: sdk-20260917-1242-0]
 // License: MIT (c) voxgig - see repository LICENSE. Do not edit: resync from upstream.
 /* Copyright (c) 2025-2026 Voxgig Ltd. MIT LICENSE. */
 Object.defineProperty(exports, "__esModule", { value: true });

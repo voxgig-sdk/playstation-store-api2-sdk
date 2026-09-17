@@ -21,7 +21,7 @@
   },
   "autoload": {
     "files": ["playstationstoreapi2_sdk.php"],
-    "classmap": ["core/", "entity/", "feature/", "types/", "utility/", "config.php", "features.php"]
+    "classmap": ["core/", "entity/", "feature/", "types/", "utility/", "config.php", "schema.php", "features.php"]
   },
   "autoload-dev": {
     "classmap": ["test/"]

@@ -438,6 +438,7 @@ Use `Helpers::to_map()` to safely validate that a value is an array.
 php/
 ├── playstationstoreapi2_sdk.php          -- Main SDK class
 ├── config.php                     -- Configuration
+├── schema.php                     -- Generated option + entity specs
 ├── features.php                   -- Feature factory
 ├── core/                          -- Core types and context
 ├── entity/                        -- Entity implementations

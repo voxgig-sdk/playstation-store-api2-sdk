@@ -2,7 +2,7 @@
 
 
 
-@"test.aon"
-@"retry.aon"
-@"timeout.aon"
-@"ratelimit.aon"
+@"./test.aon"
+@"./retry.aon"
+@"./timeout.aon"
+@"./ratelimit.aon"

@@ -15,7 +15,7 @@ def: 'playstation-store-api-2_0.1.0.json'
 
 
 # SDK Configuration.
-@"config.aon"
+@"./config.aon"
 
 
 # SDK Entities
@@ -38,7 +38,7 @@ def: 'playstation-store-api-2_0.1.0.json'
 #
 # LAST, deliberately: it may refine main.kit.target.<t>, and a target can only
 # be refined after target-index.aon has defined it.
-@"project.aon"
+@"./project.aon"
 
 # Documentation editions. Settings belong in project.aon.
 @"edition/edition-index.aon"

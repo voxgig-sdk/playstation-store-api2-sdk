@@ -11,6 +11,8 @@ const OPTSPEC = {
   "apikey": "",
   "auth": {
     "basic": false,
+    "in": "",
+    "name": "",
     "prefix": ""
   },
   "base": "http://localhost:8000",

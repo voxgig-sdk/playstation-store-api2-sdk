@@ -14,6 +14,8 @@ import {
   goModule,
   isAuthActive,
   isConfigData,
+  resolveAuthIn,
+  resolveAuthName,
   resolveAuthPrefix,
   serverVariables,
   targetFeatures,
@@ -64,9 +66,18 @@ const Config = cmp(async function Config(props: any) {
     svars.map((v: any) => `\t\t\t\t${JSON.stringify(v.name)}: ${JSON.stringify(v.dflt)},\n`).join('') +
     '\t\t\t},\n'
 
+  // `in` and `name` travel with the prefix now. They were resolved by
+  // apidef all along and dropped here, so an apiKey-in-query API got an
+  // Authorization header it does not read. Emitted only when they differ
+  // from the defaults, so a header/Authorization SDK is byte-identical to
+  // what it generated before.
+  const authIn = resolveAuthIn(model)
+  const authName = resolveAuthName(model)
   const authBlock = authActive
     ? `			"auth": map[string]any{
-				"prefix": "${authPrefix}",
+				"prefix": "${authPrefix}",${'header' === authIn ? '' : `
+				"in": "${authIn}",`}${'Authorization' === authName ? '' : `
+				"name": "${authName}",`}
 			},\n`
     : ''
 

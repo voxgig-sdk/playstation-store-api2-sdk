@@ -24,71 +24,6 @@
         "repr": "auto"
       },
       "contributor": {},
-      "doc": {
-        "active": true,
-        "assets": {
-          "path": ".sdk/doc/assets"
-        },
-        "brand": {
-          "label": "",
-          "notice": "",
-          "shortNotice": "",
-          "url": ""
-        },
-        "ci": {
-          "active": true,
-          "branch": "main"
-        },
-        "content": {
-          "path": ".sdk/doc/content"
-        },
-        "edition": {
-          "summary": {
-            "active": true,
-            "base": "node_modules/@voxgig/docgen/project/.sdk",
-            "brand": {},
-            "filter": {
-              "entities": [],
-              "features": [],
-              "targets": []
-            },
-            "kind": "summary",
-            "name": "summary",
-            "origname": "",
-            "output": {
-              "path": "SUMMARY.md"
-            },
-            "package": "@voxgig/docgen",
-            "site": {
-              "active": true
-            },
-            "style": {},
-            "title": ""
-          }
-        },
-        "qa": {
-          "vocabulary": []
-        },
-        "style": {
-          "color": {
-            "accent": "#00c6d8",
-            "background": "#f5f5f9",
-            "darkBackground": "#0f1117",
-            "darkText": "#e6edf3",
-            "primary": "#e70042",
-            "text": "#0a0a0a"
-          },
-          "font": "Nunito, system-ui, sans-serif",
-          "fontFile": "",
-          "headingFont": "Nunito, system-ui, sans-serif",
-          "headingFontFile": "",
-          "logo": "",
-          "mode": "light",
-          "mono": "ui-monospace, monospace",
-          "monoFile": ""
-        },
-        "target": {}
-      },
       "entity": {
         "container": {
           "active": true,
@@ -812,6 +747,8 @@
         "apikey": "",
         "auth": {
           "basic": false,
+          "in": "",
+          "name": "",
           "prefix": ""
         },
         "base": "http://localhost:8000",
@@ -886,6 +823,7 @@
           },
           "package": "@voxgig/sdkgen",
           "provides": {
+            "schema": true,
             "sekreto": true
           },
           "publish": {
@@ -1112,6 +1050,7 @@
           },
           "package": "@voxgig/sdkgen",
           "provides": {
+            "schema": true,
             "sekreto": true
           },
           "publish": {
@@ -1177,6 +1116,7 @@
           },
           "package": "@voxgig/sdkgen",
           "provides": {
+            "schema": true,
             "sekreto": true
           },
           "publish": {
@@ -1248,6 +1188,7 @@
           },
           "package": "@voxgig/sdkgen",
           "provides": {
+            "schema": true,
             "sekreto": true
           },
           "publish": {
@@ -1324,6 +1265,7 @@
           },
           "package": "@voxgig/sdkgen",
           "provides": {
+            "schema": true,
             "sekreto": true
           },
           "publish": {

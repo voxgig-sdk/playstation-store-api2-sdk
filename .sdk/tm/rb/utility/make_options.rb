@@ -1,5 +1,6 @@
 # PlaystationStoreApi2 SDK utility: make_options
 require_relative 'struct/voxgig_struct'
+require_relative '../schema'
 module PlaystationStoreApi2Utilities
   MakeOptions = ->(ctx) {
     options = ctx.options || {}
@@ -80,38 +81,20 @@ module PlaystationStoreApi2Utilities
     config = ctx.config || {}
     cfgopts = config["options"].is_a?(Hash) ? config["options"] : {}
 
-    optspec = {
-      "apikey" => "",
-      "base" => "http://localhost:8000",
-      "secret" => "",
-      "prefix" => "",
-      "suffix" => "",
-      # `basic` and `secret`: HTTP Basic Auth needs a second credential and
-      # a flag to say the pair is Basic rather than a single bearer token.
-      "auth" => { "prefix" => "", "basic" => false },
-      "headers" => { "`$CHILD`" => "`$STRING`" },
-      "allow" => {
-        "method" => "GET,PUT,POST,PATCH,DELETE,OPTIONS",
-        "op" => "create,update,load,list,remove,command,direct,graphql",
-      },
-      "entity" => { "`$CHILD`" => { "`$OPEN`" => true, "active" => false, "alias" => {} } },
-      "feature" => { "`$CHILD`" => { "`$OPEN`" => true, "active" => false } },
-      "utility" => {},
-      # Feature INSTANCES supplied at construction (the station adopt
-      # path): consumed by the constructor's feature_add loop, so they are
-      # class instances, not data — `$ANY` accepts them verbatim. Without
-      # this entry the seam is dead: the constructor reads
-      # options["extend"], but validate rejected the key.
-      "extend" => "`$ANY`",
-      "system" => {},
-      "test" => { "active" => false, "entity" => { "`$OPEN`" => true } },
-      "clean" => { "keys" => "key,token,id" },
-      # Server-variable values for a templated base URL (OpenAPI server
-      # variables): {name} placeholders in "base" are substituted from this
-      # map at construction. Spec defaults arrive via the generated config;
-      # user values override them.
-      "server" => { "`$CHILD`" => "" },
-    }
+    # THE OPTION SPEC IS GENERATED, NOT WRITTEN HERE.
+    #
+    # `PlaystationStoreApi2Schema::OPTSPEC` is built from the model:
+    # `main.kit.optspec` for the standard options, plus one entry per
+    # feature this target carries, taken from that feature's own
+    # `config.options` / `config.optspec`. Editing this file to add an
+    # option would put it back where it was — one of twenty
+    # hand-maintained copies of a schema nothing cross-checked — so add
+    # it to the model instead and every ported target validates it.
+    #
+    # NOT MUTATED. It is a frozen module constant shared by every client
+    # this process constructs; anything defaulted below is applied to the
+    # RESULT, never to the spec.
+    optspec = PlaystationStoreApi2Schema::OPTSPEC
 
     sys_fetch = VoxgigStruct.getpath(opts, "system.fetch")
 

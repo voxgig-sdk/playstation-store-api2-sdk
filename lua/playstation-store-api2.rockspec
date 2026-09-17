@@ -25,6 +25,7 @@ build = {
     ["config"] = "config.lua",
     ["config_shared"] = "config_shared.lua",
     ["config_plugins"] = "config_plugins.lua",
+    ["schema"] = "schema.lua",
     ["features"] = "features.lua",
     ["feature.base_feature"] = "feature/base_feature.lua",
     ["feature.ratelimit_feature"] = "feature/ratelimit_feature.lua",

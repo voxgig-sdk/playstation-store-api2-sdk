@@ -137,8 +137,16 @@ class Struct
 
     private const S_CM = ',';
 
+    // PATCH (optspec port, pending upstream fix): 'nil', not 'noval'.
+    //
+    // validate_TYPE resolves a sentinel by NAME — array_search(strtolower(
+    // substr($ref, 1)), TYPENAME) — so `$NIL` looked up 'nil', found nothing,
+    // and got a type bitmask of 0. `0 === ($t & 0)` is true for every value,
+    // so `$NIL` reported a type error against ANYTHING, including the absent
+    // value it exists to match. The slot is already T_noval's (1 << 30); only
+    // the spelling was wrong, and the ts reference spells it 'nil'.
     private const TYPENAME = [
-        'any', 'noval', 'boolean', 'decimal', 'integer', 'number', 'string',
+        'any', 'nil', 'boolean', 'decimal', 'integer', 'number', 'string',
         'function', 'symbol', 'null',
         '', '', '', '', '', '', '',
         'list', 'map', 'instance',
@@ -2626,16 +2634,42 @@ class Struct
 
                 $vstore = array_merge((array) $store, [self::S_DTOP => $inj->dparent]);
 
-                $vcurrent = self::validate($inj->dparent, $tval, (object) [
+                // PATCH (optspec port, pending upstream fix): read the trial
+                // errors back off the injdef.
+                //
+                // `$terrs` is a PHP array, so it was passed BY VALUE into the
+                // object literal below; validate wraps it, fills the wrapper,
+                // and unwraps onto `$injdef->errs` — never touching the local.
+                // `count($terrs)` was therefore always 0, so the first
+                // alternative always counted as a match and the "no match"
+                // branch below was unreachable. Keeping the injdef and reading
+                // its `errs` is what makes the loop actually try alternatives.
+                $topts = (object) [
                     'extra' => $vstore,
                     'errs' => $terrs,
                     'meta' => $inj->meta,
-                ]);
+                ];
 
-                $inj->setval($vcurrent, 2);
+                $vcurrent = self::validate($inj->dparent, $tval, $topts);
+
+                // PATCH (optspec port, pending upstream fix): the ancestor is
+                // -2, not 2.
+                //
+                // ts writes the trial result back with `setval(vcurrent, -2)`.
+                // A NEGATIVE ancestor takes setval's `< 2` branch, which
+                // writes to `inj->parent` — still the `[$ONE, ...]` LIST at
+                // this point, under a string key, so the write is a no-op and
+                // the node the first setval above already put in place is what
+                // survives. With `2` this wrote through to the GRANDPARENT
+                // instead, which both resurrected a key the data did not have
+                // (an optional `['`$ONE`', <spec>, '`$NIL`']` entry the caller
+                // omitted came back materialised) and, one level out, invented
+                // a synthetic entry named after its own parent carrying the
+                // trial store's `$TOP`.
+                $inj->setval($vcurrent, -2);
 
                 // Accept current value if there was a match
-                if (0 === count($terrs)) {
+                if (0 === count((array) $topts->errs)) {
                     return self::undef();
                 }
             }
@@ -2903,9 +2937,24 @@ class Struct
             '$ONE' => [self::class, 'validate_ONE'],
             '$EXACT' => [self::class, 'validate_EXACT'],
 
+        // PATCH (optspec port, pending upstream fix): $ERRS LAST, so it wins.
+        //
+        // This merged `$extra` last, so a caller-supplied store overrode
+        // `$ERRS`. validate_ONE builds its trial store from the OUTER store —
+        // which carries the outer `$ERRS` — so every alternative it tried
+        // recorded its failures into the CALLER's error list. A union whose
+        // first alternative did not match therefore reported that alternative's
+        // failure even when a later one matched, which made `['`$ONE`', X,
+        // '`$NIL`']` (the encoding for an optional value) reject an absent key,
+        // and `['`$ONE`', 0, '`$NUMBER`']` reject 0.002.
+        //
+        // The ts reference merges in the order { sentinels }, extra, { $ERRS },
+        // and says so: "NOTE: collecterrs parameter always wins." Same order
+        // here now.
+        ], (array) ($extra ?? []), [
             // A special top level value to collect errors.
             '$ERRS' => $errs,
-        ], (array) ($extra ?? []));
+        ]);
 
         $meta = is_object($injdef) && property_exists($injdef, 'meta') ? $injdef->meta : null;
 

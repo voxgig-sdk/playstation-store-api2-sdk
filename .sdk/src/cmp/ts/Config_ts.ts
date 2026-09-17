@@ -15,6 +15,8 @@ import {
   isAuthActive,
   isConfigData,
   isHttpBasicAuth,
+  resolveAuthIn,
+  resolveAuthName,
   resolveAuthPrefix,
   serverVariables,
   targetFeatures,
@@ -54,10 +56,19 @@ const Config = cmp(async function Config(props: any) {
   // config.auth.prefix override -> spec-derived info.security.prefix -> 'Bearer'
   const authPrefix = resolveAuthPrefix(model)
   const authBasic = isHttpBasicAuth(model)
+  // `in` and `name` travel with the prefix now. They were resolved by
+  // apidef all along and dropped here, so an apiKey-in-query API got an
+  // Authorization header it does not read. Emitted only when they differ
+  // from the defaults, so a header/Authorization SDK is byte-identical to
+  // what it generated before.
+  const authIn = resolveAuthIn(model)
+  const authName = resolveAuthName(model)
   const authBlock = authActive
     ? `auth: {
       prefix: '${authPrefix}',${authBasic ? `
-      basic: true,` : ''}
+      basic: true,` : ''}${'header' === authIn ? '' : `
+      in: '${authIn}',`}${'Authorization' === authName ? '' : `
+      name: '${authName}',`}
     },
 
     `
@@ -106,9 +117,11 @@ const Config = cmp(async function Config(props: any) {
             pluginImports(feature)
           },
 
-          '// #FeatureClasses': () => each(feature, (f: any) => {
-            Line(` ${f.name}: ${nom(f, 'Name')}Feature,`)
-          }),
+          '// #FeatureClasses': () => {
+            each(feature, (f: any) => {
+              Line(` ${f.name}: ${nom(f, 'Name')}Feature,`)
+            })
+          },
 
           '// #FeaturePlugins': () => pluginDefs(feature),
 
@@ -150,28 +163,34 @@ const Config = cmp(async function Config(props: any) {
           Line(`    target: ${JSON.stringify(configDef.main.target)},`)
         },
 
-        '// #FeatureClasses': () => each(feature, (f: any) => {
-          // Trailing comma: the map has one entry per feature, so entries
-          // must be comma-separated (a single feature hid this until now).
-          Line(` ${f.name}: ${nom(f, 'Name')}Feature,`)
-        }),
+        '// #FeatureClasses': () => {
+          each(feature, (f: any) => {
+            // Trailing comma: the map has one entry per feature, so entries
+            // must be comma-separated (a single feature hid this until now).
+            Line(` ${f.name}: ${nom(f, 'Name')}Feature,`)
+          })
+        },
 
         '// #FeaturePlugins': () => pluginDefs(feature),
 
         // Rendered from configDefinition's def, not from f.config, so the
         // literal carries the feature's `transport` role (station design
         // §8.4) beside its options and cannot drift from the data rep.
-        '// #FeatureConfigs': () => each(feature, (f: any) => {
-          Line(` ${f.name}: ${formatJson(configDef.feature[f.name], { margin: 4 })},`)
-        }),
+        '// #FeatureConfigs': () => {
+          each(feature, (f: any) => {
+            Line(` ${f.name}: ${formatJson(configDef.feature[f.name], { margin: 4 })},`)
+          })
+        },
 
 
-        '// #EntityConfigs': () => each(entity, (entity: any) => {
-          Content(`
-      ${entity.name}: {
-      },
-`)
-        }),
+        '// #EntityConfigs': () => {
+          each(entity, (entity: any) => {
+            Content(`
+        ${entity.name}: {
+        },
+  `)
+          })
+        },
 
         // configDefinition's `def.entity` verbatim, NOT rebuilt here. This
         // reduce was a second copy of that function's entityDefs loop, and

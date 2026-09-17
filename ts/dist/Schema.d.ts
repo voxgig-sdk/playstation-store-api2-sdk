@@ -6,6 +6,8 @@ declare const OPTSPEC: {
     apikey: string;
     auth: {
         basic: boolean;
+        in: string;
+        name: string;
         prefix: string;
     };
     base: string;

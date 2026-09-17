@@ -1,18 +1,18 @@
 
 struct: &: {
-  name: .$KEY
+  name: key()
   set: []
 }
 
-struct: minor: @"minor.aon"
-struct: getpath: @"getpath.aon"
-struct: inject: @"inject.aon"
-struct: merge: @"merge.aon"
-struct: transform: @"transform.aon"
-struct: walk: @"walk.aon"
-struct: validate: @"validate.aon"
-struct: select: @"select.aon"
-struct: nullsem: @"nullsem.aon"
+struct: minor: @"./minor.aon"
+struct: getpath: @"./getpath.aon"
+struct: inject: @"./inject.aon"
+struct: merge: @"./merge.aon"
+struct: transform: @"./transform.aon"
+struct: walk: @"./walk.aon"
+struct: validate: @"./validate.aon"
+struct: select: @"./select.aon"
+struct: nullsem: @"./nullsem.aon"
 
 primary: check: {
   DEF: {

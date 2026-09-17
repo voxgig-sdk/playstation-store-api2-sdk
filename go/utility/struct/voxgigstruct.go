@@ -1,5 +1,5 @@
 // VENDORED: @voxgig/struct 0.1.0 (go/voxgigstruct.go)
-// Source: https://github.com/voxgig/struct @ abd93227e3295151f8dcd18597c3f3f2577af8b7  [tag: sdk-20260911-2013-0]
+// Source: https://github.com/voxgig/struct @ 3110e839a3f35b2fbdb047bf0c24f29d144027ea  [tag: sdk-20260917-1242-0]
 // License: MIT (c) voxgig - see repository LICENSE. Do not edit: resync from upstream.
 /* Copyright (c) 2025 Voxgig Ltd. MIT LICENSE. */
 
@@ -3867,13 +3867,29 @@ func init_validate_ONE() {
 				return nil
 			}
 
-			// Get grandparent and grandkey to replace the structure
-			grandparent := inj.Nodes.List[len(inj.Nodes.List)-2]
-			grandkey := inj.Path.List[len(inj.Path.List)-2]
+			// PATCH (optspec port, pending upstream fix): use inj.setval, as
+			// the ts reference and the py/java ports do, instead of writing
+			// through a hand-held grandparent.
+			//
+			// setval DELETES on a nil value; SetProp deliberately keeps one
+			// ("Preserve nil values (like JS null)"). For a key the DATA does
+			// not have, the reference therefore removes the `[$ONE, ...]` node
+			// outright, while this set it to the data's nil and then, below,
+			// to whichever alternative matched. An OPTIONAL entry
+			// (`['`$ONE`', <spec>, '`$NIL`']`) that the caller omitted came
+			// back MATERIALISED, complete with the spec's `$OPEN` marker and a
+			// null for every option — which is exactly what that encoding
+			// exists to prevent. In an SDK's option spec that put an entry in
+			// `options.feature` for every feature the model declares, and the
+			// feature ADD ORDER is derived from those keys.
+			//
+			// Reassigning inj.Parent is part of the same divergence: the
+			// reference leaves it pointing at the `[$ONE, ...]` LIST, so the
+			// write-back below lands on a list under a string key and is a
+			// no-op — the data node, already replaced above, is what survives.
 
 			// Clean up structure by replacing [$ONE, ...] with current value
-			SetProp(grandparent, grandkey, inj.Dparent)
-			inj.Parent = inj.Dparent
+			inj.setval(inj.Dparent, 2)
 
 			// Adjust the path
 			inj.Path.List = inj.Path.List[:len(inj.Path.List)-1]
@@ -3902,8 +3918,8 @@ func init_validate_ONE() {
 				// Attempt validation of data with shape `tval`
 				vcurrent, err := Validate(inj.Dparent, tval, &Injection{Extra: vstore, Errs: terrs})
 
-				// Update the value in the grandparent
-				SetProp(grandparent, grandkey, vcurrent)
+				// PATCH (optspec port, pending upstream fix): see above.
+				inj.setval(vcurrent, -2)
 
 				// If no errors, we found a match
 				if err == nil && len(terrs.List) == 0 {

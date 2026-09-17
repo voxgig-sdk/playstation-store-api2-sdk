@@ -1,6 +1,52 @@
 -- PlaystationStoreApi2 SDK utility: make_options
 
 local vs = require("utility.struct.struct")
+local schema = require("schema")
+
+-- See the call site in make_options for why this exists.
+local function densify_lists(v, seen)
+  if type(v) ~= 'table' then
+    return v
+  end
+
+  seen = seen or {}
+  if seen[v] then
+    return v
+  end
+  seen[v] = true
+
+  local count, max, intonly = 0, 0, true
+  for k in pairs(v) do
+    count = count + 1
+    if math.type(k) == 'integer' and 0 < k then
+      if k > max then
+        max = k
+      end
+    else
+      intonly = false
+    end
+  end
+
+  -- A hole is the only case worth rebuilding for: every key an integer, and
+  -- a highest key past the number of entries.
+  if intonly and 0 < count and max > count then
+    local out = {}
+    for i = 1, max do
+      local e = v[i]
+      if e == nil then
+        out[i] = false
+      else
+        out[i] = densify_lists(e, seen)
+      end
+    end
+    return out
+  end
+
+  for k, e in pairs(v) do
+    v[k] = densify_lists(e, seen)
+  end
+  return v
+end
 
 local function make_options_util(ctx)
   local options = ctx.options or {}
@@ -73,61 +119,20 @@ local function make_options_util(ctx)
     cfgopts = co
   end
 
-  local optspec = {
-    apikey = "",
-    secret = "",
-    base = "http://localhost:8000",
-    prefix = "",
-    suffix = "",
-    auth = {
-      prefix = "",
-      basic = false,
-    },
-    headers = {
-      ["`$CHILD`"] = "`$STRING`",
-    },
-    allow = {
-      method = "GET,PUT,POST,PATCH,DELETE,OPTIONS",
-      op = "create,update,load,list,remove,command,direct,graphql",
-    },
-    entity = {
-      ["`$CHILD`"] = {
-        ["`$OPEN`"] = true,
-        active = false,
-        alias = {},
-      },
-    },
-    feature = {
-      ["`$CHILD`"] = {
-        ["`$OPEN`"] = true,
-        active = false,
-      },
-    },
-    utility = {},
-    -- Feature INSTANCES supplied at construction (the station adopt
-    -- path): consumed by the constructor's feature_add loop, so they are
-    -- class instances, not data -- `$ANY` accepts them verbatim. Without
-    -- this entry the seam is dead: the constructor reads
-    -- options.extend, but validate rejected the key.
-    extend = "`$ANY`",
-    system = {},
-    test = {
-      active = false,
-      entity = {
-        ["`$OPEN`"] = true,
-      },
-    },
-    clean = {
-      keys = "key,token,id",
-    },
-    -- Server-variable values for a templated base URL (OpenAPI server
-    -- variables): {name} placeholders in `base` are substituted from this
-    -- map at construction. Spec defaults arrive via the generated config;
-    -- user values override them.
-    server = {
-      ["`$CHILD`"] = "",
-    },
-  }
+  -- THE OPTION SPEC IS GENERATED, NOT WRITTEN HERE.
+  --
+  -- `schema.OPTSPEC` is built from the model: `main.kit.optspec` for
+  -- the standard options, plus one entry per feature this target
+  -- carries, taken from that feature's own `config.options` /
+  -- `config.optspec`. Editing this file to add an option would put it
+  -- back where it was — one of twenty hand-maintained copies of a
+  -- schema nothing cross-checked — so add it to the model instead and
+  -- every ported target validates it.
+  --
+  -- NOT MUTATED. It is a module-level table shared by every client this
+  -- Lua state constructs; anything defaulted below is applied to the
+  -- RESULT, never to the spec.
+  local optspec = schema.OPTSPEC
 
   -- Preserve system.fetch before merge/validate.
   local sys_fetch = vs.getpath(opts, "system.fetch")
@@ -146,6 +151,20 @@ local function make_options_util(ctx)
   -- tables as merge TARGETS — one instance's options (server, headers, ...)
   -- would contaminate every instance constructed after it.
   local merged = vs.merge({ {}, vs.clone(cfgopts), opts })
+
+  -- LUA CANNOT STORE NIL, so `{ a, nil, b }` is a table holding keys 1 and 3
+  -- and no 2 -- not a sequence. struct classifies it as a MAP and refuses it
+  -- against a `list` spec, so a caller's sparse list became an uncatchable
+  -- construction error naming the whole option shape, instead of the feature's
+  -- own message about the one entry that is wrong.
+  --
+  -- Densify first: a table whose keys are ALL positive integers is meant as a
+  -- list, so walk 1..max and fill each hole with `false`. The hole stays
+  -- PRESENT -- dropping it would silently shorten a provider chain, which is
+  -- the failure the secrets suite pins -- and `false` is not a table, so the
+  -- feature reading it refuses it by its own rule, with its own message.
+  merged = densify_lists(merged)
+
   local validated = vs.validate(merged, optspec)
   if type(validated) ~= "table" then
     validated = {}

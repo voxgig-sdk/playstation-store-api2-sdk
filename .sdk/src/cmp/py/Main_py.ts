@@ -24,6 +24,8 @@ import {
 
 import { Package } from './Package_py'
 import { Config } from './Config_py'
+import { Schema } from './Schema_py'
+import { PrepareAuth } from './PrepareAuth_py'
 import { Gitignore } from './Gitignore_py'
 import { MainEntity } from './MainEntity_py'
 import { EntityTypes } from './EntityTypes_py'
@@ -188,7 +190,19 @@ if TYPE_CHECKING:
   // Generate config module
   Folder({ name: '.' }, () => {
     Config({ target })
+    Schema({ target })
   })
+
+  // GENERATED, NOT COPIED. Where the credential goes is a fact about the
+  // API, and tm/ can only hold one answer. The blanket tm/py/pkg copy above
+  // no longer brings a prepare_auth.py in - it was deleted, since both
+  // writers would claim the same output path. See PrepareAuth_py.
+  //
+  // Called HERE, inside the <name>_sdk package folder and outside any
+  // other, because that is where the deleted template's own path
+  // (tm/py/pkg/utility/prepare_auth.py) put it: the component opens the one
+  // remaining segment, `utility`, itself.
+  PrepareAuth({ target })
 
   // Generate feature factory module
   File({ name: 'features.' + target.ext }, () => {

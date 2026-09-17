@@ -12,7 +12,7 @@ main: kit: target: go: {
   # Applicability (docs/design/feature-tags.md). A vendored sekreto port
   # lives in this target's feature container (tm/go/feature/secrets/), so
   # a feature that resolves secrets through sekreto can apply here.
-  provides: { sekreto: true }
+  provides: { sekreto: true, schema: true }
 
   # Files earlier toolchains generated that this target has RETIRED
   # (vendor-tag rollout): both fused runners. `doctor` reports leftovers;

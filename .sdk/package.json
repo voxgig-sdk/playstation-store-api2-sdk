@@ -21,7 +21,8 @@
     "add-edition": "voxgig-sdkgen edition add",
     "text-qa": "cd .. && voxgig-docgen qa",
     "postinstall": "node build/docgen.js",
-    "status": "bash admin/status.sh"
+    "status": "bash admin/status.sh",
+    "check-drift": "bash admin/check-drift.sh"
   },
   "author": "PlaystationStoreApi2",
   "license": "MIT",

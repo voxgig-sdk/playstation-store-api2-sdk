@@ -13,6 +13,8 @@ import {
   each,
   isAuthActive,
   isConfigData,
+  resolveAuthIn,
+  resolveAuthName,
   resolveAuthPrefix,
   serverVariables,
   targetFeatures,
@@ -114,9 +116,21 @@ const Config = cmp(async function Config(props: any) {
     svars.map((v: any) => `        [${JSON.stringify(v.name)}] = ${JSON.stringify(v.dflt)},\n`).join('') +
     '      },\n'
 
+  // WHERE the credential goes and UNDER WHAT NAME. apidef resolved both
+  // from the spec's securityScheme all along and generation dropped them,
+  // so an apiKey-in-query API got an authorization header it does not read.
+  // Emitted only when they differ from the defaults, so a
+  // header/Authorization SDK is byte-identical to what it generated before.
+  //
+  // `in` is a RESERVED WORD in lua, so the key is bracketed - a bare
+  // `in = "query"` does not parse.
+  const authIn = resolveAuthIn(model)
+  const authName = resolveAuthName(model)
   const authBlock = authActive
     ? `      auth = {
-        prefix = "${authPrefix}",
+        prefix = "${authPrefix}",${'header' === authIn ? '' : `
+        ["in"] = "${authIn}",`}${'Authorization' === authName ? '' : `
+        name = "${authName}",`}
       },\n`
     : ''
 

@@ -159,6 +159,7 @@ build = {
     ["config"] = "config.lua",
     ["config_shared"] = "config_shared.lua",
     ["config_plugins"] = "config_plugins.lua",
+    ["schema"] = "schema.lua",
     ["features"] = "features.lua",
 ${featureModules}  }
 }

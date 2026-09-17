@@ -24,6 +24,7 @@ import {
 
 import { Package } from './Package_ts'
 import { Config } from './Config_ts'
+import { PrepareAuth } from './PrepareAuth_ts'
 import { Schema } from './Schema_ts'
 import { Gitignore } from './Gitignore_ts'
 import { MainEntity } from './MainEntity_ts'
@@ -193,6 +194,10 @@ if (fres instanceof Promise) { await fres }
     })
 
     Config({ target })
+
+    // GENERATED, NOT COPIED. Where the credential goes is a fact about the
+    // API, and tm/ can only hold one answer. See PrepareAuth_ts.
+    PrepareAuth({ target })
     Schema({ target })
     EntityBase({ target })
     EntityTypes({ target })

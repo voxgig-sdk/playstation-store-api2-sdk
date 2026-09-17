@@ -1740,7 +1740,30 @@ module VoxgigStruct
       end
 
       inj.keyI = size(inj.keys)
-      inj.setval(inj.dparent, 2)
+
+      # PATCH (optspec port, pending upstream fix): DELETE the `[$ONE, ...]`
+      # node when the data has no value there, as the ts reference does.
+      #
+      # setval carries a deliberate special case - "nil with ancestor: set to
+      # nil in grandparent (preserves key for $ONE/$EXACT)" - where ts deletes
+      # in BOTH branches. The consequence is that an OPTIONAL entry
+      # (`['`$ONE`', <spec>, '`$NIL`']`) the caller OMITTED comes back as a
+      # nil-valued key rather than staying absent, which is exactly what that
+      # encoding exists to prevent. In an SDK's option spec that put an entry
+      # in `options.feature` for every feature the model declares, and the
+      # feature ADD ORDER is derived from those keys.
+      #
+      # Confined to $ONE so $EXACT keeps the behaviour the special case was
+      # written for. ruby cannot tell an absent key from a stored nil here
+      # (getprop answers nil for both), so a stored nil under a $ONE is
+      # dropped too; ts would keep it. That is the narrower of the two
+      # divergences and the one nothing in this SDK relies on.
+      if inj.dparent.nil?
+        delprop(getelem(inj.nodes, -2), getelem(inj.path, -2))
+      else
+        inj.setval(inj.dparent, 2)
+      end
+
       inj.path = inj.path[0...-1]
       inj.key = getelem(inj.path, -1)
 

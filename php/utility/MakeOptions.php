@@ -147,30 +147,21 @@ class PlaystationStoreApi2MakeOptions
         $config = $ctx->config ?? [];
         $cfgopts = isset($config['options']) && is_array($config['options']) ? $config['options'] : [];
 
-        $optspec = [
-            'apikey' => '',
-            'secret' => '',
-            'base' => 'http://localhost:8000',
-            'prefix' => '',
-            'suffix' => '',
-            'auth' => ['prefix' => '', 'basic' => false],
-            'headers' => ['`$CHILD`' => '`$STRING`'],
-            'allow' => [
-                'method' => 'GET,PUT,POST,PATCH,DELETE,OPTIONS',
-                'op' => 'create,update,load,list,remove,command,direct,graphql',
-            ],
-            'entity' => ['`$CHILD`' => ['`$OPEN`' => true, 'active' => false, 'alias' => (object)[]]],
-            'feature' => ['`$CHILD`' => ['`$OPEN`' => true, 'active' => false]],
-            'utility' => (object)[],
-            'system' => (object)[],
-            'test' => ['active' => false, 'entity' => ['`$OPEN`' => true]],
-            'clean' => ['keys' => 'key,token,id'],
-            // Server-variable values for a templated base URL (OpenAPI server
-            // variables): {name} placeholders in 'base' are substituted from
-            // this map at construction. Spec defaults arrive via the generated
-            // config; user values override them.
-            'server' => ['`$CHILD`' => ''],
-        ];
+        // THE OPTION SPEC IS GENERATED, NOT WRITTEN HERE.
+        //
+        // `PlaystationStoreApi2Schema::optspec()` is built from the model:
+        // `main.kit.optspec` for the standard options, plus one entry per
+        // feature this target carries, taken from that feature's own
+        // `config.options` / `config.optspec`. Editing this file to add an
+        // option would put it back where it was — one of twenty
+        // hand-maintained copies of a schema nothing cross-checked — so add
+        // it to the model instead and every ported target validates it.
+        //
+        // Required explicitly rather than left to the classmap: the generated
+        // SDK is exercised (README examples, the compile checks) without a
+        // dumped composer autoload.
+        require_once __DIR__ . '/../schema.php';
+        $optspec = PlaystationStoreApi2Schema::optspec();
 
         // Empty [] would be treated as a list and clobber the map under merge;
         // substitute an empty stdClass to preserve map semantics.

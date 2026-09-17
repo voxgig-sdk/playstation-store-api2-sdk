@@ -14,6 +14,8 @@ import {
   isAuthActive,
   isConfigData,
   rawStringLiteral,
+  resolveAuthIn,
+  resolveAuthName,
   resolveAuthPrefix,
   serverVariables,
   targetFeatures,
@@ -121,6 +123,13 @@ const Config = cmp(async function Config(props: any) {
   const authActive = isAuthActive(model)
   // config.auth.prefix override -> spec-derived info.security.prefix -> 'Bearer'
   const authPrefix = resolveAuthPrefix(model)
+  // `in` and `name` travel with the prefix now. They were resolved by
+  // apidef all along and dropped here, so an apiKey-in-query API got an
+  // Authorization header it does not read. Emitted only when they differ
+  // from the defaults, so a header/Authorization SDK is byte-identical to
+  // what it generated before.
+  const authIn = resolveAuthIn(model)
+  const authName = resolveAuthName(model)
 
   let baseUrl = ''
   try { baseUrl = getModelPath(model, `main.${KIT}.info.servers.0.url`) } catch (_e) { }
@@ -137,7 +146,9 @@ const Config = cmp(async function Config(props: any) {
 
   const authBlock = authActive
     ? `                "auth" => [
-                    "prefix" => "${authPrefix}",
+                    "prefix" => "${authPrefix}",${'header' === authIn ? '' : `
+                    "in" => ${phps(authIn)},`}${'Authorization' === authName ? '' : `
+                    "name" => ${phps(authName)},`}
                 ],\n`
     : ''
 

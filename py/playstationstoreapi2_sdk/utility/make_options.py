@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from playstationstoreapi2_sdk.utility.voxgig_struct import voxgig_struct as vs
+from playstationstoreapi2_sdk.schema import OPTSPEC
 
 
 
@@ -111,59 +112,19 @@ def make_options_util(ctx):
     if isinstance(co, dict):
         cfgopts = co
 
-    optspec = {
-        "apikey": "",
-        "secret": "",
-        "base": "http://localhost:8000",
-        "prefix": "",
-        "suffix": "",
-        "auth": {
-            "prefix": "",
-            "basic": False,
-        },
-        "headers": {
-            "`$CHILD`": "`$STRING`",
-        },
-        "allow": {
-            "method": "GET,PUT,POST,PATCH,DELETE,OPTIONS",
-            "op": "create,update,load,list,remove,command,direct,graphql",
-        },
-        "entity": {
-            "`$CHILD`": {
-                "`$OPEN`": True,
-                "active": False,
-                "alias": {},
-            },
-        },
-        "feature": {
-            "`$CHILD`": {
-                "`$OPEN`": True,
-                "active": False,
-            },
-        },
-        "utility": {},
-        # Extension feature instances (see above) - stripped before the
-        # clone, but the key stays legal so a passed-through map cannot
-        # fail validation.
-        "extend": "`$ANY`",
-        "system": {},
-        "test": {
-            "active": False,
-            "entity": {
-                "`$OPEN`": True,
-            },
-        },
-        "clean": {
-            "keys": "key,token,id",
-        },
-        # Server-variable values for a templated base URL (OpenAPI server
-        # variables): {name} placeholders in "base" are substituted from this
-        # map at construction. Spec defaults arrive via the generated config;
-        # user values override them.
-        "server": {
-            "`$CHILD`": "",
-        },
-    }
+    # THE OPTION SPEC IS GENERATED, NOT WRITTEN HERE.
+    #
+    # `schema.OPTSPEC` is built from the model: `main.kit.optspec` for the
+    # standard options, plus one entry per feature this target carries, taken
+    # from that feature's own `config.options` / `config.optspec`. Editing
+    # this file to add an option would put it back where it was — one of
+    # twenty hand-maintained copies of a schema nothing cross-checked — so
+    # add it to the model instead and every ported target validates it.
+    #
+    # NOT MUTATED. It is a module-level dict shared by every client this
+    # process constructs; anything this function defaults is applied to the
+    # RESULT, never to the spec.
+    optspec = OPTSPEC
 
     # Preserve system.fetch before merge/validate.
     sys_fetch = vs.getpath(opts, "system.fetch")

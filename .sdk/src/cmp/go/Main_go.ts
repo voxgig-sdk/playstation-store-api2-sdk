@@ -24,9 +24,11 @@ import {
 import { goFeatureName } from './utility_go'
 import { Package } from './Package_go'
 import { Config } from './Config_go'
+import { Schema } from './Schema_go'
 import { Gitignore } from './Gitignore_go'
 import { MainEntity } from './MainEntity_go'
 import { EntityTypes } from './EntityTypes_go'
+import { PrepareAuth } from './PrepareAuth_go'
 
 
 const Main = cmp(async function Main(props: any) {
@@ -78,6 +80,19 @@ const Main = cmp(async function Main(props: any) {
   // generated *_entity.go files so the typed accessors resolve without imports.
   EntityTypes({ target })
 
+  // utility/prepare_auth.go is GENERATED, not templated: where the
+  // credential goes (header / query / cookie, and under what name) is a
+  // fact about the API, and tm/ can only hold one answer. See
+  // PrepareAuth_go.
+  //
+  // AT ROOT LEVEL, and outside the `core` Folder below. Go's layout is flat
+  // at the target root, and the component opens `utility` itself - the same
+  // path `Copy({from:'tm/go'})` used for the template it replaces. Calling
+  // it beside Config, inside `Folder({name:'core'})`, would emit
+  // core/utility/prepare_auth.go instead: a package nothing imports, while
+  // registerAll keeps binding whatever utility/ actually holds.
+  PrepareAuth({ target })
+
   // Generate main SDK file in core/ folder
   Folder({ name: 'core' }, () => {
 
@@ -117,6 +132,7 @@ s.utility.FeatureHook(s.rootctx, "${name}")
     })
 
     Config({ target })
+    Schema({ target })
 
     // Generate registry.go with all constructor function vars
     File({ name: 'registry.' + target.ext }, () => {

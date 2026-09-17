@@ -69,7 +69,7 @@ const Package = cmp(async function Package(props: any) {
   },
   "autoload": {
     "files": ["${model.const.Name.toLowerCase()}_sdk.php"],
-    "classmap": ["core/", "entity/", "feature/", "types/", "utility/", "config.php", "features.php"]
+    "classmap": ["core/", "entity/", "feature/", "types/", "utility/", "config.php", "schema.php", "features.php"]
   },
   "autoload-dev": {
     "classmap": ["test/"]

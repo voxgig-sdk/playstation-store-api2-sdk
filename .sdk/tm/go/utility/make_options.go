@@ -93,60 +93,19 @@ func makeOptionsUtil(ctx *core.Context) map[string]any {
 		}
 	}
 
-	optspec := map[string]any{
-		"apikey": "",
-		"base":   "http://localhost:8000",
-		"prefix": "",
-		"suffix": "",
-		"auth": map[string]any{
-			"prefix": "",
-		},
-		"headers": map[string]any{
-			"`$CHILD`": "`$STRING`",
-		},
-		"allow": map[string]any{
-			"method": "GET,PUT,POST,PATCH,DELETE,OPTIONS",
-			"op":     "create,update,load,list,remove,command,direct,graphql",
-		},
-		"entity": map[string]any{
-			"`$CHILD`": map[string]any{
-				"`$OPEN`": true,
-				"active":  false,
-				"alias":   map[string]any{},
-			},
-		},
-		"feature": map[string]any{
-			"`$CHILD`": map[string]any{
-				"`$OPEN`": true,
-				"active":  false,
-			},
-		},
-		"utility": map[string]any{},
-		// Feature INSTANCES supplied at construction (the station adopt
-		// path): consumed by the constructor's featureAdd loop, so they
-		// are class instances, not data - `$ANY` accepts them verbatim.
-		// Without this entry the seam is dead: the constructor reads
-		// options.extend, but validate rejected the key (mirrors
-		// MakeOptionsUtility.ts).
-		"extend": "`$ANY`",
-		"system": map[string]any{},
-		"test": map[string]any{
-			"active": false,
-			"entity": map[string]any{
-				"`$OPEN`": true,
-			},
-		},
-		"clean": map[string]any{
-			"keys": "key,token,id",
-		},
-		// Server-variable values for a templated base URL (OpenAPI server
-		// variables): {name} placeholders in "base" are substituted from this
-		// map at construction. Spec defaults arrive via the generated config;
-		// user values override them.
-		"server": map[string]any{
-			"`$CHILD`": "",
-		},
-	}
+	// THE OPTION SPEC IS GENERATED, NOT WRITTEN HERE.
+	//
+	// core.OPTSPEC is built from the model: `main.kit.optspec` for the
+	// standard options, plus one entry per feature this target carries, taken
+	// from that feature's own `config.options` / `config.optspec`. Editing
+	// this file to add an option would put it back where it was — one of
+	// twenty hand-maintained copies of a schema nothing cross-checked — so
+	// add it to the model instead and every ported target validates it.
+	//
+	// NOT MUTATED. It is a package-level map shared by every client this
+	// process constructs; the platform default below is applied to the
+	// RESULT, never to the spec.
+	optspec := core.OPTSPEC
 
 	// Preserve system.fetch before merge/validate.
 	var sysFetch any
