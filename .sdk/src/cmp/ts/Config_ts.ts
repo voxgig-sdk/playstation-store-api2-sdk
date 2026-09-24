@@ -43,9 +43,6 @@ const Config = cmp(async function Config(props: any) {
   const model: Model = ctx$.model
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  // Gated by the applicability tags, so this target never imports or
-  // registers a feature it has no source for. One rule, one place:
-  // helpers/applicability.
   const feature = targetFeatures(model, target)
 
   const ff = Path.normalize(__dirname + '/../../../src/cmp/ts/fragment/')
@@ -53,7 +50,6 @@ const Config = cmp(async function Config(props: any) {
   const headers = getModelPath(model, `main.${KIT}.config.headers`) || {}
 
   const authActive = isAuthActive(model)
-  // config.auth.prefix override -> spec-derived info.security.prefix -> 'Bearer'
   const authPrefix = resolveAuthPrefix(model)
   const authBasic = isHttpBasicAuth(model)
   // `in` and `name` travel with the prefix now. They were resolved by
@@ -74,30 +70,17 @@ const Config = cmp(async function Config(props: any) {
     `
     : ''
 
-  // Templated server URL: emit the spec's server-variable defaults so the
-  // runtime can substitute {name} placeholders in base (see makeOptions).
   const svars = serverVariables(model)
   const serverBlock = 0 === svars.length ? '' :
     'server: {\n' +
     svars.map((v: any) => `      ${JSON.stringify(v.name)}: ${JSON.stringify(v.dflt)},\n`).join('') +
     '    },\n\n    '
 
-  // Read the base URL here rather than leaving it to a `$$...$$` stdrep
-  // placeholder in the fragment. stdrep can only substitute a path the model
-  // actually has: a model with no `info.servers` left the placeholder itself in
-  // the generated source, so `options.base` came out as the literal string
-  // '$main.kit.info.servers.0.url$'. Reading it explicitly yields '' in that
-  // case, which is what every other target already emits, and is identical to
-  // the old output whenever the model does define a server.
   let baseUrl = ''
   try {
     baseUrl = getModelPath(model, `main.${KIT}.info.servers.0.url`)
   } catch (_e) { }
 
-  // The same config as an OBJECT, built by the shared helper so this target's
-  // literal and the data that replaces it above the threshold are the same
-  // config by construction. The JSON is what the threshold is measured on -
-  // emitted source size varies by language, the model does not.
   const { def: configDef, json: configJson } = configDefinition(model, target.name)
   const asData = isConfigData(configJson, configReprSetting(model))
 
@@ -125,9 +108,6 @@ const Config = cmp(async function Config(props: any) {
 
           '// #FeaturePlugins': () => pluginDefs(feature),
 
-          // A JS string literal, so the JSON survives verbatim. JSON.stringify
-          // escapes the quotes and backslashes the model contains (values like
-          // `$STRING` carry backticks, which a template literal could not).
           "'CONFIGJSON'": JSON.stringify(configJson),
         }
       })
@@ -165,8 +145,6 @@ const Config = cmp(async function Config(props: any) {
 
         '// #FeatureClasses': () => {
           each(feature, (f: any) => {
-            // Trailing comma: the map has one entry per feature, so entries
-            // must be comma-separated (a single feature hid this until now).
             Line(` ${f.name}: ${nom(f, 'Name')}Feature,`)
           })
         },
@@ -192,12 +170,6 @@ const Config = cmp(async function Config(props: any) {
           })
         },
 
-        // configDefinition's `def.entity` verbatim, NOT rebuilt here. This
-        // reduce was a second copy of that function's entityDefs loop, and
-        // when configDefinition started reconstructing a point's `parts`
-        // from apidef's segment vector (its ADR-003), only the data
-        // representation got it — the literal one emitted empty paths. The
-        // config-repr equivalence test caught it, which is what it is for.
         "'ENTITYMAP'": formatJson(configDef.entity, { margin: 2 }).trim(),
       }
     })
@@ -206,24 +178,8 @@ const Config = cmp(async function Config(props: any) {
 
 
 
-// PLUGIN DEFINITION IMPORTS AND THE FEATURE_PLUGINS MAP.
-//
-// Upstream sekreto replaced its self-registration registry with
-// voxgig/plugin definitions: a provider kind the caller did not pass in
-// via `plugins: [...]` is unknown to that Sekreto. So Config no longer
-// imports provider modules for their side effects — it imports each
-// active plugin's exported Definition BY NAME (the model's `def` map)
-// and hands the list to the feature through FEATURE_PLUGINS.
-//
-// Emitted here because Config already imports every active feature from
-// the model, and this is the same list one level down. The `def` map is
-// declared in the model rather than derived from filenames because one
-// file may export several definitions (sekreto's aws.ts exports
-// awssecrets AND awsparams).
 function pluginImports(feature: any) {
   each(feature, (f: any) => {
-    // path -> [symbol, ...], so one import line serves a two-definition
-    // module.
     const bypath: Record<string, string[]> = {}
 
     each(f.plugin, (plugin: any) => {
@@ -247,8 +203,6 @@ function pluginImports(feature: any) {
   })
 }
 
-// The FEATURE_PLUGINS entries: one line per feature that has any active
-// plugin definitions, listing the imported symbols.
 function pluginDefs(feature: any) {
   each(feature, (f: any) => {
     const syms: string[] = []

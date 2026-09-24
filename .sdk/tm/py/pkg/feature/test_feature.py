@@ -143,18 +143,11 @@ class PlaystationStoreApi2TestFeature(PlaystationStoreApi2BaseFeature):
                 args = test_self.build_args(fctx, op, update_match)
                 found = vs.select(entmap, args)
                 ent = vs.getelem(found, 0)
-                if ent is None and isinstance(entmap, dict):
-                    for e in entmap.values():
-                        if isinstance(e, dict):
-                            ent = e
-                            break
                 if ent is None:
+                    # update miss: 404, never another record
                     return respond(404, None, {"statusText": "Not found"})
-                if isinstance(ent, dict):
-                    reqdata = fctx.reqdata
-                    if reqdata is not None:
-                        for k, v in reqdata.items():
-                            ent[k] = v
+                if isinstance(ent, dict) and isinstance(fctx.reqdata, dict):
+                    vs.merge([ent, fctx.reqdata])
                 vs.delprop(ent, "$KEY")
                 out = vs.clone(ent)
                 return respond(200, out)
@@ -260,12 +253,36 @@ class PlaystationStoreApi2TestFeature(PlaystationStoreApi2BaseFeature):
 
         return netsim_fetcher
 
+    # The entity's own endpoint: a terminal `{param}` marks a record route,
+    # and among equals the shallower path wins (the same rule as make_point).
+    @staticmethod
+    def pick_point(points):
+        if not isinstance(points, list) or len(points) == 0:
+            return None
+
+        def terminal(p):
+            parts = vs.getprop(p, "parts")
+            return isinstance(parts, list) and len(parts) > 0 and \
+                isinstance(parts[-1], str) and parts[-1].startswith("{")
+
+        def depth(p):
+            parts = vs.getprop(p, "parts")
+            return len(parts) if isinstance(parts, list) else 0
+
+        point = points[0]
+        for cand in points[1:]:
+            if terminal(cand) != terminal(point):
+                if terminal(cand):
+                    point = cand
+            elif depth(cand) < depth(point):
+                point = cand
+        return point
+
     def build_args(self, ctx, op, args):
         opname = op.name
 
-        # Get last point from config.
         points = vs.getpath(ctx.config, "entity." + ctx.entity.get_name() + ".op." + opname + ".points")
-        point = vs.getelem(points, -1)
+        point = self.pick_point(points)
 
         # Path AND query: a path-only read misses a query-addressed record
         # (e.g. GET /result?trace_id=), which has no path param at all.

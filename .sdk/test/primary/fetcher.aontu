@@ -1,0 +1,4 @@
+
+
+basic: pending: 'Needs a live or mocked transport and a client instance; the shared runner has no transport-injection hook.'
+basic: set: []

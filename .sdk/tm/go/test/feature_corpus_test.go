@@ -1,19 +1,5 @@
 package sdktest
 
-// Feature behaviour, driven by the SHARED corpus.
-//
-// The same route primary_utility_test.go takes for the utilities:
-// language-neutral cases in .sdk/test/test.json, executed against THIS
-// generated SDK. The feature is the ordinary compiled type, built by the
-// generated config, installed by the generated constructor, and driven by a
-// real entity operation. Not a miniature of the pipeline - that is what
-// feature_harness_test.go does, and a miniature can only be as right as the
-// miniature.
-//
-// Everything in a case is data. The two pieces go writes for itself are
-// turning scripted responses into a FetcherFunc, and reading the record back
-// off the feature (go keeps the aggregates on the feature value, where ts
-// keeps them on the client).
 
 import (
 	"encoding/json"
@@ -32,17 +18,13 @@ import (
 // added under .sdk/test/feature/ — runs without editing this file. An
 // SDK generated without a listed feature still skips, not fails.
 
-// The standard operation names, in the order the runner prefers them. Every
-// entity declares every CRUD method, so an op that the API does not define
-// errors at runtime rather than failing to compile - which is why usable
-// operations are found by DRIVING them, below.
 var featureCorpusOps = []string{"Load", "List", "Create", "Update", "Remove"}
 
 // One operation this SDK can actually perform.
 type fcOp struct {
 	key      string // "<entity>.<op>", how features attribute it
 	accessor string // the client method returning the entity
-	method   string // the op method on that entity
+	method   string
 }
 
 // fcFetcher builds a scripted transport from a case's `res` list. Responses
@@ -106,20 +88,8 @@ func fcFetcher(res []any) sdk.FetcherFunc {
 	}
 }
 
-// fcClient builds a client the way a caller would: the generated constructor,
-// the feature list from the case, and the scripted transport through the
-// documented `utility.fetcher` override.
-//
-// NewPlaystationStoreApi2SDK, not TestSDK: the `test` feature is transport: 'base' and
-// REPLACES the transport, so a client in test mode would shadow the script.
 func fcClient(kase map[string]any) *sdk.PlaystationStoreApi2SDK {
 	res, _ := kase["res"].([]any)
-	// "test" here is the OPTION, not the `test` FEATURE. It says "this
-	// client is not live", which is what makes a REQUIRED OpenAPI server
-	// variable resolve to a deterministic test-<name> rather than panic at
-	// construction (see makeOptions). It installs no transport, so the
-	// scripted fetcher still stands — the FEATURE is transport: 'base' and
-	// would shadow it, which is why this cannot just turn the feature on.
 	opts := map[string]any{
 		"test":    map[string]any{"active": true},
 		"utility": map[string]any{"fetcher": fcFetcher(res)},
@@ -338,13 +308,6 @@ func fcNum(v any) (float64, bool) {
 	return 0, false
 }
 
-// fcSubset asserts that `actual` contains `expect`, recursively. Cases assert
-// only the fields they are about, so a full deep-equal would force every case
-// to restate the whole record.
-//
-// `actual` is a Go value, not a map: the aggregates live on the feature as
-// typed structs, so an expected key is matched to an exported field by
-// capitalising it.
 func fcSubset(t *testing.T, actual any, expect any, path string) {
 	t.Helper()
 
@@ -410,21 +373,6 @@ func fcMember(actual any, key string) (any, bool) {
 	return nil, false
 }
 
-// fcRecord finds the named feature on the client and hands back the value
-// carrying its aggregates. go keeps them on the feature; ts keeps them on the
-// client. Same data, different home.
-//
-// Returned as the feature value itself, NOT type-asserted to a concrete
-// feature type. Naming one here would be a compile-time reference to a
-// feature the project may not have: `target add` trims unselected features,
-// and this template is not trimmed with them, so an SDK generated without
-// that feature would ship a test that does not build. featuresource.test.ts
-// guards exactly that, and caught it - including, on its first pass, the
-// spelling of the type inside this very comment.
-//
-// fcSubset reads the expected keys off the struct by capitalising them, so
-// `total` finds Total, `ops` finds Ops, and a feature added later needs no
-// new go here.
 func fcRecord(client *sdk.PlaystationStoreApi2SDK, name string) any {
 	for _, f := range client.Features {
 		if f.GetName() == name {
@@ -439,13 +387,6 @@ func TestFeatureCorpus(t *testing.T) {
 
 	featureSection := getSpec(spec, "feature")
 	if featureSection == nil {
-		// A corpus with no `feature` section is a SKIP, not a failure. Each
-		// project carries its OWN materialised copy of .sdk/test/test.json, so a
-		// project scaffolded before the section existed legitimately has no cases
-		// to run - and a hard assertion here turned that into a red suite in every
-		// SDK on the fleet, for a corpus the project had simply not re-pulled yet.
-		// The strict check belongs where the corpus is CONTROLLED: sdkgen's own
-		// end-to-end lane supplies one and requires the cases to actually run.
 		t.Skip("this project's test.json has no `feature` section - recompile the corpus (create-sdkgen .sdk/test/feature/) to run these cases")
 	}
 
@@ -487,6 +428,7 @@ func TestFeatureCorpus(t *testing.T) {
 				"feature": []any{map[string]any{"name": name, "active": true}},
 			})
 			if fcRecord(probe, name) == nil {
+				t.Logf("feature.%s: inert (this SDK does not generate the feature)", name)
 				t.Skipf("this SDK was generated without the %s feature", name)
 			}
 

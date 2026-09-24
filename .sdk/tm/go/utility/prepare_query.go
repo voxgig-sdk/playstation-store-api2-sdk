@@ -29,7 +29,7 @@ func prepareQueryUtil(ctx *core.Context) map[string]any {
 	for _, item := range vs.Items(reqmatch) {
 		key, _ := item[0].(string)
 		val := item[1]
-		if val != nil && !containsStr(params, key) {
+		if val != nil && key != "$action" && !containsStr(params, key) {
 			out[key] = val
 		}
 	}

@@ -1,10 +1,4 @@
 "use strict";
-// Direct unit tests for the operation-pipeline utilities. The generated
-// entity tests exercise the happy path; these drive the error and edge
-// branches (missing spec/response/result, 4xx handling, transport
-// failures, feature ordering, auth header shaping) that a normal
-// success-path op never reaches. All utilities are reached through
-// `stdutil`, so this suite is API-agnostic.
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_test_1 = require("node:test");
 const node_assert_1 = require("node:assert");
@@ -264,38 +258,94 @@ function utilWith(fetcher) {
         (0, node_assert_1.strictEqual)(o.__derived__.featureorder.join(','), 'cache,retry');
     });
 });
+// A cookie credential as prepareAuth writes it: `<scheme>=K` for the probe
+// key, with no scheme prefix and nothing else in the bag.
+const COOKIE_PAIR = /^[^=;]+=K$/;
 (0, node_test_1.describe)('pipeline:prepareAuth', () => {
-    // Fake client so the exact options.auth / apikey shape is controlled.
-    function authCtx(options, headers) {
-        return base({ client: { options: () => options }, spec: headers == null ? null : { headers } });
+    function authCtx(options, spec) {
+        return base({ client: { options: () => options }, spec });
+    }
+    function bags() {
+        return { headers: {}, query: {} };
+    }
+    // `basic: false` is explicit: an HTTP Basic API's generated config carries
+    // `auth.basic: true`, and a client that merges it in takes a branch needing
+    // a secret as well. With none supplied that branch writes nothing, which
+    // the probe below would then read as a public API.
+    function auth(prefix) {
+        return { prefix, basic: false };
+    }
+    // Run prepareAuth with both containers present and see which one the
+    // generated utility writes to, and under what name. Null means this SDK
+    // places no credential at all — a public API — which the cases below then
+    // assert instead.
+    // `pair` is the `<scheme>=` lead-in of a COOKIE credential, which rides the
+    // header bag under the key `cookie` rather than taking a header of its own.
+    function probe(options) {
+        const ctx = authCtx(options, bags());
+        __1.stdutil.prepareAuth(ctx);
+        for (const where of ['headers', 'query']) {
+            const name = Object.keys(ctx.spec[where])[0];
+            if (null == name)
+                continue;
+            const value = ctx.spec[where][name];
+            const pair = COOKIE_PAIR.test(String(value)) && 'cookie' === name && 'headers' === where
+                ? String(value).slice(0, -1)
+                : '';
+            return { where, name, value, pair };
+        }
+        return null;
+    }
+    const CRED = probe({ apikey: 'K', auth: auth('Bearer') });
+    // Every credential this SDK could possibly place: both credentials and
+    // Basic switched on, so whichever branch the API has, something lands
+    // unless the API is public.
+    const ANY = probe({ apikey: 'K', secret: 'S', auth: { prefix: 'Bearer', basic: true } });
+    function placed(options, seed) {
+        const spec = bags();
+        if (null != CRED && null != seed)
+            spec[CRED.where][CRED.name] = seed;
+        const ctx = authCtx(options, spec);
+        __1.stdutil.prepareAuth(ctx);
+        return null == CRED ? undefined : ctx.spec[CRED.where][CRED.name];
     }
     (0, node_test_1.test)('guards a missing spec', () => {
-        (0, node_assert_1.strictEqual)(__1.stdutil.prepareAuth(authCtx({ auth: { prefix: '' }, apikey: 'K' }, null)).code, 'auth_no_spec');
+        (0, node_assert_1.strictEqual)(__1.stdutil.prepareAuth(authCtx({ auth: auth(''), apikey: 'K' }, null)).code, 'auth_no_spec');
     });
-    (0, node_test_1.test)('an apikey with a prefix is space-joined', () => {
-        const ctx = authCtx({ apikey: 'K', auth: { prefix: 'Bearer' } }, {});
-        __1.stdutil.prepareAuth(ctx);
-        (0, node_assert_1.strictEqual)(ctx.spec.headers.authorization, 'Bearer K');
+    // Without this the cases below cannot fail for an SDK whose credential the
+    // probe misses: every one of them takes the public-API path instead.
+    (0, node_test_1.test)('the probe finds the credential this SDK places', () => {
+        (0, node_assert_1.strictEqual)(null != CRED, null != ANY);
+    });
+    (0, node_test_1.test)('the apikey is placed where this API puts it', () => {
+        if (null == CRED) {
+            // A public API places nothing, and that is the whole assertion.
+            (0, node_assert_1.strictEqual)(placed({ apikey: 'K', auth: auth('Bearer') }), undefined);
+            return;
+        }
+        (0, node_assert_1.ok)('headers' === CRED.where || 'query' === CRED.where);
+        if ('' !== CRED.pair) {
+            // A cookie credential is a `<scheme>=<key>` pair, and the scheme name
+            // leaves no room for the option's prefix.
+            (0, node_assert_1.ok)(COOKIE_PAIR.test(String(CRED.value)), String(CRED.value));
+            return;
+        }
+        // A header credential is prefix-joined; a query credential is the raw
+        // key, because a query parameter has nowhere to put a scheme name.
+        (0, node_assert_1.strictEqual)(CRED.value, 'headers' === CRED.where ? 'Bearer K' : 'K');
     });
     (0, node_test_1.test)('a raw apikey (empty prefix) goes in as-is', () => {
-        const ctx = authCtx({ apikey: 'K', auth: { prefix: '' } }, {});
-        __1.stdutil.prepareAuth(ctx);
-        (0, node_assert_1.strictEqual)(ctx.spec.headers.authorization, 'K');
+        const raw = null == CRED ? undefined : CRED.pair + 'K';
+        (0, node_assert_1.strictEqual)(placed({ apikey: 'K', auth: auth('') }), raw);
     });
-    (0, node_test_1.test)('an empty apikey drops the header', () => {
-        const ctx = authCtx({ apikey: '', auth: { prefix: 'Bearer' } }, { authorization: 'stale' });
-        __1.stdutil.prepareAuth(ctx);
-        (0, node_assert_1.strictEqual)(ctx.spec.headers.authorization, undefined);
+    (0, node_test_1.test)('an empty apikey drops the credential', () => {
+        (0, node_assert_1.strictEqual)(placed({ apikey: '', auth: auth('Bearer') }, 'stale'), undefined);
     });
-    (0, node_test_1.test)('a public API (no auth block) drops the header', () => {
-        const ctx = authCtx({ apikey: 'K' }, { authorization: 'stale' });
-        __1.stdutil.prepareAuth(ctx);
-        (0, node_assert_1.strictEqual)(ctx.spec.headers.authorization, undefined);
+    (0, node_test_1.test)('a public API (no auth block) drops the credential', () => {
+        (0, node_assert_1.strictEqual)(placed({ apikey: 'K' }, 'stale'), undefined);
     });
-    (0, node_test_1.test)('a missing apikey option drops the header', () => {
-        const ctx = authCtx({ auth: { prefix: 'Bearer' } }, { authorization: 'stale' });
-        __1.stdutil.prepareAuth(ctx);
-        (0, node_assert_1.strictEqual)(ctx.spec.headers.authorization, undefined);
+    (0, node_test_1.test)('a missing apikey option drops the credential', () => {
+        (0, node_assert_1.strictEqual)(placed({ auth: auth('Bearer') }, 'stale'), undefined);
     });
 });
 (0, node_test_1.describe)('pipeline:result helpers', () => {

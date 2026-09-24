@@ -12,6 +12,22 @@ class PlaystationStoreApi2Fetcher
     // Users can override by passing a User-Agent header in fetchdef.
     public const DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; PlaystationStoreApi2SDK/1.0)';
 
+    // One cURL handle per process, reset between calls rather than closed:
+    // curl_reset keeps the connection cache, so the next request to the
+    // same host reuses the open connection.
+    private static $curl = null;
+
+    private static function curlHandle(string $fullurl)
+    {
+        if (self::$curl === null) {
+            self::$curl = curl_init();
+        } else {
+            curl_reset(self::$curl);
+        }
+        curl_setopt(self::$curl, CURLOPT_URL, $fullurl);
+        return self::$curl;
+    }
+
     public static function defaultHttpFetch(string $fullurl, array $fetchdef): array
     {
         $method_str = strtoupper($fetchdef['method'] ?? 'GET');
@@ -130,7 +146,7 @@ class PlaystationStoreApi2Fetcher
             ];
         }
 
-        $ch = curl_init($fullurl);
+        $ch = self::curlHandle($fullurl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HEADER, false);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
@@ -157,7 +173,6 @@ class PlaystationStoreApi2Fetcher
         $response_body = curl_exec($ch);
         if ($response_body === false) {
             $err = curl_error($ch) ?: 'curl_exec failed';
-            curl_close($ch);
             return [
                 [
                     'status' => 0,
@@ -169,7 +184,6 @@ class PlaystationStoreApi2Fetcher
                 $err,
             ];
         }
-        curl_close($ch);
 
         $status = 0;
         $status_text = '';

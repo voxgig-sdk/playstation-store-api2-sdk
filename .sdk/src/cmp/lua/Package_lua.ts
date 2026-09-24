@@ -33,9 +33,6 @@ const SECRETS_CORE_MODULES = [
   'feature/secrets/sekreto/err',
   'feature/secrets/sekreto/name',
   'feature/secrets/sekreto/providers',
-  // The shared plugin helpers, in no group: httpjson (eight kinds), net
-  // (httpjson, boru, secretspec), json and support (every kind), crypto
-  // (aws AND gcpsecrets - two groups, so neither may own it).
   'feature/secrets/sekreto/plugins/crypto',
   'feature/secrets/sekreto/plugins/httpjson',
   'feature/secrets/sekreto/plugins/json',
@@ -110,23 +107,6 @@ dependencies = {
 `)
     }
 
-    // Feature modules must be listed too, or an install-from-rock ships a
-    // features.lua whose requires cannot resolve. Emitted from the model
-    // (each = sorted order, byte-stable), plus the base feature every
-    // factory falls back to. The station feature additionally carries the
-    // VENDORED voxgig_station library beside its adapter (no voxgig-station
-    // rock exists to depend on - station design 9.2's registry-less tier).
-    // Gated: a feature that does not apply to lua must not be listed
-    // as a rockspec module — the require would not resolve.
-    //
-    // The secrets feature carries the VENDORED sekreto core, the
-    // voxgig/plugin runtime and the shared plugin helpers (no sekreto or
-    // plugin rock exists to depend on); the plugin KINDS themselves are
-    // listed from the model's active `def.lua` entries, so a trimmed
-    // group's modules are not claimed. The compiled transport helper the
-    // plugin kinds run is NOT a rock module: `build.type = "builtin"`
-    // cannot produce an executable, so an install-from-rock carries the
-    // helper's source and `make build` compiles it where the SDK runs.
     const feature = targetFeatures(model, target)
     let featureModules = `    ["feature.base_feature"] = "feature/base_feature.lua",\n`
     each(feature, (f: any) => {

@@ -1,0 +1,4 @@
+
+
+basic: pending: 'featureAdd mutates client._features; the runner builds one client per spec, not per entry, so a case cannot isolate or undo itself.'
+basic: set: []

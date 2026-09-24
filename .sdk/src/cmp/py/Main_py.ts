@@ -42,20 +42,14 @@ const Main = cmp(async function Main(props: any) {
   // helpers/applicability.
   const feature = targetFeatures(model, target)
 
-  // Does the secrets feature apply here and is it switched on? Both, since
-  // targetFeatures already dropped it for a target with no sekreto port.
   const secrets = null != (feature as any).secrets
 
-  // The one package directory everything the SDK owns lives in.
   const pkgdir = model.const.Name.toLowerCase() + '_sdk'
 
   Package({ target })
 
   Gitignore({})
 
-  // Root-level statics only (Makefile, LICENSE, test/). The runtime
-  // packages live under tm/py/pkg and are copied INSIDE the SDK package
-  // below.
   Copy({
     from: 'tm/' + target.name,
     exclude: [/src\//, /pkg\//, TEST_CONTROL_EXCLUDE],
@@ -64,35 +58,16 @@ const Main = cmp(async function Main(props: any) {
     }
   })
 
-  // Everything the SDK owns lives inside ONE package directory.
-  //
-  // core/, entity/, feature/ and utility/ used to sit at the language root
-  // as top-level importable names. `core`, `entity` and `utility` are all
-  // real PyPI distributions AND common scratch filenames, and Python puts
-  // the working directory first on sys.path — so a single utility.py beside
-  // a notebook shadowed ours and the SDK died on
-  // `No module named 'utility.voxgig_struct'`. Nesting them behind the
-  // model-named package makes that impossible.
-  //
-  // The public import is unchanged: `from <name>_sdk import <Name>SDK`,
-  // because <name>_sdk.py becomes <name>_sdk/__init__.py.
   Folder({ name: pkgdir }, () => {
 
   Copy({
     from: 'tm/' + target.name + '/pkg',
-    // An ACTIVE feature's INACTIVE plugins do not ship. py has no
-    // src/feature layout (srcfeature: false), so this blanket pkg copy is
-    // the one place the generate-time plugin trim can act; the model's
-    // `plugin.<group>.path` entries name their files relative to THIS
-    // copy's root ('feature/secrets/voxgig_sekreto/plugins/<kind>.py').
-    // See helpers/featureSource.pluginExcludes.
     exclude: [...pluginExcludes(model)],
     replace: {
       ...props.ctx$.stdrep,
     }
   })
 
-  // Generate main SDK file
   File({ name: '__init__.' + target.ext }, () => {
 
     Fragment(
@@ -101,22 +76,7 @@ const Main = cmp(async function Main(props: any) {
         replace: {
           ...props.ctx$.stdrep,
 
-          // SECRETS. Both slots are emitted only when the secrets feature
-          // applies to this target AND the model activates it - an
-          // unconditional edit would land in every generated SDK, and with
-          // the feature off the marker line is REMOVED, so the inactive
-          // output is byte-identical to pre-migration. `feature` is
-          // already gated by targetFeatures, so a target that does not
-          // provide 'sekreto' never reaches these.
-          //
-          // CUSTOM-REGEX keys, like Entity_py's hook markers: jostraca's
-          // built-in `#Name` tag pattern is hardcoded to `//` comments,
-          // so a bare '#SecretsAccessor' key would silently never match a
-          // python `# #SecretsAccessor` marker line.
 
-          // The LIVE Sekreto, not a clone: sekreto holds provider and
-          // cache state, so a clone would resolve into a copy that
-          // prepare_auth never sees.
           '/(?<indent>[ \\t]*)#[ \\t]*#SecretsAccessor[ \\t]*\\n?/':
             ({ indent }: any) => !secrets ? '' :
               `${indent}def secrets(self):\n` +
@@ -148,7 +108,6 @@ self._utility.feature_hook(self._rootctx, "${name}")
         }
       },
 
-      // Entities - injected at SLOT
       () => {
         each(entity, (entity: ModelEntity) => {
           const entitySDK = getModelPath(model, `main.${KIT}.entity.${entity.name}`)
@@ -177,7 +136,6 @@ if TYPE_CHECKING:
     }
   })
 
-  // Generate the typed-model module (<sdk>_types.py) next to the main SDK file.
   EntityTypes({ target })
 
   // PEP 561 marker so the inline type hints ship to consumers. Emitted at the
@@ -187,24 +145,13 @@ if TYPE_CHECKING:
     Content(``)
   })
 
-  // Generate config module
   Folder({ name: '.' }, () => {
     Config({ target })
     Schema({ target })
   })
 
-  // GENERATED, NOT COPIED. Where the credential goes is a fact about the
-  // API, and tm/ can only hold one answer. The blanket tm/py/pkg copy above
-  // no longer brings a prepare_auth.py in - it was deleted, since both
-  // writers would claim the same output path. See PrepareAuth_py.
-  //
-  // Called HERE, inside the <name>_sdk package folder and outside any
-  // other, because that is where the deleted template's own path
-  // (tm/py/pkg/utility/prepare_auth.py) put it: the component opens the one
-  // remaining segment, `utility`, itself.
   PrepareAuth({ target })
 
-  // Generate feature factory module
   File({ name: 'features.' + target.ext }, () => {
     Content(`# ${model.const.Name} SDK feature factory
 
@@ -252,11 +199,6 @@ def _has_feature(name):
 `)
   })
 
-  // Generate __init__.py files for sub-packages.
-  // NOTE: deliberately omit __init__.py at the language-root (py/) level —
-  // making py/ a package collides with the third-party `py` module on PyPI
-  // (a single-file `py.py`), which causes pytest to construct test module
-  // paths as `py.test.<file>` and fail with "'py' is not a package".
   Folder({ name: 'core' }, () => {
     File({ name: '__init__.' + target.ext }, () => {
       Content(``)
@@ -267,8 +209,6 @@ def _has_feature(name):
     File({ name: '__init__.' + target.ext }, () => {
       Content(``)
     })
-    // PEP 561 marker inside the type-bearing package so setuptools package-data
-    // ("*" = ["py.typed"]) bundles it into the wheel.
     File({ name: 'py.typed' }, () => {
       Content(``)
     })

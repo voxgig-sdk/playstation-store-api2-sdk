@@ -1,0 +1,4 @@
+
+
+basic: pending: 'featureHook calls f[name] on each registered feature; a fixture compiles to JSON and cannot carry a function.'
+basic: set: []

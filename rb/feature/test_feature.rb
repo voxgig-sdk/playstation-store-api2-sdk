@@ -4,9 +4,10 @@ require_relative '../utility/struct/voxgig_struct'
 require_relative 'base_feature'
 
 class PlaystationStoreApi2TestFeature < PlaystationStoreApi2BaseFeature
-  # The `body.<key>` form of an op's response transform: the mock wraps its
-  # payload in <key> so the transform can unwrap it again.
-  ENVELOPE_RES_RE = /\A`body\.([^`.]+)`\z/
+  # The `body.<path>` form of an op's response transform: the mock rebuilds
+  # whatever nesting the transform unwraps. Multi-segment on purpose: GraphQL
+  # ops unwrap body.data.<field>, not just one level.
+  ENVELOPE_RES_RE = /\A`body\.(.+)`\z/
 
   def initialize
     super
@@ -52,7 +53,8 @@ class PlaystationStoreApi2TestFeature < PlaystationStoreApi2BaseFeature
         restf = transform["res"]
         next data unless restf.is_a?(String)
         m = ENVELOPE_RES_RE.match(restf)
-        m.nil? ? data : { m[1] => data }
+        next data if m.nil?
+        m[1].split('.', -1).reverse.reduce(data) { |out, seg| { seg => out } }
       }
 
       respond = ->(status, data, extra) {
@@ -125,12 +127,10 @@ class PlaystationStoreApi2TestFeature < PlaystationStoreApi2BaseFeature
         args = test_self.build_args(fctx, op, update_match)
         found = VoxgigStruct.select(entmap, args)
         ent = VoxgigStruct.getelem(found, 0)
-        if ent.nil? && entmap.is_a?(Hash) && !entmap.empty?
-          ent = entmap.values.find { |e| e.is_a?(Hash) }
-        end
+        # update miss: 404, never another record
         return respond.call(404, nil, { "statusText" => "Not found" }) unless ent
-        if ent.is_a?(Hash) && fctx.reqdata
-          fctx.reqdata.each { |k, v| ent[k] = v }
+        if ent.is_a?(Hash) && fctx.reqdata.is_a?(Hash)
+          VoxgigStruct.merge([ent, fctx.reqdata])
         end
         VoxgigStruct.delprop(ent, "$KEY")
         out = VoxgigStruct.clone(ent)
@@ -235,14 +235,42 @@ class PlaystationStoreApi2TestFeature < PlaystationStoreApi2BaseFeature
     }
   end
 
+  # The entity's own endpoint: a terminal `{param}` marks a record route,
+  # and among equals the shallower path wins (the same rule as make_point).
+  def pick_point(points)
+    return nil unless points.is_a?(Array) && !points.empty?
+    terminal = ->(p) {
+      parts = VoxgigStruct.getprop(p, "parts")
+      parts.is_a?(Array) && !parts.empty? && parts[-1].is_a?(String) && parts[-1].start_with?("{")
+    }
+    depth = ->(p) {
+      parts = VoxgigStruct.getprop(p, "parts")
+      parts.is_a?(Array) ? parts.length : 0
+    }
+    point = points[0]
+    points[1..].each do |cand|
+      if terminal.call(cand) != terminal.call(point)
+        point = cand if terminal.call(cand)
+      elsif depth.call(cand) < depth.call(point)
+        point = cand
+      end
+    end
+    point
+  end
+
   def build_args(ctx, op, args)
     opname = op.name
     points = VoxgigStruct.getpath(ctx.config, "entity.#{ctx.entity.get_name}.op.#{opname}.points")
-    point = VoxgigStruct.getelem(points, -1)
+    point = pick_point(points)
 
+    # Path AND query: a path-only read misses a query-addressed record
+    # (e.g. GET /result?trace_id=), which has no path param at all.
     params_path = VoxgigStruct.getpath(point, "args.params")
     reqd_params = VoxgigStruct.select(params_path, { "reqd" => true })
-    reqd = VoxgigStruct.transform(reqd_params, ["`$EACH`", "", "`$KEY.name`"])
+    query_path = VoxgigStruct.getpath(point, "args.query")
+    reqd_query = VoxgigStruct.select(query_path, { "reqd" => true })
+    reqd = (VoxgigStruct.transform(reqd_params, ["`$EACH`", "", "`$KEY.name`"]) || []) +
+      (VoxgigStruct.transform(reqd_query, ["`$EACH`", "", "`$KEY.name`"]) || [])
 
     qand = []
     q = { "`$AND`" => qand }

@@ -53,7 +53,8 @@ class PlaystationStoreApi2Context:
                 self.ctrl.actor = ctrl_raw["actor"]
             if isinstance(ctrl_raw.get("paging"), dict):
                 self.ctrl.paging = ctrl_raw["paging"]
-        elif basectx is not None and basectx.ctrl is not None:
+        elif (basectx is not None and basectx.ctrl is not None
+              and get_ctx_prop(ctxmap, "opname") is None):
             self.ctrl = basectx.ctrl
 
         # Meta

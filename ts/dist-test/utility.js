@@ -1,10 +1,4 @@
 "use strict";
-/**
- * Shared utility functions for unit tests
- *
- * This module provides common helper functions used across unit tests
- * for creating test data, transformations, validations, and environment overrides.
- */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -55,7 +49,6 @@ exports.liveDelay = liveDelay;
 exports.loadEnvLocal = loadEnvLocal;
 const Fs = __importStar(require("node:fs"));
 const Path = __importStar(require("node:path"));
-// Creates a new step data structure within the data model
 function makeStepData(dm, stepname) {
     dm.s[stepname] = {
         entity: undefined,
@@ -73,17 +66,13 @@ function makeMatch(dm, transform, match) {
 function makeReqdata(dm, transform, data) {
     return transform({}, data, { meta: { dm } });
 }
-// Validates data against validation rules and returns the result
 function makeValid(dm, validate, data, valid) {
     valid["`$OPEN`"] = true;
     return validate(data, valid, { meta: { '`$EXISTS`': true, dm } });
 }
-// Creates a control object for test explanations when enabled
 function makeCtrl(explain) {
     return explain ? { explain: {} } : undefined;
 }
-// CLAUDE: add a full stop to each function comment
-// Overrides configuration values with environment variables if available
 function envOverride(m) {
     if ('TRUE' === process.env.PLAYSTATION_STORE_API2_TEST_LIVE ||
         'TRUE' === process.env.PLAYSTATION_STORE_API2_TEST_OVERRIDE) {
@@ -154,35 +143,6 @@ function skipIfMissingIds(t, setup, requiredKeys) {
     }
     return false;
 }
-// Extra SDK options every LIVE client is constructed with, from
-// sdk-test-control.json `test.client.options`.
-//
-// The generated live client knows two things: the base URL (from the spec)
-// and the credential (from the environment). Everything else about how a
-// particular API wants to be talked to — which features to switch on, and
-// with what settings — is a property of THAT API, known to the project and
-// to nothing in the toolchain.
-//
-// The concrete case: an API that issues short-lived access tokens needs the
-// `secrets` feature's exchange turned on and pointed at its token endpoint,
-// or the live suite gets a handful of calls in and then fails 401 with
-// nothing explaining why. There was no seam for that, so the suite could
-// not be run at all.
-//
-// A committed FILE rather than an environment variable, because it is
-// configuration, not a secret: it belongs in the repo next to the API it
-// describes, where it can be read and reviewed. Secrets still come from the
-// environment (the providers this block names read them).
-//
-// Merged UNDER the generated fields, so the suite's own base/apikey/server
-// values win — this adds to the live client, it does not redirect it.
-//
-// That contract is enforced HERE rather than left to each merge site: the
-// generated object only names a field when the model calls for one, so a
-// `base` in this block would face no competing value and would silently
-// redirect the whole suite — credential included — to another host. The
-// reserved fields are stripped once, where the block is read, so every
-// caller gets the same guarantee whether or not it happens to emit them.
 const LIVE_RESERVED = ['base', 'prefix', 'suffix', 'server', 'apikey', 'secret'];
 function liveClientOptions() {
     const opts = loadTestControl()?.test?.client?.options;
@@ -214,20 +174,6 @@ function liveDelay(liveEnvVar) {
         }
     };
 }
-// Load a .env.local file into process.env, replacing the `dotenv`
-// devDependency — the SDK's last non-tooling package.
-//
-// Same semantics dotenv gave these tests: a missing file is fine, and a key
-// already present in the environment is never overridden, so an explicit
-// export still beats the file.
-//
-// WHY NOT sekreto's parsedotenv, which does the same job and is already
-// vendored: sekreto lives INSIDE the secrets feature container, so `target
-// add` removes it whenever a project does not select that feature — while
-// these entity tests need the loader either way. Importing it here would
-// couple every generated test suite to an optional feature. The parser is
-// small enough that a second, independent copy is cheaper than that
-// coupling; it deliberately handles only what a .env.local holds.
 function loadEnvLocal(file) {
     let text;
     try {
@@ -241,7 +187,6 @@ function loadEnvLocal(file) {
     }
     for (const raw of text.split(/\r?\n/)) {
         const line = raw.trim();
-        // Blank and comment lines. A '#' INSIDE a value is not a comment.
         if ('' === line || line.startsWith('#')) {
             continue;
         }

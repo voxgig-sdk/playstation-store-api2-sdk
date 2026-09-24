@@ -16,7 +16,6 @@ function makeUrl(ctx) {
     if (null == result) {
         return ctx.error('url_no_result', 'Expected context result property to be defined.');
     }
-    // TODO: use parts to avoid regexp?
     let url = join([spec.base, spec.prefix, spec.path, spec.suffix], '/', true);
     let resmatch = {};
     const params = spec.params;

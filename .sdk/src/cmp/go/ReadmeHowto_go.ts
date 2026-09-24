@@ -10,7 +10,6 @@ import {
 import { goVarName } from './utility_go'
 
 
-// A type-correct Go literal for a field's canonical type.
 function goLit(type: any): string {
   const k = canonScalarKey(type)
   if ('INTEGER' === k || 'NUMBER' === k) return '1'
@@ -28,7 +27,6 @@ function cap(s: string): string {
 const ReadmeHowto = cmp(function ReadmeHowto(props: any) {
   const { target, ctx$: { model } } = props
 
-  // Go module path == repo path on GitHub (org from model.origin).
   const gomodule = goModule(model, target.name)
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
@@ -40,7 +38,6 @@ const ReadmeHowto = cmp(function ReadmeHowto(props: any) {
   // camelCase Go identifier (never snake_case or flattened lowercase,
   // never a Go keyword).
   const eLower = exampleEntity ? goVarName(exampleEntity.name) : 'entity'
-  // Model-driven id key: null when the entity has no id-like field.
   const idF = exampleEntity ? entityIdField(exampleEntity) : null
   const isMatchOp = 'load' === primaryOp || 'remove' === primaryOp
   let testArg = 'nil'

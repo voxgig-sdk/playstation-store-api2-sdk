@@ -44,22 +44,16 @@ const Config = cmp(async function Config(props: any) {
   const model: Model = ctx$.model
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  // Gated by the applicability tags, so this target never imports or
-  // registers a feature it has no source for. One rule, one place:
-  // helpers/applicability.
   const feature = targetFeatures(model, target)
 
   const headers = getModelPath(model, `main.${KIT}.config.headers`) || {}
 
   const authActive = isAuthActive(model)
-  // config.auth.prefix override -> spec-derived info.security.prefix -> 'Bearer'
   const authPrefix = resolveAuthPrefix(model)
 
   let baseUrl = ''
   try { baseUrl = getModelPath(model, `main.${KIT}.info.servers.0.url`) } catch (_e) { }
 
-  // Templated server URL: emit the spec's server-variable defaults so the
-  // runtime can substitute {name} placeholders in base (see make_options).
   const svars = serverVariables(model)
   const serverBlock = 0 === svars.length ? '' :
     '\t\t\t"server": map[string]any{\n' +
@@ -81,27 +75,9 @@ const Config = cmp(async function Config(props: any) {
 			},\n`
     : ''
 
-  // The same config as an OBJECT, built by the shared helper so this target's
-  // literal and the data that replaces it above the threshold are the same
-  // config by construction. The JSON is what the threshold is measured on -
-  // emitted source size varies by language, the model does not.
   const { def: configDef, json: configJson } = configDefinition(model, target.name)
   const asData = isConfigData(configJson, configReprSetting(model))
 
-  // PLUGIN DEFINITION IMPORTS AND THE FeaturePlugins MAP (the go peer of
-  // Config_ts's pluginImports/pluginDefs).
-  //
-  // Upstream sekreto replaced its self-registration registry with
-  // voxgig/plugin definitions: a provider kind the caller did not pass in
-  // via `Plugins: [...]` is unknown to that Sekreto. So the config imports
-  // each active plugin's exported Definition BY NAME (the model's
-  // per-target `def` map - `aws.Secrets`, a package-qualified go symbol)
-  // and hands the list to the feature through core.FeaturePlugins.
-  //
-  // Emitted in core (not in the feature package) so the dependency runs
-  // core -> plugins -> sekreto -> plugin with no cycle; the feature reads
-  // it back as []any and type-asserts, so a tree with the feature present
-  // but never selected still compiles.
   const gomodule = goModule(model, target.name)
   const pluginPaths = new Set<string>()
   const featurePlugins: Record<string, string[]> = {}
@@ -109,12 +85,8 @@ const Config = cmp(async function Config(props: any) {
   each(feature, (f: any) => {
     const syms: string[] = []
     each(f.plugin, (plugin: any) => {
-      // Filter on `active` HERE rather than trusting the feature object to
-      // arrive filtered (see Config_ts.pluginImports: getting this wrong
-      // emits an import for a package the trim just deleted).
       if (false === plugin.active || null == plugin.active) return
       for (const [sym, one] of Object.entries(plugin.def?.go || {})) {
-        // 'feature/secrets/plugins/aws/aws.go' -> its PACKAGE directory.
         pluginPaths.add(String(one).replace(/\/[^/]+$/, ''))
         syms.push(sym)
       }
@@ -137,17 +109,6 @@ const Config = cmp(async function Config(props: any) {
 
   File({ name: 'config.' + target.ext }, () => {
 
-    // ABOVE THE THRESHOLD: emit the model as DATA.
-    //
-    // A composite literal makes the compiler walk every node of the model;
-    // a string constant is one token. On the real gitlab model that is 30.8 s
-    // and 2.49 GB of compiler memory versus 0.34 s and 0.06 GB, and a binary
-    // 2.1x smaller. MakeConfig still returns the same map, so nothing
-    // downstream can tell which representation it got.
-    //
-    // JSON escapes work in Go interpreted strings; formatGoString also
-    // escapes BOM characters that Go forbids literally inside source files. A raw (backtick) literal could NOT be used - the model
-    // contains backticks in values like `$STRING`.
     if (asData) {
       Content(`package core
 
@@ -297,8 +258,6 @@ func makeFeature(name string) Feature {
 `)
 
     each(feature, (f: any) => {
-      // MUST match Main_go.ts, which DECLARES these identifiers in registry.go
-      // and the root init(); see goFeatureName.
       const fname = goFeatureName(f)
       if (f.name !== 'base') {
         Content(`	case "${f.name}":

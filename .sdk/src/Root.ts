@@ -45,7 +45,6 @@ const Root = cmp(function Root(props: any) {
   ctx$.util = ctx$.util || {}
   ctx$.util.makeFlow = makeFlow
 
-  // TODO: move to @voxgig/util as duplicated
   model.const = { name: model.name }
   names(model.const, model.name)
   model.const.year = new Date().getFullYear()
@@ -65,16 +64,13 @@ const Root = cmp(function Root(props: any) {
   })
 
   names(model, model.name)
-  // console.log('MODEL name', model.name, model.Name)
 
   // Standard Replacements
   ctx$.stdrep = {}
   names(ctx$.stdrep, model.Name, 'Project' + 'Name')
-  // console.log('STDREP', stdrep)
 
   Project({}, () => {
 
-    // TODO: jostraca should accept no props
     Top({})
 
     BuildSDK({})
@@ -84,22 +80,6 @@ const Root = cmp(function Root(props: any) {
 
       Folder({ name: target.name }, () => {
 
-        // Per-generation-phase activation. A target's aontu model carries
-        // a `phase` map mirroring the feature pattern:
-        //
-        //   phase: {
-        //     entity:     { active: false }
-        //     feature:    { active: false }
-        //     readme:     { active: false }
-        //     agentguide: { active: false }
-        //     test:       { active: false }
-        //   }
-        //
-        // Defaults are inclusive — when a phase entry is absent (or
-        // active is not explicitly false), the phase runs. Existing
-        // standard targets don't declare `phase` and keep current
-        // behaviour. A CLI-style target switches all five off and
-        // only emits Main.
         const phase = target.phase || {}
         const phaseActive = (name: string): boolean =>
           false !== (phase[name] && phase[name].active)
@@ -145,7 +125,6 @@ function makeFlow(def: any, data: any, stepMakers: Record<string, any>) {
 
   const steps: any = {}
   each(stepMakers, (n: any) => {
-    // TODO: support after?
     if ('function' === typeof n.val$) {
       steps[n.key$] = (id: any, pdef: any) => makeFlowStep(id(), pdef, n.val$)
     }
@@ -210,7 +189,6 @@ function makeFlow(def: any, data: any, stepMakers: Record<string, any>) {
     names(step, step.entity, 'entity')
   })
 
-  // console.log('STEPS', stepMakers, steps, def)
 
   const spec = transform(def, {
     p: ['`$EACH`', 'step', {

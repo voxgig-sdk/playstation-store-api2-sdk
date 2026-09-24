@@ -46,14 +46,6 @@ func transformResponseUtil(ctx *core.Context) any {
 	}, resform)
 
 	if terr != nil {
-		// Ok must be cleared as well as Err. This runs from BOTH makeResponse
-		// and makeResult, and only the makeResult call actually reaches the
-		// transform: resultBasic never sets Ok, so the makeResponse call
-		// returns at the !result.Ok guard above, and makeResponse then sets
-		// Ok true. By the time the transform really runs, Ok is already true —
-		// and doneUtil returns result.Resdata whenever Ok is true, without
-		// ever consulting Err. Recording only the error would leave a failed
-		// response transform resolving successfully.
 		result.Err = ctx.MakeError("resform", "resform: "+terr.Error())
 		result.Ok = false
 		return nil

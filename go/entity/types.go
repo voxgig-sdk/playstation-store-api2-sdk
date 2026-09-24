@@ -1,7 +1,7 @@
 // Typed models for the PlaystationStoreApi2 SDK.
 //
-// GENERATED from the API model: main.kit.entity.<e>.fields[] and per-op
-// params (op.<name>.points[].args.params[]). Field/param types come from the
+// GENERATED from the API model: main.kit.entity.<e>.fields{} and per-op
+// params (op.<name>.points[].g.params[]). Field/param types come from the
 // canonical type sentinels via @voxgig/sdkgen canonToType (source of truth:
 // @voxgig/apidef VALID_CANON). Do not edit by hand.
 package entity
@@ -14,14 +14,6 @@ import (
 
 // Container is the typed data model for the container entity.
 type Container struct {
-	AgeLimit *int `json:"age_limit,omitempty"`
-	Attributes *map[string]any `json:"attributes,omitempty"`
-	ContainerType *string `json:"container_type,omitempty"`
-	ContentOrigin *int `json:"content_origin,omitempty"`
-	DobRequired *bool `json:"dob_required,omitempty"`
-	Id *string `json:"id,omitempty"`
-	Images *[]any `json:"images,omitempty"`
-	Links *[]any `json:"links,omitempty"`
 }
 
 // ContainerLoadMatch is the typed request payload for Container.LoadTyped.

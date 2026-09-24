@@ -1,0 +1,15 @@
+# SDK Configuration
+
+main: kit: config: {
+
+
+
+  headers: {
+    'content-type': 'application/json'
+  }
+
+}
+
+# Metadata provenance: sourced from the freepublicapis.com catalogue;
+# sdkgen's ReadmeTop renders an attribution note from this field.
+main: kit: info: meta_source: 'https://www.freepublicapis.com'

@@ -8,37 +8,6 @@ import {
 } from '@voxgig/apidef'
 
 
-// Emits py/test/test_readme_examples.py — a pytest COMPLETENESS GATE over
-// every ```python fenced block in the repository ROOT README.md, in the
-// per-language py/README.md, AND in the per-language py/REFERENCE.md.
-//
-// The gate GUARANTEES every documented python example is unit-tested. For each
-// of the three docs it:
-//   1. extracts every ```python block (tagged by source doc + index);
-//   2. ast.parse + compile()s EVERY block                 -> SYNTAX gate;
-//   3. EXECUTEs every RUNNABLE block (one that constructs the SDK, or drives a
-//      `client`/`sdk` the narrative built earlier) in a seeded, offline
-//      TEST-mode subprocess. A PROGRAMMING error
-//      (Name/Attribute/Type/Key/Index/Import/Syntax) FAILS; ONLY a
-//      not-found/404 domain error is tolerated. Any other error also FAILS;
-//   4. asserts COMPLETENESS: it partitions every block into exactly one of
-//      {executed, compiled-nonrunnable, illustration} and asserts
-//      total == executed + compiled + illustration. "illustration" is a NARROW
-//      explicit class (a non-runnable block that is only imports / signature
-//      stubs / bare references / literal assignments — a pure signature/table
-//      snippet) and can NEVER absorb a runnable example. A block that looks
-//      runnable (references the SDK/client) but was not executed FAILS the
-//      test; a block that fails to compile FAILS the test. A per-doc summary
-//      (total/executed/compiled/illustration) is printed.
-//
-// If mypy is importable it also type-checks the concatenated ROOT README blocks
-// (the SDK ships py.typed + TypedDicts) — a bonus TYPE gate over the primary
-// EXECUTE gate.
-//
-// The emitted Python is written WITHOUT backticks or backslashes (chr(96) is
-// the fence marker, chr(10) is newline) so this TS template literal stays
-// clean — the only interpolations are the SDK module/class names and the
-// generated entity map.
 const ReadmeExamplesTest = cmp(function ReadmeExamplesTest(props: any) {
   const { target, ctx$: { model } } = props
 

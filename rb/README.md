@@ -32,8 +32,6 @@ client = PlaystationStoreApi2SDK.new
 
 ### 3. Load a container
 
-Container is nested under age_limit, so provide the `age_limit`.
-
 ```ruby
 begin
   # load returns the ENTITY — call data_get for the Container record (raises on error).

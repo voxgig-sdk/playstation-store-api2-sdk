@@ -315,12 +315,6 @@ describe('struct', async () => {
   })
 
 
-  // The struct.nullsem section: does a PRESENT key holding a JSON null
-  // read as "no value"? Opt-in per target (create-sdkgen ships it; an
-  // older project corpus may predate it - the skip below says so OUT
-  // LOUD rather than passing vacuously). All lanes run {null: false}:
-  // without the flag the runner rewrites every null to '__NULL__' and
-  // the section asserts nothing about null at all.
   test('nullsem', async (t) => {
     const nullsem = spec.nullsem
     if (null == nullsem) {
@@ -822,7 +816,6 @@ describe('struct', async () => {
     const extra = {
       $INTEGER: (inj: any) => {
         const { key } = inj
-        // let out = getprop(current, key)
         let out = struct.getprop(inj.dparent, key)
 
         let t = typeof out

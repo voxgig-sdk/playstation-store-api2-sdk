@@ -19,12 +19,6 @@ const MainEntity = cmp(async function MainEntity(props: any) {
   // (below) is unchanged so callers still write $client->${entity.Name}().
   const cls = entityClassName(entity, entityCollection(model))
 
-  // Canonical facade method name is the PascalCase entity Name
-  // (`$client->${entity.Name}()`). PHP method names are case-insensitive, so
-  // the lowercase spelling `$client->${entity.name}()` still resolves here as
-  // a convenience — we declare it ONCE under the PascalCase name. An entity
-  // literally named 'test' would collide (case-insensitively) with the static
-  // `test()` test-mode constructor, so mangle to `<Name>_` in that case.
   const accessor = phpEntityAccessor(entity.Name)
 
   // The backing field is mangled independently of the accessor: the two are

@@ -1,0 +1,29 @@
+
+main: kit: feature: timeout: {
+
+  name: key()
+  title: "Per-request timeout with transport abort"
+  version: '0.0.1'
+  active: true
+  base: 'node_modules/@voxgig/sdkgen/project/.sdk'
+  package: '@voxgig/sdkgen'
+  transport: 'wrap'
+
+  config: {
+    options: {
+      active: false
+      ms: 30000
+    }
+  }
+
+  # Timeout wraps the transport in init(); it dispatches no pipeline hooks.
+  hook: {}
+}
+
+
+main: kit: feature: timeout: config: optspec: {
+  # injected clearTimeout
+  clearTimer: '`$FUNCTION`'
+  # injected setTimeout
+  setTimer: '`$FUNCTION`'
+}

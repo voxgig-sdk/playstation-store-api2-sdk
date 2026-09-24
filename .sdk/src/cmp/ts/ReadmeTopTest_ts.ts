@@ -18,13 +18,6 @@ const ReadmeTopTest = cmp(function ReadmeTopTest(props: any) {
   // `load` on an op-less entity like Cloudsmith's `Abort`.
   const { entity: exampleEntity, primaryOp } = pickExampleEntity(entity)
 
-  // The mock SEEDS NOTHING on its own.
-  //
-  // `SDK.test()` with no argument used to be shown alongside "populated with
-  // mock data" — and returned an empty array. The seed shape
-  // (`{ entity: { <name>: { <id>: {...} } } }`) was documented nowhere; the
-  // only way to find it was to read TestFeature.ts. Offline test mode is a
-  // headline feature of these SDKs, so its one worked example has to run.
   const seedEntity = exampleEntity ? nom(exampleEntity, 'name') : ''
   const seedFields = exampleEntity ?
     opRequestShape(exampleEntity, 'create').items
@@ -74,12 +67,16 @@ const client = ${model.const.Name}SDK.test({
             it.name === idF ? 'test01' : 'example_' + it.name)}`).join(', ')} }`
         : ''
     } else if ('create' === primaryOp || 'update' === primaryOp) {
+      const isIdField = (it: any) => it.name === idF || it.name === 'id'
       const items = opRequestShape(exampleEntity, primaryOp).items
-        .filter((it: any) => it.name !== idF && it.name !== 'id')
+        .filter((it: any) => !isIdField(it) || !it.optional)
       const required = items.filter((it: any) => !it.optional)
       const chosen = required.length ? required : items.slice(0, 3)
       arg = `{ ${chosen.map((it: any) =>
-        `${jsKey(it.name)}: ${exampleValue(exampleEntity, primaryOpDef, it.name, 'example_' + it.name)}`).join(', ')} }`
+        // A required id matches the record seeded into the mock above, so the
+        // example reads as one coherent story rather than two.
+        `${jsKey(it.name)}: ${exampleValue(exampleEntity, primaryOpDef, it.name,
+          isIdField(it) ? seedId : 'example_' + it.name)}`).join(', ')} }`
     }
     Content(`const ${eVar} = await client.${eName}().${primaryOp}(${arg})
 // ${eVar} is ${'list' === primaryOp ? `an array of ${eName} entities` : `the ${eName} entity`}, populated with mock data

@@ -35,21 +35,6 @@ import {
 } from './utility_lua'
 
 
-// PLUGIN DEFINITION REQUIRES AND THE FEATURE PLUGINS TABLE (the lua peer
-// of cmp/py/Config_py.ts's pluginImports/pluginDefs).
-//
-// Upstream sekreto replaced its self-registration registry with
-// voxgig/plugin definitions: a provider kind the caller did not pass in via
-// `plugins = { ... }` is unknown to that Sekreto. So the generated
-// config_plugins module requires each active plugin's module and names the
-// FIELD it exports (the model's `def.lua` map - `hashicorp` on
-// plugins/hashicorp.lua, `awssecrets` AND `awsparams` on plugins/aws.lua),
-// handing the list to the feature.
-//
-// A def value is the module's path under tm/lua, this target's root; the
-// require is that path with `.lua` stripped and slashes turned to dots,
-// resolved by the plain `?.lua` searcher every generated lua SDK relies on.
-// One `local` per module, so a two-definition module is required once.
 function pluginRequires(feature: any): { locals: string[], defs: Record<string, string[]> } {
   const bypath: Record<string, { local: string, syms: string[] }> = {}
   const defs: Record<string, string[]> = {}
@@ -94,36 +79,22 @@ const Config = cmp(async function Config(props: any) {
   const model: Model = ctx$.model
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  // Gated by the applicability tags, so this target never imports or
-  // registers a feature it has no source for. One rule, one place:
-  // helpers/applicability.
   const feature = targetFeatures(model, target)
 
   const headers = getModelPath(model, `main.${KIT}.config.headers`) || {}
 
   const authActive = isAuthActive(model)
-  // config.auth.prefix override -> spec-derived info.security.prefix -> 'Bearer'
   const authPrefix = resolveAuthPrefix(model)
 
   let baseUrl = ''
   try { baseUrl = getModelPath(model, `main.${KIT}.info.servers.0.url`) } catch (_e) { }
 
-  // Templated server URL: emit the spec's server-variable defaults so the
-  // runtime can substitute {name} placeholders in base (see make_options).
   const svars = serverVariables(model)
   const serverBlock = 0 === svars.length ? '' :
     '      server = {\n' +
     svars.map((v: any) => `        [${JSON.stringify(v.name)}] = ${JSON.stringify(v.dflt)},\n`).join('') +
     '      },\n'
 
-  // WHERE the credential goes and UNDER WHAT NAME. apidef resolved both
-  // from the spec's securityScheme all along and generation dropped them,
-  // so an apiKey-in-query API got an authorization header it does not read.
-  // Emitted only when they differ from the defaults, so a
-  // header/Authorization SDK is byte-identical to what it generated before.
-  //
-  // `in` is a RESERVED WORD in lua, so the key is bracketed - a bare
-  // `in = "query"` does not parse.
   const authIn = resolveAuthIn(model)
   const authName = resolveAuthName(model)
   const authBlock = authActive
@@ -134,13 +105,6 @@ const Config = cmp(async function Config(props: any) {
       },\n`
     : ''
 
-  // The same config as an OBJECT, built by the shared helper so this target's
-  // literal and the data that replaces it above the threshold are the same
-  // config by construction. The JSON is what the threshold is measured on -
-  // emitted source size varies by language, the model does not. Passing the
-  // target name opts this target into the main slug/version/target identity
-  // fields (station descriptor v1 reads all three) - the literal branch
-  // below emits them too, so the two representations cannot diverge.
   const { def: configDef, json: configJson } = configDefinition(model, target.name)
   const asData = isConfigData(configJson, configReprSetting(model))
 
@@ -150,18 +114,6 @@ const Config = cmp(async function Config(props: any) {
 
 `)
 
-    // ABOVE THE THRESHOLD: emit the model as DATA.
-    //
-    // A table constructor makes the Lua parser emit a SETTABLE per entry and
-    // the VM run them all on every load; a long-bracket string is one token,
-    // and dkjson's decoder builds the table from it.
-    //
-    // dkjson is already a runtime dependency - `utility/fetcher.lua` decodes
-    // every HTTP response with it - so this adds nothing to the SDK.
-    //
-    // Null handling agrees between the branches by construction: dkjson maps
-    // JSON null to nil, and assigning nil to a table key removes it, which is
-    // exactly what the literal branch does when `formatLuaTable` emits `nil`.
     if (asData) {
       Content(`local json = require("dkjson")
 
@@ -253,14 +205,6 @@ return make_config
 `)
   })
 
-  // The plugin definitions the model selected per feature, as a module of
-  // the config family. ALWAYS emitted, even with nothing declared: the
-  // secrets feature requires it (a missing module and a broken one must
-  // read differently there), and a feature source arrives in the tree by
-  // Main's blanket copy whether or not the model declares the feature.
-  //
-  // A sibling module rather than a member of `config`, for the reason
-  // config_shared is: `config` returns a bare function.
   const plugins = pluginRequires(feature)
 
   File({ name: 'config_plugins.' + target.ext }, () => {

@@ -10,11 +10,6 @@ import {
 import { exampleValue } from './utility_ts'
 
 
-// A `list()` on a NESTED entity needs its parent path params. The
-// quickstart used to emit `client.Moon().list()` for an entity at
-// `/planet/{planet_id}/moon`, which 404s against a live server from a
-// half-built URL — indistinguishable from "no such record". The model
-// already marks those params `reqd: true`; matchArg renders exactly them.
 function listMatchArg(ent: any): string {
   const idF = entityIdField(ent)
   return matchArg('ts', ent, 'list', idF, idLiteral(ent, 'list', idF))
@@ -26,12 +21,8 @@ const ReadmeQuick = cmp(function ReadmeQuick(props: any) {
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
 
-  // Find the first published entity for examples
   const exampleEntity = Object.values(entity).find((e: any) => e.active !== false) as any
 
-  // Find a nested entity if available: one with a parent chain
-  // (relations.ancestors), an active load op, and a required non-id load
-  // param to demonstrate (the parent key, e.g. page_id).
   const nestedEntity = Object.values(entity).find((e: any) =>
     e.active !== false &&
     e.relations && e.relations.ancestors && 0 < e.relations.ancestors.length &&
@@ -71,13 +62,9 @@ const client = ${ctor}
 
   if (exampleEntity) {
     const eName = nom(exampleEntity, 'Name')
-    // Variable-safe lowercase name — a `Delete`/`Class` entity must not bind a
-    // reserved word (`const delete = ...` is a TS1109 syntax error).
     const eVar = exampleVarName(eName.toLowerCase(), 'ts')
     const article = /^[aeiou]/i.test(eName) ? 'an' : 'a'
     const opnames = entityOps(exampleEntity)
-    // Model-driven id key: `idF` is the entity's id-like MATCH field name, or
-    // null when it has none (then load/remove match on no argument).
     const idF = entityIdField(exampleEntity)
     // The id field on the RETURNED record's data type, or null. DISTINCT from
     // idF (the match key): an entity can key its load-match on an id it does not
@@ -109,9 +96,6 @@ for (const ${eVar} of ${eVar}s) {
       const neArticle = /^[aeiou]/i.test(neName) ? 'an' : 'a'
       const loadOp = nestedEntity.op && nestedEntity.op.load
 
-      // Model-driven match: every REQUIRED load-match key — the same shape
-      // that generates <Name>LoadMatch, so the example always type-checks.
-      // Parent keys (e.g. page_id) first, the entity's own id last.
       const neIdF = entityIdField(nestedEntity)
       const neRequired = opRequestShape(nestedEntity, 'load').items
         .filter((it: any) => !it.optional)
@@ -143,8 +127,6 @@ ${neMatchLines.join('\n')}
 `)
     }
     else if (opnames.includes('load')) {
-      // Every REQUIRED load-match key (id first) — the same shape that
-      // generates <Name>LoadMatch, so the example always type-checks.
       const loadRequired = opRequestShape(exampleEntity, 'load').items
         .filter((it: any) => !it.optional || it.name === idF)
         .sort((a: any, b: any) =>
@@ -177,21 +159,12 @@ try {
     // non-id fields and render a type-correct literal per field via
     // exampleValue — never a hardcoded field the entity may not have.
     if (opnames.includes('create') || opnames.includes('update') || opnames.includes('remove')) {
-      // Writable non-id example fields for an op body. For create the REQUIRED
-      // fields must all appear or the literal is not assignable to the typed
-      // <Name>CreateData (a TS2345); update is a patch, so a couple of fields
-      // suffice.
       const exampleFields = (opname: string): string[] => {
-        // ids are rendered separately as the match key for update/remove; a
-        // REQUIRED id stays (dropping it makes the literal unassignable).
         const items = opRequestShape(exampleEntity, opname).items
           .filter((it: any) => (it.name !== idF && it.name !== 'id') ||
             ('create' === opname && !it.optional))
         const required = items.filter((it: any) => !it.optional)
         const optional = items.filter((it: any) => it.optional)
-        // Required members must all appear or the literal is not assignable
-        // to the typed <Name>{Create,Update}Data; pad update (a patch) with a
-        // sample optional field or two.
         const chosen = 'create' === opname
           ? (required.length ? required : items.slice(0, 2))
           : required.concat(optional).slice(0, Math.max(2, required.length))
@@ -199,20 +172,10 @@ try {
           `  ${jsKey(it.name)}: ${exampleValue(exampleEntity, exampleEntity.op[opname], it.name, 'example_' + it.name)},`)
       }
 
-      // The id VALUE for an update/remove match. When the entity's DATA type
-      // carries the id (dataIdF) AND a `created` record exists, take it off the
-      // returned record; otherwise use a type-correct literal — reading
-      // `created.id` off an id-less data type is a TS2339.
-      // Type of the data field we would read off `created` (e.g. number for an
-      // integer id). null when unknown.
       const dataFields: any[] = exampleEntity.fields ? each(exampleEntity.fields) : []
       const dataIdType = dataIdF
-        ? (dataFields.find((f: any) => f && f.name === dataIdF) || {}).type
+        ? (dataFields.find((f: any) => f && f.n === dataIdF) || {}).type
         : null
-      // `created.<dataIdF>` is only usable as an op's id-match value when its
-      // type matches that op's id PARAM type. An id that is integer in the data
-      // type but string in the match path (a spec quirk seen on management
-      // APIs) would be a TS2322 otherwise — fall back to a type-correct literal.
       const usesCreatedId = (opname: string): boolean => {
         if (null == dataIdF || !opnames.includes('create')) {
           return false
@@ -222,8 +185,6 @@ try {
         const matchType = matchItem ? matchItem.type : null
         return null == matchType || null == dataIdType || matchType === dataIdType
       }
-      // `create` resolves to the ENTITY, so the id is reached through
-      // `.data()` — `created.id` is a TS2339 on the entity class.
       const idValueFor = (opname: string): string => usesCreatedId(opname)
         ? `created.data().${dataIdF}!`
         : exampleValue(exampleEntity, exampleEntity.op[opname], idF as string, 'example_id')
@@ -241,8 +202,6 @@ const created = await client.${eName}().create({${createBody}})
 `)
       }
       if (opnames.includes('update')) {
-        // Match on the id (from the returned `created` record when the data
-        // type carries one, else a literal), plus a couple of patch fields.
         const updateLines = (idF ? [`  ${idF}: ${idValueFor('update')},`] : []).concat(exampleFields('update'))
         const updateBody = updateLines.length ? '\n' + updateLines.join('\n') + '\n' : ''
         Content(`// Update${usesCreatedId('update') ? ' — the id comes off the returned entity\'s data()' : ''}
@@ -251,8 +210,6 @@ const updated = await client.${eName}().update({${updateBody}})
 `)
       }
       if (opnames.includes('remove')) {
-        // Every REQUIRED remove-match key: the id (off the created record
-        // when possible) plus parent keys like page_id.
         const removeLines = opRequestShape(exampleEntity, 'remove').items
           .filter((it: any) => !it.optional || it.name === idF)
           .sort((a: any, b: any) =>

@@ -911,6 +911,44 @@ class FeatureTest < Minitest::Test
     assert_equal true, res["result"].paging["hasMore"]
   end
 
+  def test_paging_snake_case_signals_and_ctrl_write_back
+    skip_unless_feature("paging")
+    server, calls = H.recording_server { |n, _fd|
+      body = 1 == n ? { "has_more" => true, "next_cursor" => "c2" } : { "has_more" => false }
+      [H.make_response(200, body), nil]
+    }
+    h = harness([fspec("paging")], server: server)
+    pg = {}
+    ctrl = { "paging" => pg }
+    res = h.op(opname: "list", path: "/w", ctrl: ctrl)
+    assert_equal true, res["result"].paging["hasMore"]
+    assert_equal "c2", res["result"].paging["cursor"]
+    assert_equal "c2", pg["cursor"], "record written back into ctrl"
+    assert_equal true, pg["hasMore"]
+    h.op(opname: "list", path: "/w", ctrl: ctrl)
+    assert_match(/[?&]cursor=c2(&|\z)/, calls[1]["url"])
+    assert_equal false, pg["hasMore"]
+    assert_nil pg["cursor"]
+  end
+
+  def test_paging_continues_from_written_back_next_page
+    skip_unless_feature("paging")
+    server, calls = H.recording_server { |n, _fd|
+      body = 1 == n ? { "next_page" => 2 } : {}
+      [H.make_response(200, body, "x-page" => n.to_s), nil]
+    }
+    h = harness([fspec("paging")], server: server)
+    pg = {}
+    ctrl = { "paging" => pg }
+    h.op(opname: "list", path: "/w", ctrl: ctrl)
+    assert_equal 1, pg["page"]
+    assert_equal 2, pg["nextPage"]
+    assert_equal true, pg["hasMore"]
+    h.op(opname: "list", path: "/w", ctrl: ctrl)
+    assert_match(/[?&]page=2(&|\z)/, calls[1]["url"])
+    assert_equal false, pg["hasMore"]
+  end
+
   def test_paging_non_list_op_is_not_paged
     skip_unless_feature("paging")
     server, calls = H.recording_server

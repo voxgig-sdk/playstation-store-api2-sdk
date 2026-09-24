@@ -4,8 +4,6 @@ exports.validateContract = validateContract;
 exports.synthesizeInput = synthesizeInput;
 exports.requestContract = requestContract;
 const live_runner_1 = require("./live-runner");
-// Deliberately conservative: unsupported constraints block preparation instead
-// of labelling an invented value as live-valid. Errors never include values.
 function validateContract(schema, value, direction = 'request', depth = 0) {
     const bad = () => { throw new Error('Operation contract mismatch'); };
     if (depth > 40 || schema === false)

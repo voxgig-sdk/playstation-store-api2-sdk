@@ -1,10 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transformResponse = transformResponse;
-/* Convert data from respnse into a structure suitable for use as entity data.
- *
- * The operation (op) property `resform` is used to perform the data extraction.
- */
 function transformResponse(ctx) {
     const spec = ctx.spec;
     const result = ctx.result;

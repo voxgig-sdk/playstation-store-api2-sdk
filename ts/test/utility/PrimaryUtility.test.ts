@@ -31,23 +31,11 @@ describe('PrimaryUtility', async () => {
   }
 
 
-  // Sections deliberately left empty in the shared corpus
-  // (.sdk/test/primary/<name>.aon carries a PENDING header). Everything
-  // else MUST contribute cases.
   const PENDING = new Set([
     'fetcher', 'makeFetchDef', 'makeResult',
     'featureAdd', 'featureHook', 'featureInit',
   ])
 
-  // Run one corpus section, failing loudly when it would run ZERO cases.
-  // A renamed section or a fixture that compiled to an empty `set` used to
-  // pass silently, which defeats the point of a shared oracle. (The guard
-  // lives here rather than in runner.ts, which is vendored verbatim from
-  // @voxgig/struct and must stay byte-identical to upstream.)
-  //
-  // EVERY corpus-backed test goes through here — a guard that only some
-  // sections opt into leaves the rest able to run zero assertions, which is
-  // the exact hole it was added to close.
   async function runsection(name: string, subject: Function) {
     const section = spec[name]
     ok(null != section,
@@ -70,10 +58,6 @@ describe('PrimaryUtility', async () => {
     spec = run.spec
     runset = run.runset
     runsetflags = run.runsetflags
-    // Under the old hand-vendored runner, run.client WAS the SDK; under
-    // omni it is the provider wrapping it. This suite treats the client as
-    // the SDK — including ASSIGNING to client._features, which prototype
-    // delegation cannot forward — so unwrap the real instance.
     client = (run.client as any).sdk
     utility = client.utility()
     struct = utility.struct
@@ -111,14 +95,65 @@ describe('PrimaryUtility', async () => {
   })
 
 
+  function credential() {
+    const ctx: any = {
+      utility,
+      client: { options: () => ({ apikey: 'PROBE', auth: { prefix: '' } }) },
+      spec: { headers: {}, query: {} },
+      error: (code: string, msg: string) => Object.assign(new Error(msg), { code }),
+    }
+    try { utility.prepareAuth(ctx) } catch (e) { return null }
+    for (const where of ['headers', 'query']) {
+      const name = Object.keys(ctx.spec[where] || {})[0]
+      if (null != name) return { where, name }
+    }
+    return null
+  }
+
+  // Rename the corpus's `headers` bag to the real container, and the
+  // `authorization` key inside it to the real credential name. Applied only
+  // to the prepareAuth section, so real header assertions elsewhere are
+  // untouched.
+  function retarget(node: any, cred: { where: string, name: string }): any {
+    if (null == node || 'object' !== typeof node) return node
+    if (Array.isArray(node)) return node.map((n) => retarget(n, cred))
+    const out: any = {}
+    for (const key of Object.keys(node)) {
+      if ('headers' === key) {
+        const bag: any = {}
+        for (const bk of Object.keys(node[key] || {})) {
+          bag['authorization' === bk ? cred.name : bk] = retarget(node[key][bk], cred)
+        }
+        out[cred.where] = bag
+      }
+      else out[key] = retarget(node[key], cred)
+    }
+    return out
+  }
+
   test('auth-basic', async () => {
     const sdkopts = spec.prepareAuth?.DEF?.setup?.a || {}
     const authClient = SDK.test({}, sdkopts)
-    await runsection('prepareAuth', (ctx: any) => {
-      ctx.client = authClient
-      fixctx(ctx)
-      return utility.prepareAuth(ctx)
-    })
+
+    const cred = credential()
+    ok(null != cred, 'prepareAuth placed no credential in headers or query')
+
+    const section = spec.prepareAuth
+    const original = section.basic
+    if ('headers' !== cred!.where || 'authorization' !== cred!.name) {
+      section.basic = retarget(original, cred!)
+    }
+
+    try {
+      await runsection('prepareAuth', (ctx: any) => {
+        ctx.client = authClient
+        fixctx(ctx)
+        return utility.prepareAuth(ctx)
+      })
+    }
+    finally {
+      section.basic = original
+    }
   })
 
 
@@ -233,7 +268,6 @@ describe('PrimaryUtility', async () => {
       body: 'present',
     })
     const reqClient = new (SDK as any)({
-      // Concrete base: a live construction must satisfy any server variables a templated base URL declares; a literal base sidesteps the requirement.
       base: 'http://localhost:8080',
       system: { fetch: mockFetch }
     })
@@ -283,13 +317,6 @@ describe('PrimaryUtility', async () => {
   })
 
 
-  // Was one hand-written case (the single-point path) covering one of this
-  // utility's seven branches, which is how the corpus fixture came to be
-  // marked deferred as "needs a real client". It does not: Context rebuilds
-  // `op` from opname + entity + config, and `options` can be supplied
-  // literally, so allow.op, the empty-points error, exist-selection,
-  // $action selection and the invalid-$action error are all expressible.
-  // Driven from the corpus now, so every port asserts the same branches.
   test('makePoint-basic', async () => {
     await runsection('makePoint', utility.makePoint)
   })

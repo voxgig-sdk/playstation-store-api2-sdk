@@ -4,7 +4,6 @@ import { cmp, Content, isAuthActive, envName, canonKey, canonScalarKey, entityId
 import { KIT, getModelPath, nom } from '@voxgig/apidef'
 
 
-// A type-correct PHP literal for a field's canonical type.
 function phpLit(type: any): string {
   const k = canonScalarKey(type)
   if ('INTEGER' === k || 'NUMBER' === k) return '1'

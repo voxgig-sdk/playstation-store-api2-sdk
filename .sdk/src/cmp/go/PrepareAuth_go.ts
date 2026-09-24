@@ -18,26 +18,6 @@ import {
 } from '@voxgig/apidef'
 
 
-// WHERE THE CREDENTIAL GOES IS A FACT ABOUT THE API, so it is generated
-// rather than templated. This is the go peer of PrepareAuth_ts; read that
-// one first, it carries the full account of the defect.
-//
-// This was a static file at `tm/go/utility/prepare_auth.go` that hardcoded
-//
-//   const headerAuth = "authorization"
-//
-// apidef has always resolved the scheme's `in` and `name` into
-// `main.kit.info.security` — joplin's says `in: "query", name: "token"` —
-// and generation dropped both, so the SDK sent a header the API does not
-// read and never sent the query parameter it does.
-//
-// A template cannot fix this, because the three placements need three
-// different bodies and a template has to pick one. A component emits the
-// branch this API actually uses and nothing else — no dead query code in a
-// bearer-token SDK, and no runtime `if` on a value fixed at generation
-// time. Go makes that stricter than most targets: an unused local is a
-// COMPILE ERROR, so a file that resolved `authPrefix` and then dropped it
-// for a query placement would not build at all.
 const PrepareAuth = cmp(async function PrepareAuth(props: any) {
   const { target } = props
   const { model } = props.ctx$
@@ -54,16 +34,6 @@ const PrepareAuth = cmp(async function PrepareAuth(props: any) {
   const prefix = resolveAuthPrefix(model)
   const basic = isHttpBasicAuth(model)
 
-  // FOLDER NESTING. Main_go opens NO folder around this call: go's layout is
-  // flat at the target root (core/, utility/, feature/, entity/, test/), the
-  // template this replaces lived at `tm/go/utility/prepare_auth.go`, and
-  // `Copy({from:'tm/go'})` lands it at `<root>/utility/`. So the `utility`
-  // folder is opened HERE, exactly as EntityTypes_go opens `entity`.
-  //
-  // The call site matters as much: Config is inside `Folder({name:'core'})`,
-  // and putting PrepareAuth beside it would write `core/utility/prepare_auth.go`
-  // — a second `package utility` nobody imports, while the registrar keeps
-  // calling whatever `utility/` still holds. Main_go calls this at ROOT level.
   Folder({ name: 'utility' }, () => {
     File({ name: 'prepare_auth.' + target.ext }, () => {
       Content(render({ gomodule, active, where, name, prefix, basic }))
@@ -84,9 +54,6 @@ type AuthSpec = {
 
 function render(spec: AuthSpec): string {
 
-  // NO AUTH AT ALL. A public API's SDK gets a prepareAuth that is honest
-  // about it rather than one that deletes a header nobody set. `vs` is left
-  // out of the imports deliberately — go rejects an unused import.
   if (!spec.active) {
     return `package utility
 
@@ -209,19 +176,6 @@ ${place(spec.where)}
 }
 
 
-// The credential's key, as it goes into the bag.
-//
-// A HEADER name is lowercased. HTTP header names are case-insensitive
-// (RFC 9110 5.1) and go's `req.Header.Set` canonicalises on the wire, so
-// nothing changes over the socket — but this SDK's own header map is keyed
-// in lowercase throughout (`content-type`, and the `authorization` that the
-// generated pipeline/feature/secrets tests assert on), and the shipped
-// `prepare_auth.go` said `"authorization"`. Emitting the resolver's
-// title-cased default here would have left every header SDK's own test
-// suite failing on a purely cosmetic difference.
-//
-// A QUERY parameter and a COOKIE name are case-SENSITIVE, so those go in
-// verbatim: `?token=` is not `?Token=`.
 function credLiteral(where: string, name: string): string {
   return 'header' === where ? String(name).toLowerCase() : String(name)
 }
@@ -246,9 +200,6 @@ function clear(where: string): string {
 
 function place(where: string): string {
   if ('query' === where) {
-    // NO PREFIX IN A QUERY STRING. `?token=Bearer%20abc` is not a thing any
-    // API reads; the prefix is a header convention and is dropped here
-    // deliberately rather than silently concatenated.
     return `		apikeyVal := ""
 		if av, ok := apikey.(string); ok {
 			apikeyVal = av
@@ -257,8 +208,6 @@ function place(where: string): string {
   }
 
   if ('cookie' === where) {
-    // Append, never replace: the cookie header may already carry pairs this
-    // SDK did not set, and clobbering it would drop them.
     return `		apikeyVal := ""
 		if av, ok := apikey.(string); ok {
 			apikeyVal = av
@@ -302,19 +251,6 @@ export {
 }
 
 
-// NOT `isAuthActive`, AND THE DIFFERENCE IS LOAD-BEARING. That helper is
-// also false whenever the SPEC declares no security scheme
-// (`main.kit.info.auth: false`) — a statement about the DEFINITION, not a
-// ban on ever sending a credential. `optspec` still declares `apikey` and
-// makeOptions fills `options.auth` from its defaults, so the runtime
-// `options.auth == null` guard never fired and those SDKs have always sent
-// the credential. Gating the body on `isAuthActive` does not trim dead
-// code, it removes working authentication — which
-// `go: auth null suppresses the credential` catches, and which takes the
-// secrets feature down with it.
-//
-// `main.kit.config.auth.active: false` is the project saying "no credential,
-// ever", and it is the only signal that can be honoured before runtime.
 function isAuthActive_go(model: any): boolean {
   const auth = getModelPath(model, `main.${KIT}.config.auth`,
     { only_active: false, required: false })

@@ -1,5 +1,5 @@
 
-import { cmp, each, Content, canonToType, canonKey, canonScalarKey, File, isAuthActive, entityIdField, opRequestShape, safeVarName, exampleVarName, luaKey } from '@voxgig/sdkgen'
+import { cmp, each, Content, canonToType, canonKey, canonScalarKey, File, isAuthActive, entityIdField, opRequestShape, safeVarName, exampleVarName, luaKey , targetFeatures } from '@voxgig/sdkgen'
 import { ReadmeRefFeatures } from '@voxgig/sdkgen'
 
 import {
@@ -57,7 +57,7 @@ const ReadmeRef = cmp(function ReadmeRef(props: any) {
   const { model } = props.ctx$
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  const feature = getModelPath(model, `main.${KIT}.feature`)
+  const feature = targetFeatures(model, target)
 
   const publishedEntities = each(entity).filter((e: any) => e.active !== false)
 
@@ -119,7 +119,6 @@ local client = sdk.test()
 `)
 
 
-    // Entity factory methods
     publishedEntities.map((ent: any) => {
       Content(`#### \`${ent.Name}(data)\`
 
@@ -165,10 +164,9 @@ same parameters as \`direct()\`.
 `)
 
 
-    // Entity reference sections
     publishedEntities.map((ent: any) => {
       const opnames = Object.keys(ent.op || {})
-      const fields = ent.fields || []
+      const fields = Object.values(ent.fields || {})
       // Model-driven id key: null when this entity has no id-like field, in
       // which case load/remove match on no argument and update omits the id.
       const idF = entityIdField(ent)
@@ -196,7 +194,6 @@ local ${eVar} = client:${ent.Name}(nil)
 `)
 
 
-      // Field schema
       if (fields.length > 0) {
         Content(`### Fields
 
@@ -204,9 +201,9 @@ local ${eVar} = client:${ent.Name}(nil)
 | --- | --- | --- | --- |
 `)
         each(fields, (field: any) => {
-          const req = field.req ? 'Yes' : 'No'
-          const desc = field.short || ''
-          Content(`| \`${field.name}\` | \`${canonToType(field.type, target.name)}\` | ${req} | ${desc} |
+          const req = field.r ? 'Yes' : 'No'
+          const desc = field.sh || ''
+          Content(`| \`${field.n}\` | \`${canonToType(field.t, target.name)}\` | ${req} | ${desc} |
 `)
         })
 
@@ -233,7 +230,7 @@ local ${eVar} = client:${ent.Name}(nil)
               if (fop.active === false) return '-'
               return 'Yes'
             })
-            Content(`| \`${field.name}\` | ${cols.join(' | ')} |
+            Content(`| \`${field.n}\` | ${cols.join(' | ')} |
 `)
           })
 
@@ -243,7 +240,6 @@ local ${eVar} = client:${ent.Name}(nil)
       }
 
 
-      // Operation details
       if (opnames.length > 0) {
         Content(`### Operations
 
@@ -259,7 +255,6 @@ ${info.desc}
 
 `)
 
-          // Show example
           if ('load' === opname || 'remove' === opname) {
             // The id key plus every REQUIRED match key (parent path params
             // like page_id) — the same shape the runtime resolves path
@@ -328,7 +323,6 @@ ${updateLines}  -- Fields to update
       }
 
 
-      // Common methods
       Content(`### Common Methods
 
 #### \`data_get() -> table\`
@@ -360,7 +354,6 @@ Return the entity name.
     })
 
 
-    // Features section
     const activeFeatures = each(feature).filter((f: any) => f.active)
     if (activeFeatures.length > 0) {
       Content(`
@@ -396,9 +389,6 @@ local client = sdk.new({
 \`\`\`
 
 `)
-      // The shared feature reference: options, defaults, usage and the
-      // considerations. Model facts, identical in every target, so they are
-      // written once in cmp/ReadmeRefFeatures.ts rather than here.
       ReadmeRefFeatures({ target })
     }
 

@@ -1,3 +1,4 @@
+import { flowSteps } from '@voxgig/sdkgen'
 
 import {
   flatten,
@@ -36,8 +37,6 @@ function goVar(name: string): string {
 }
 
 
-// Go's GenCtx mirrors the shared shape (see TestEntity_ts.ts) plus a
-// `gomodule` slot used to build qualified package paths in emitted code.
 type GenCtx = {
   model: Model
   entity: ModelEntity
@@ -97,10 +96,10 @@ const TestEntity = cmp(function TestEntity(props: any) {
   const idnamesStr = idnames.map(n => `"${n}"`).join(', ')
 
   // Get all update data entries for alias generation
-  const allSteps = Object.values(basicflow.step) as any[]
-  const updateStep = allSteps.find((s: any) => s.op === 'update')
-  const updateData = updateStep?.data
-    ? Object.entries(updateStep.data).filter(([k]: any) => k !== 'id' && !k.endsWith('$'))
+  const allSteps = Object.values(flowSteps(basicflow)) as any[]
+  const updateStep = allSteps.find((s: any) => s.o === 'update')
+  const updateData = updateStep?.d
+    ? Object.entries(updateStep.d).filter(([k]: any) => k !== 'id' && !k.endsWith('$'))
     : []
   const aliases = updateData.map(([k, v]: any) => [k, v])
 
@@ -109,10 +108,10 @@ const TestEntity = cmp(function TestEntity(props: any) {
   // fmt is only used by the TextFieldMark Update branch — omit the import
   // when no step needs it, otherwise Go's strict unused-import check fails.
   const needsFmt = allSteps.some((s: any) =>
-    s.op === 'update' &&
-    s.input.textfield &&
-    Array.isArray(s.spec) &&
-    s.spec.some((sp: any) => sp.apply === 'TextFieldMark'))
+    s.o === 'update' &&
+    s.i.textfield &&
+    Array.isArray(s.s) &&
+    s.s.some((sp: any) => sp.apply === 'TextFieldMark'))
 
   File({ name: entity.name + '_entity_test.' + target.ext }, () => {
 
@@ -198,7 +197,7 @@ ${hasList ? `
 		if setup.live {
 			_mode = "live"
 		}
-		for _, _op := range []string{${(Array.from(new Set((allSteps as any[]).map((s: any) => s.op).filter(Boolean)))).map(o => `"${o}"`).join(', ')}} {
+		for _, _op := range []string{${(Array.from(new Set((allSteps as any[]).map((s: any) => s.o).filter(Boolean)))).map(o => `"${o}"`).join(', ')}} {
 			if _shouldSkip, _reason := isControlSkipped("entityOp", "${entity.name}." + _op, _mode); _shouldSkip {
 				if _reason == "" {
 					_reason = "skipped via sdk-test-control.json"
@@ -216,7 +215,7 @@ ${hasList ? `
 ${allSteps.length > 0 ? '\t\tclient := setup.client\n\n' : ''}`)
 
     // Check if the flow has a create step; if not, bootstrap entity data
-    const flowHasCreate = allSteps.some((s: any) => s.op === 'create')
+    const flowHasCreate = allSteps.some((s: any) => s.o === 'create')
     if (!flowHasCreate) {
       const preambleRef = entity.name + '_ref01'
       const preambleVar = goVar(preambleRef)
@@ -234,16 +233,16 @@ ${allSteps.length > 0 ? '\t\tclient := setup.client\n\n' : ''}`)
     }
 
     // Model-driven step iteration
-    each(basicflow.step, (step: any, index: any) => {
+    each(flowSteps(basicflow), (step: any, index: any) => {
       // Never emit a REMOVE (or its removed-item verify LIST) without a
       // preceding CREATE: a coherent CRUD flow only removes what it created,
       // so a create-less remove would mutate pre-existing (live) data.
       if (!flowHasCreate) {
-        if ('remove' === step.op) { return }
-        if ('list' === step.op &&
-          (step.valid || []).some((v: any) => 'ItemNotExists' === v.apply)) { return }
+        if ('remove' === step.o) { return }
+        if ('list' === step.o &&
+          (step.v || []).some((v: any) => 'ItemNotExists' === v.apply)) { return }
       }
-      const opgen: OpGen = GENERATE_OP[step.op]
+      const opgen: OpGen = GENERATE_OP[step.o]
       if (opgen) {
         opgen(genCtx, step, index)
         Content('\n')
@@ -281,12 +280,6 @@ ${allSteps.length > 0 ? '\t\tclient := setup.client\n\n' : ''}`)
 
 `)
 
-    // Generate idmap via vs.Transform.
-    //
-    // The error return Transform gained in struct go 0.1.3 is discarded
-    // deliberately: this transforms the entity's own id names, which the
-    // generator produced, so an error would be a generator bug rather than
-    // anything the generated test can act on.
     Content('\t// Generate idmap via transform, matching TS pattern.\n')
     Content('\tidmap, _ := vs.Transform(\n')
     Content('\t\t[]any{' + idnamesStr + '},\n')
@@ -367,18 +360,18 @@ ${allSteps.length > 0 ? '\t\tclient := setup.client\n\n' : ''}`)
 
 const generateCreate: OpGen = (ctx, step, index) => {
   const { entity, flow } = ctx
-  const ref = step.input.ref ?? entity.name + '_ref01'
-  const entvar = goVar(step.input.entvar ?? ref + '_ent')
-  const datavar = goVar(step.input.datavar ?? (ref + '_data' + (step.input.suffix ?? '')))
+  const ref = step.i.ref ?? entity.name + '_ref01'
+  const entvar = goVar(step.i.entvar ?? ref + '_ent')
+  const datavar = goVar(step.i.datavar ?? (ref + '_data' + (step.i.suffix ?? '')))
 
-  const priorSteps = Object.values(flow.step).slice(0, Number(index)) as any[]
+  const priorSteps = Object.values(flowSteps(flow)).slice(0, Number(index)) as any[]
   const needsEnt = !priorSteps.some((s: any) =>
-    ['create', 'list', 'load', 'update', 'remove'].includes(s.op))
+    ['create', 'list', 'load', 'update', 'remove'].includes(s.o))
 
   const hasDatvar = priorSteps.some((s: any) => {
-    if ('create' === s.op) {
-      const priorRef = s.input.ref ?? entity.name + '_ref01'
-      const priorDatvar = goVar(s.input.datavar ?? (priorRef + '_data' + (s.input.suffix ?? '')))
+    if ('create' === s.o) {
+      const priorRef = s.i.ref ?? entity.name + '_ref01'
+      const priorDatvar = goVar(s.i.datavar ?? (priorRef + '_data' + (s.i.suffix ?? '')))
       return priorDatvar === datavar
     }
     return false
@@ -431,14 +424,14 @@ const generateCreate: OpGen = (ctx, step, index) => {
 const generateList: OpGen = (ctx, step, index) => {
   const { entity, flow } = ctx
   const hasDataId = null != entityDataIdField(entity)
-  const ref = step.input.ref ?? entity.name + '_ref01'
-  const entvar = goVar(step.input.entvar ?? ref + '_ent')
-  const matchvar = goVar(step.input.matchvar ?? (ref + '_match' + (step.input.suffix ?? '')))
-  const listvar = goVar(step.input.listvar ?? (ref + '_list' + (step.input.suffix ?? '')))
+  const ref = step.i.ref ?? entity.name + '_ref01'
+  const entvar = goVar(step.i.entvar ?? ref + '_ent')
+  const matchvar = goVar(step.i.matchvar ?? (ref + '_match' + (step.i.suffix ?? '')))
+  const listvar = goVar(step.i.listvar ?? (ref + '_list' + (step.i.suffix ?? '')))
 
-  const priorSteps = Object.values(flow.step).slice(0, Number(index)) as any[]
+  const priorSteps = Object.values(flowSteps(flow)).slice(0, Number(index)) as any[]
   const needsEnt = !priorSteps.some((s: any) =>
-    ['create', 'list', 'load', 'update', 'remove'].includes(s.op))
+    ['create', 'list', 'load', 'update', 'remove'].includes(s.o))
 
   Content(`		// LIST
 `)
@@ -465,14 +458,14 @@ const generateList: OpGen = (ctx, step, index) => {
 
   // Only declare ${listvar} as a real var when a downstream validator
   // actually uses it; otherwise `_` to satisfy Go's unused-var check.
-  const allSteps = Object.values(flow.step) as any[]
+  const allSteps = Object.values(flowSteps(flow)) as any[]
   // hasDataId: the ItemExists/ItemNotExists asserts (the only listvar users) are
   // now gated on a real DATA id field, so without one the list result is unused.
-  const listvarUsed = hasDataId && !!step.valid?.some((v: any) => {
+  const listvarUsed = hasDataId && !!step.v?.some((v: any) => {
     if ('ItemExists' !== v.apply && 'ItemNotExists' !== v.apply) return false
     const validRef = v.def?.ref
-    return validRef && allSteps.some((s: any) => 'create' === s.op &&
-      ((s.input.ref ?? entity.name + '_ref01') === validRef))
+    return validRef && allSteps.some((s: any) => 'create' === s.o &&
+      ((s.i.ref ?? entity.name + '_ref01') === validRef))
   })
   const listvarBind = listvarUsed ? listvar : '_'
 
@@ -490,12 +483,12 @@ const generateList: OpGen = (ctx, step, index) => {
 		}
 `)
 
-  // Handle validators from step.valid
-  if (step.valid) {
-    for (const validator of step.valid) {
+  // Handle validators from step.v
+  if (step.v) {
+    for (const validator of step.v) {
       const validRef = validator.def?.ref
-      const hasRefData = validRef && allSteps.some((s: any) => 'create' === s.op &&
-        ((s.input.ref ?? entity.name + '_ref01') === validRef))
+      const hasRefData = validRef && allSteps.some((s: any) => 'create' === s.o &&
+        ((s.i.ref ?? entity.name + '_ref01') === validRef))
 
       if ('ItemExists' === validator.apply && hasRefData && hasDataId) {
         const refDataVar = goVar(validRef + '_data')
@@ -521,16 +514,16 @@ const generateList: OpGen = (ctx, step, index) => {
 
 const generateUpdate: OpGen = (ctx, step, index) => {
   const { entity, flow } = ctx
-  const ref = step.input.ref ?? entity.name + '_ref01'
-  const entvar = goVar(step.input.entvar ?? ref + '_ent')
-  const datavar = goVar(step.input.datavar ?? (ref + '_data' + (step.input.suffix ?? '')))
-  const resdatavar = goVar(step.input.resdatavar ?? (ref + '_resdata' + (step.input.suffix ?? '')))
-  const markdefvar = goVar(step.input.markdefvar ?? (ref + '_markdef' + (step.input.suffix ?? '')))
-  const srcdatavar = goVar(step.input.srcdatavar ?? (ref + '_data' + (step.input.suffix ?? '')))
+  const ref = step.i.ref ?? entity.name + '_ref01'
+  const entvar = goVar(step.i.entvar ?? ref + '_ent')
+  const datavar = goVar(step.i.datavar ?? (ref + '_data' + (step.i.suffix ?? '')))
+  const resdatavar = goVar(step.i.resdatavar ?? (ref + '_resdata' + (step.i.suffix ?? '')))
+  const markdefvar = goVar(step.i.markdefvar ?? (ref + '_markdef' + (step.i.suffix ?? '')))
+  const srcdatavar = goVar(step.i.srcdatavar ?? (ref + '_data' + (step.i.suffix ?? '')))
 
-  const priorSteps = Object.values(flow.step).slice(0, Number(index)) as any[]
+  const priorSteps = Object.values(flowSteps(flow)).slice(0, Number(index)) as any[]
   const needsEnt = !priorSteps.some((s: any) =>
-    ['create', 'list', 'load', 'update', 'remove'].includes(s.op))
+    ['create', 'list', 'load', 'update', 'remove'].includes(s.o))
 
   const hasEntIdU = null != entity.id
 
@@ -547,9 +540,9 @@ const generateUpdate: OpGen = (ctx, step, index) => {
 `)
   }
 
-  // Add data entries from step.data
-  if (step.data) {
-    const dataEntries = Object.entries(step.data).filter(([k]: any) => k !== 'id' && !k.endsWith('$'))
+  // Add data entries from step.d
+  if (step.d) {
+    const dataEntries = Object.entries(step.d).filter(([k]: any) => k !== 'id' && !k.endsWith('$'))
     for (const [key] of dataEntries) {
       Content(`			"${key}": setup.idmap["${key}"],
 `)
@@ -560,10 +553,10 @@ const generateUpdate: OpGen = (ctx, step, index) => {
 `)
 
   // Handle TextFieldMark spec
-  if (step.spec) {
-    for (const spec of step.spec) {
-      if ('TextFieldMark' === spec.apply && null != step.input.textfield) {
-        const fieldname = step.input.textfield
+  if (step.s) {
+    for (const spec of step.s) {
+      if ('TextFieldMark' === spec.apply && null != step.i.textfield) {
+        const fieldname = step.i.textfield
         const fieldvalue = spec.def?.mark ?? `Mark01-${ref}`
         Content(`
 		${markdefvar}Name := "${fieldname}"
@@ -592,9 +585,9 @@ const generateUpdate: OpGen = (ctx, step, index) => {
   }
 
   // Assert TextFieldMark
-  if (step.spec) {
-    for (const spec of step.spec) {
-      if ('TextFieldMark' === spec.apply && null != step.input.textfield) {
+  if (step.s) {
+    for (const spec of step.s) {
+      if ('TextFieldMark' === spec.apply && null != step.i.textfield) {
         Content(`		if ${resdatavar}[${markdefvar}Name] != ${markdefvar}Value {
 			t.Fatalf("expected %s to be updated, got %v", ${markdefvar}Name, ${resdatavar}[${markdefvar}Name])
 		}
@@ -607,24 +600,24 @@ const generateUpdate: OpGen = (ctx, step, index) => {
 
 const generateLoad: OpGen = (ctx, step, index) => {
   const { entity, flow } = ctx
-  const ref = step.input.ref ?? entity.name + '_ref01'
-  const entvar = goVar(step.input.entvar ?? ref + '_ent')
-  const matchvar = goVar(step.input.matchvar ?? (ref + '_match' + (step.input.suffix ?? '')))
-  const datavar = goVar(step.input.datavar ?? (ref + '_data' + (step.input.suffix ?? '')))
-  const srcdatavar = goVar(step.input.srcdatavar ?? (ref + '_data' + (step.input.suffix ?? '')))
+  const ref = step.i.ref ?? entity.name + '_ref01'
+  const entvar = goVar(step.i.entvar ?? ref + '_ent')
+  const matchvar = goVar(step.i.matchvar ?? (ref + '_match' + (step.i.suffix ?? '')))
+  const datavar = goVar(step.i.datavar ?? (ref + '_data' + (step.i.suffix ?? '')))
+  const srcdatavar = goVar(step.i.srcdatavar ?? (ref + '_data' + (step.i.suffix ?? '')))
 
-  const priorSteps = Object.values(flow.step).slice(0, Number(index)) as any[]
+  const priorSteps = Object.values(flowSteps(flow)).slice(0, Number(index)) as any[]
   const hasEntVar = priorSteps.some((s: any) =>
-    ['create', 'list', 'load', 'update', 'remove'].includes(s.op))
+    ['create', 'list', 'load', 'update', 'remove'].includes(s.o))
 
   // Check if srcdatavar was declared by a prior create step or preamble
-  const flowHasCreate = Object.values(flow.step).some((s: any) => (s as any).op === 'create')
+  const flowHasCreate = Object.values(flowSteps(flow)).some((s: any) => (s as any).o === 'create')
   const preambleRef = entity.name + '_ref01'
   const hasSrcData = (!flowHasCreate && srcdatavar === goVar(preambleRef + '_data')) ||
     priorSteps.some((s: any) => {
-      if ('create' === s.op) {
-        const priorRef = s.input.ref ?? entity.name + '_ref01'
-        const priorDatvar = goVar(s.input.datavar ?? (priorRef + '_data' + (s.input.suffix ?? '')))
+      if ('create' === s.o) {
+        const priorRef = s.i.ref ?? entity.name + '_ref01'
+        const priorDatvar = goVar(s.i.datavar ?? (priorRef + '_data' + (s.i.suffix ?? '')))
         return priorDatvar === srcdatavar
       }
       return false
@@ -682,14 +675,14 @@ const generateRemove: OpGen = (ctx, step, index) => {
   if (null == entityDataIdField(entity)) {
     return
   }
-  const ref = step.input.ref ?? entity.name + '_ref01'
-  const entvar = goVar(step.input.entvar ?? ref + '_ent')
-  const matchvar = goVar(step.input.matchvar ?? (ref + '_match' + (step.input.suffix ?? '')))
-  const srcdatavar = goVar(step.input.srcdatavar ?? (ref + '_data'))
+  const ref = step.i.ref ?? entity.name + '_ref01'
+  const entvar = goVar(step.i.entvar ?? ref + '_ent')
+  const matchvar = goVar(step.i.matchvar ?? (ref + '_match' + (step.i.suffix ?? '')))
+  const srcdatavar = goVar(step.i.srcdatavar ?? (ref + '_data'))
 
-  const priorSteps = Object.values(flow.step).slice(0, Number(index)) as any[]
+  const priorSteps = Object.values(flowSteps(flow)).slice(0, Number(index)) as any[]
   const needsEnt = !priorSteps.some((s: any) =>
-    ['create', 'list', 'load', 'update', 'remove'].includes(s.op))
+    ['create', 'list', 'load', 'update', 'remove'].includes(s.o))
 
   // Use `:=` when this is the first op step (so `err` gets declared);
   // otherwise reuse the `err` from a prior op step.

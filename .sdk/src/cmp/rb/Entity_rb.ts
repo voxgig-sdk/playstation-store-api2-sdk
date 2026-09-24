@@ -33,7 +33,6 @@ const Entity = cmp(function Entity(props: any) {
 
   const ff = Path.normalize(__dirname + '/../../../src/cmp/rb/fragment/')
 
-  // Entity files go to entity/ folder
   Folder({ name: 'entity' }, () => {
 
     File({ name: entity.name + '_entity.' + target.ext }, () => {
@@ -56,8 +55,6 @@ const Entity = cmp(function Entity(props: any) {
           EntityName: entity.Name,
           entityname: entity.name,
 
-          // Class token decoupled from the EntityName data-type token in
-          // Entity.fragment.rb so the class can be renamed independently.
           EntyClass: cls,
 
           // Feature-hook markers. jostraca's built-in `#Name-Tag` pattern is

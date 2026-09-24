@@ -403,7 +403,14 @@ end
 --- omni's value model), which keeps smoke tests free of fixture files.
 function M.makeRunner(testfile, client)
   local specref = testfile
-  if "string" == type(testfile) and "/" ~= testfile:sub(1, 1) then
+  -- A drive letter and a UNC prefix are absolute too, and neither starts
+  -- with "/": treating one as relative joins it onto _test_dir and reads
+  -- nothing. Lua has no path library, so the shapes are spelled out.
+  local function isabs(p)
+    return nil ~= p:match("^/") or nil ~= p:match("^%a:[/\\]")
+      or nil ~= p:match("^\\\\")
+  end
+  if "string" == type(testfile) and not isabs(testfile) then
     specref = _test_dir .. testfile
   end
 

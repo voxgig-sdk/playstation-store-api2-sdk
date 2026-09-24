@@ -1,7 +1,3 @@
-// Smoke tests for the vendored omni runner itself: a runner that cannot
-// FAIL a bad entry would turn every corpus suite vacuously green, so pin
-// the failure paths, not just the happy one. (The go peer of
-// tm/ts/test/omni.test.ts.)
 
 package sdktest
 

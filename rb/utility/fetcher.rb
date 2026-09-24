@@ -5,6 +5,42 @@ require 'uri'
 require 'json'
 
 module PlaystationStoreApi2Utilities
+  # Started Net::HTTP connections keyed by scheme, host, port and proxy,
+  # checked out for one request and returned. A Net::HTTP serves one
+  # request at a time, so the pool holds idle ones rather than sharing one.
+  HTTP_POOL = Hash.new { |h, k| h[k] = [] }
+  HTTP_POOL_LOCK = Mutex.new
+  HTTP_POOL_IDLE_MAX = 4
+
+  def self.http_checkout(key, uri, proxy)
+    http = HTTP_POOL_LOCK.synchronize { HTTP_POOL[key].pop }
+    return http if http && http.started?
+
+    if proxy
+      purl = URI.parse(proxy)
+      http = Net::HTTP.new(uri.host, uri.port, purl.host, purl.port, purl.user, purl.password)
+    else
+      http = Net::HTTP.new(uri.host, uri.port)
+    end
+    http.use_ssl = (uri.scheme == "https")
+    http.start
+  end
+
+  def self.http_checkin(key, http)
+    kept = HTTP_POOL_LOCK.synchronize do
+      HTTP_POOL[key].size < HTTP_POOL_IDLE_MAX && HTTP_POOL[key].push(http)
+    end
+    http.finish unless kept
+  rescue IOError
+    nil
+  end
+
+  def self.http_discard(http)
+    http.finish if http.started?
+  rescue IOError
+    nil
+  end
+
   DefaultHttpFetch = ->(fullurl, fetchdef) {
     method_str = fetchdef["method"] || "GET"
     body_str = fetchdef["body"]
@@ -12,8 +48,9 @@ module PlaystationStoreApi2Utilities
 
     begin
       uri = URI.parse(fullurl)
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = (uri.scheme == "https")
+      proxy = fetchdef["proxy"]
+      proxy = nil unless proxy.is_a?(String) && !proxy.empty?
+      key = [uri.scheme, uri.host, uri.port, proxy]
 
       klass = case method_str.upcase
               when "POST" then Net::HTTP::Post
@@ -35,7 +72,16 @@ module PlaystationStoreApi2Utilities
       request['User-Agent'] = 'Mozilla/5.0 (compatible; PlaystationStoreApi2SDK/1.0)' unless has_ua
       request.body = body_str if body_str.is_a?(String)
 
-      resp = http.request(request)
+      http = PlaystationStoreApi2Utilities.http_checkout(key, uri, proxy)
+      begin
+        # Net::HTTP retries idempotent requests; an EOF can follow a committed POST.
+        resp = http.request(request)
+      rescue StandardError
+        PlaystationStoreApi2Utilities.http_discard(http)
+        raise
+      end
+      PlaystationStoreApi2Utilities.http_checkin(key, http)
+
       resp_headers = {}
       resp.each_header { |k, v| resp_headers[k.downcase] = v }
 

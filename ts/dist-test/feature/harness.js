@@ -1,13 +1,4 @@
 "use strict";
-// Offline feature-test harness for the generated SDK.
-//
-// Feature behaviour (retry, cache, rbac, telemetry, ...) is unit-tested by
-// driving each feature class through a faithful miniature of the real
-// operation pipeline against a configurable mock transport — the same hook
-// order and short-circuit rules as the generated Entity*Op code, but with
-// no live server and no API-specific fixtures. Feature instances are built
-// via `config.makeFeature`, so only features actually present in this SDK
-// are exercised (see `hasFeature`).
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasFeature = hasFeature;
 exports.makeClient = makeClient;

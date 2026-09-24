@@ -11,8 +11,6 @@ import (
 	vs "github.com/voxgig-sdk/playstation-store-api2-sdk/go/utility/struct"
 )
 
-// PENDING sections are the ones deliberately left empty in the shared corpus
-// (.sdk/test/primary/<name>.aon). Everything else MUST contribute cases.
 var pendingSections = map[string]bool{
 	"fetcher": true, "makeFetchDef": true, "makeResult": true,
 	"featureAdd": true, "featureHook": true, "featureInit": true,
@@ -37,12 +35,6 @@ func TestPrimaryUtility(t *testing.T) {
 		t.Fatal("primary section not found in test.json")
 	}
 
-	// Run one corpus section, failing loudly when it would run ZERO cases.
-	// A renamed section, a fixture that failed to compile, or an empty set
-	// used to report PASS while running zero assertions - the whole point
-	// of a shared oracle lost without a single red test. (The guard lives
-	// here rather than in the runner, which is vendored verbatim; the
-	// shared corpus is a v0 spec, and v0 tolerates an empty set.)
 	runsection := func(t *testing.T, name string, subject any) {
 		t.Helper()
 		section, _ := primary[name].(map[string]any)
@@ -283,9 +275,6 @@ func TestPrimaryUtility(t *testing.T) {
 	t.Run("fetcher-live", func(t *testing.T) {
 		calls := []map[string]any{}
 		liveClient := sdk.NewPlaystationStoreApi2SDK(map[string]any{
-			// Concrete base: a live construction must satisfy any server
-			// variables a templated base URL declares; a literal base
-			// sidesteps the requirement.
 			"base": "http://localhost:8080",
 			"system": map[string]any{
 				"fetch": func(url string, fetchdef map[string]any) (map[string]any, error) {
@@ -553,16 +542,6 @@ func TestPrimaryUtility(t *testing.T) {
 		})
 	})
 
-	// Was one hand-written case (the single-point path) covering one of this
-	// utility's seven branches, which is how the corpus fixture came to be
-	// marked deferred as "needs a real client". It does not: NewContext
-	// rebuilds Op from opname + entity + config, and Options can be supplied
-	// literally. Driven from the corpus now, so TS and Go assert the same
-	// branches.
-	//
-	// TS returns the error AS the value; Go returns it as a second result. The
-	// corpus says `match: out: code` for both, so the error is normalised to a
-	// map carrying its code here rather than forking the fixture per language.
 	t.Run("makePoint-basic", func(t *testing.T) {
 		runsection(t, "makePoint", func(args ...any) (any, error) {
 			ctxmap, _ := args[0].(map[string]any)
@@ -570,12 +549,6 @@ func TestPrimaryUtility(t *testing.T) {
 				ctxmap = map[string]any{}
 			}
 
-			// NewContext resolves Op from the ENTITY NAME, and reaches it
-			// through the Entity interface - a literal {name:...} map from the
-			// fixture is not one, so entname would be "" and every lookup would
-			// miss, reporting point_no_points for all seven cases. TS reads the
-			// same field with getprop and accepts the plain map. Swap in the
-			// package's minimal Entity so both ports resolve the same op.
 			if em, ok := ctxmap["entity"].(map[string]any); ok {
 				name, _ := em["name"].(string)
 				made := []any{}
@@ -634,7 +607,6 @@ func TestPrimaryUtility(t *testing.T) {
 
 			result := utility.Param(ctx, paramdef)
 
-			// The spec alias mutation is what mark 80 asserts on.
 			omniSyncCtx(args[0], ctx)
 
 			return result, nil
@@ -645,6 +617,23 @@ func TestPrimaryUtility(t *testing.T) {
 		setupOpts := getSpec(primary, "prepareAuth", "DEF", "setup", "a")
 		authClient := sdk.TestSDK(nil, setupOpts)
 		authUtility := authClient.GetUtility()
+
+		// The corpus writes the credential as `headers.authorization`: a
+		// PLACEHOLDER each runner points at the container and name this API
+		// actually uses. plAuthCredential (pipeline_test.go, same package)
+		// discovers both by running PrepareAuth once.
+		cred := plAuthCredential(t)
+		if cred == nil {
+			t.Fatal("prepareAuth placed no credential in headers or query")
+		}
+
+		// An absent section is runsection's report to make, not a nil-map write.
+		if section, has := primary["prepareAuth"].(map[string]any); has &&
+			("headers" != cred.where || "authorization" != cred.name) {
+			original := section["basic"]
+			section["basic"] = retargetAuth(original, cred)
+			defer func() { section["basic"] = original }()
+		}
 
 		runsection(t, "prepareAuth", func(args ...any) (any, error) {
 			ctx := omniCtx(args[0], authClient, authUtility)
@@ -695,10 +684,6 @@ func TestPrimaryUtility(t *testing.T) {
 		})
 	})
 
-	// Was two hand-written cases that had drifted out of the shared corpus
-	// (the preparePath fixture shipped as an empty `set: []`). Now driven by
-	// the corpus like every other section, so all ports assert the same
-	// separator/blank-segment behaviour.
 	t.Run("preparePath-basic", func(t *testing.T) {
 		runsection(t, "preparePath", func(args ...any) (any, error) {
 			ctx := omniCtx(args[0], client, utility)
@@ -855,3 +840,39 @@ func makeTestFullCtx(client *sdk.PlaystationStoreApi2SDK, utility *sdk.Utility) 
 
 // useVS prevents unused import error
 var _ = vs.Clone
+
+
+// retargetAuth rewrites the corpus's `headers` bag to the container this
+// SDK's PrepareAuth writes to, and the `authorization` key inside it to the
+// API's own credential name. Applied only to the prepareAuth section, so
+// real header assertions elsewhere are untouched.
+func retargetAuth(node any, cred *plAuthCred) any {
+	switch value := node.(type) {
+	case map[string]any:
+		out := map[string]any{}
+		for key, child := range value {
+			if "headers" == key {
+				bag := map[string]any{}
+				inner, _ := child.(map[string]any)
+				for bagkey, bagvalue := range inner {
+					name := bagkey
+					if "authorization" == bagkey {
+						name = cred.name
+					}
+					bag[name] = retargetAuth(bagvalue, cred)
+				}
+				out[cred.where] = bag
+			} else {
+				out[key] = retargetAuth(child, cred)
+			}
+		}
+		return out
+	case []any:
+		out := make([]any, len(value))
+		for index, child := range value {
+			out[index] = retargetAuth(child, cred)
+		}
+		return out
+	}
+	return node
+}

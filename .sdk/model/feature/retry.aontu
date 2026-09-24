@@ -1,0 +1,34 @@
+
+main: kit: feature: retry: {
+
+  name: key()
+  title: "Automatic retry of transient failures with exponential backoff"
+  version: '0.0.1'
+  active: true
+  base: 'node_modules/@voxgig/sdkgen/project/.sdk'
+  package: '@voxgig/sdkgen'
+  transport: 'wrap'
+
+  config: {
+    # Opt-in: enable per SDK via options.feature.retry.active = true
+    options: {
+      active: false
+      retries: 2
+      minDelay: 50
+      maxDelay: 2000
+      factor: 2
+      statuses: [408, 425, 429, 500, 502, 503, 504]
+    }
+  }
+
+  # Retry wraps the transport in init(); it dispatches no pipeline hooks.
+  hook: {}
+}
+
+
+main: kit: feature: retry: config: optspec: {
+  # randomise the backoff delay
+  jitter: '`$BOOLEAN`'
+  # injected delay, so a test need not really wait
+  sleep: '`$FUNCTION`'
+}

@@ -2,12 +2,6 @@
 import { cmp, Content, File } from '@voxgig/sdkgen'
 
 
-// Generates ts/test/ReadmeExample.test.ts — a test that reads the
-// repo's top-level README.md at runtime, extracts the first TS code
-// block under "## Quickstart", transforms `new <Name>SDK(...)`
-// to `<Name>SDK.test()` so it runs offline, evaluates the rest, and
-// asserts no error. Catches drift between the README quickstart and
-// the real SDK API.
 const ReadmeExampleTest = cmp(function ReadmeExampleTest(props: any) {
   const { ctx$: { model } } = props
   const Name = model.const.Name

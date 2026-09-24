@@ -200,6 +200,13 @@ class FeatureCorpusTest < Minitest::Test
     assert_equal expect, actual, path
   end
 
+  # Whether the SDK built the feature at all. The activity record is the
+  # wrong probe: most features create theirs on first use, so an idle
+  # client has none and every section but the eager ones read as inert.
+  def present?(client, name)
+    (client.features || []).any? { |f| f.respond_to?(:name) && f.name == name }
+  end
+
   def record(client, name)
     # A corpus key is any manifest item name, so it may carry characters
     # (foo-bar, foo.2) that cannot form a Ruby instance-variable name. The
@@ -246,7 +253,11 @@ class FeatureCorpusTest < Minitest::Test
       # Probed by ACTIVATING it: the feature defaults to inactive, so an idle
       # client never builds it and its absence says nothing.
       probe = build_client({ "feature" => [{ "name" => name, "active" => true }] })
-      next if record(probe, name).nil?
+      unless present?(probe, name)
+        # The one line every runner prints for an inert section.
+        puts "feature.#{name}: inert (this SDK does not generate the feature)"
+        next
+      end
 
       ops = usable_ops(2)
       by_key = ops.each_with_object({}) { |o, h| h[o["key"]] = o }

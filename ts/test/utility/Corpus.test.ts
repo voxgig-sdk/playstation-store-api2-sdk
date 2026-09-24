@@ -6,19 +6,6 @@ import { join } from 'node:path'
 import { TEST_JSON_FILE } from './index'
 
 
-// Guards the shared corpus AS A WHOLE, which the per-section guard in the
-// language runners cannot do.
-//
-// That guard only fires for a section some test actually runs. Seven sections
-// — fetcher, makeFetchDef, makePoint, makeResult, featureAdd, featureHook and
-// featureInit — had no test calling them at all, so they sat at `set: []`
-// through two reviews reporting nothing. A fixture nobody runs is
-// indistinguishable from a fixture that passes.
-//
-// Deferral is therefore DATA (`basic.pending`), not a comment: comments do not
-// survive compilation to test.json, so a marker written only in the .aon
-// source cannot be checked by the thing that consumes it. Being data, these
-// invariants hold for every port, not just this one.
 describe('Corpus', () => {
 
   // Resolved the same way runner.ts resolves it — from dist-test/, one level
@@ -44,7 +31,7 @@ describe('Corpus', () => {
     })
     equal(undeclared.join(','), '',
       'these sections compile to ZERO cases and carry no `basic: pending` ' +
-      'reason — add cases, or state the blocker in .sdk/test/primary/<name>.aon')
+      'reason — add cases, or state the blocker in .sdk/test/primary/<name>.aontu')
   })
 
 

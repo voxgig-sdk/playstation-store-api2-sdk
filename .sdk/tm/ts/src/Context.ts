@@ -13,7 +13,6 @@ import { Result } from './Result'
 import { Spec } from './Spec'
 
 
-// TODO: move to own file
 class Context {
 
   id = 'C' + ('' + Math.random()).substring(2, 10)
@@ -59,7 +58,13 @@ class Context {
     this.client = getprop(ctxmap, 'client', getprop(basectx, 'client'))
     this.utility = getprop(ctxmap, 'utility', getprop(basectx, 'utility'))
 
-    this.ctrl = getprop(ctxmap, 'ctrl', getprop(basectx, 'ctrl', this.ctrl))
+    // An operation gets its OWN control unless the caller passed one: a
+    // paging cursor left on the client's control would otherwise be picked
+    // up by the next, unrelated call. A context with no opname is not an
+    // operation, so it still shares (an entity's, with the client's).
+    const opname = getprop(ctxmap, 'opname')
+    const basectrl = null == opname ? getprop(basectx, 'ctrl', this.ctrl) : this.ctrl
+    this.ctrl = getprop(ctxmap, 'ctrl', basectrl)
     this.meta = getprop(ctxmap, 'meta', getprop(basectx, 'meta', this.meta))
 
     this.config = getprop(ctxmap, 'config', getprop(basectx, 'config'))
@@ -80,16 +85,11 @@ class Context {
     this.result = getprop(ctxmap, 'result', getprop(basectx, 'result'))
     this.response = getprop(ctxmap, 'response', getprop(basectx, 'response'))
 
-    const opname = getprop(ctxmap, 'opname')
     this.op = this.resolveOp(opname)
   }
 
 
   resolveOp(opname: string): Operation {
-    // Cache key is `<entity>:<opname>` so two entities with the same op
-    // (e.g. both have a "list") get distinct cached Operations. Keying on
-    // opname alone caused the first-resolved entity's points to be served
-    // to every subsequent entity's call.
     const entname = getprop(this.entity, 'name', '')
     const cacheKey = entname + ':' + opname
     let op: Operation = getprop(this.opmap, cacheKey)

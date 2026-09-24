@@ -117,13 +117,13 @@ On error, \`ok\` is \`False\` and \`err\` contains the error value.
 
 `)
   each(entityList, (ent: any) => {
-    const fields = ent.fields || []
+    const fields = Object.values(ent.fields || {})
     const opnames = Object.keys(ent.op || {})
     const ops = ent.op || {}
     const points = each(ops).map((op: any) =>
       op.points ? each(op.points) : []
     ).flat()
-    const path = points.length > 0 ? (points[0] as any).orig || '' : ''
+    const path = points.length > 0 ? (points[0] as any).o || '' : ''
 
     Content(`#### ${ent.Name}
 
@@ -131,7 +131,7 @@ On error, \`ok\` is \`False\` and \`err\` contains the error value.
 | --- | --- |
 `)
     each(fields, (field: any) => {
-      Content(`| \`${field.name}\` | ${field.short || ''} |
+      Content(`| \`${field.n}\` | ${field.sh || ''} |
 `)
     })
 

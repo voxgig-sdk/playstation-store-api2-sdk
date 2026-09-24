@@ -6,36 +6,6 @@ import {
 } from '@voxgig/apidef'
 
 
-// Emits go/test/readme_examples_test.go — a COMPLETENESS GATE over every
-// ```go block in ALL THREE docs that ship go examples:
-//   - the root README.md (top-level, multi-language quick start)
-//   - the per-language go/README.md
-//   - the per-language go/REFERENCE.md
-//
-// For every ```go block, tagged by (source doc, index), it exercises the
-// block against the real generated SDK:
-//
-//   - Fragments (statement snippets) are wrapped in a function with a SEEDED
-//     test-mode `client` in scope and `go build`-checked. Any stray `import`
-//     line inside the fragment is stripped and constructor calls are rewritten
-//     to the seeded test client (so undefined-variable placeholders like
-//     sdk.TestSDK(testopts, sdkopts) still type-check). A call to a method
-//     that does not exist, a wrong argument count/type, or `.data`/`.ok` field
-//     access on a bare entity-op result fails to compile — and so fails.
-//   - Complete programs (a block with `func main`) are built as-is (the
-//     documented, possibly live, form must compile) AND a test-mode variant —
-//     its constructor rewritten to a seeded `sdk.TestSDK(...)` — is RUN with
-//     `go run`. A genuine runtime panic (nil pointer, nil map, index,
-//     interface conversion) FAILS the test; a tolerated not-found domain
-//     error does not.
-//   - Illustrative blocks are the ONLY blocks skipped, and the class is
-//     NARROW: a bare signature (a `func` line with no body) or a comment-only
-//     / `/* ... */` placeholder. Everything else must compile or run.
-//
-// Completeness: per doc, total == compiled + illustration is asserted. A block
-// that is neither compiled nor a recognized illustration — e.g. real code
-// hidden behind a `/* ... */` comment that the old logic silently skipped —
-// FAILS the gate, so no compilable example can escape the check.
 const ReadmeExamplesTest = cmp(function ReadmeExamplesTest(props: any) {
   const { ctx$: { model } } = props
 

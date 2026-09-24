@@ -19,7 +19,6 @@ function luaLit(type: any, placeholder: string = 'example'): string {
   return `"${placeholder}"`
 }
 
-// Non-identifier table keys use bracket syntax.
 
 
 const ReadmeTopQuick = cmp(function ReadmeTopQuick(props: any) {
@@ -47,8 +46,6 @@ local client = ${ctor}
     // Lua keyword (e.g. `end`) would otherwise emit uncompilable code.
     const eVar = exampleVarName(eName.toLowerCase(), 'lua')
     const opnames = Object.keys(exampleEntity.op || {})
-    // Model-driven id key: null when the entity has no id-like field, in which
-    // case the load example takes no match argument.
     const idF = entityIdField(exampleEntity)
 
     let hasCall = false

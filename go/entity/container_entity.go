@@ -50,10 +50,6 @@ func NewContainerEntity(client *core.PlaystationStoreApi2SDK, entopts map[string
 
 func (e *ContainerEntity) GetName() string { return e.name }
 
-// Deleted marks this instance as removed. `Remove` resolves to the entity
-// like every other operation, and the instance KEEPS the data it held — a
-// caller can still read what was deleted — but it is no longer a live
-// record. See AGENTS.md "Entity operations return ENTITIES".
 func (e *ContainerEntity) MarkDeleted() {
 	e.deleted = true
 }
@@ -122,15 +118,6 @@ func (e *ContainerEntity) MatchTyped(match ...Container) Container {
 	return typedFrom[Container](e.Match())
 }
 
-// Stream (feature #4). Runs `action` through the full pipeline and returns a
-// channel over result items, so the `streaming` feature's incremental output
-// is reachable from a generated entity (a normal op call materialises the
-// whole result). `callopts` parameterises the call:
-//   - inbound (download): the channel yields items/chunks (from the streaming
-//     feature when active, else the materialised items);
-//   - outbound (upload): a `body` in callopts is attached to the request so the
-//     transport can stream the payload;
-//   - `ctrl` (pipeline control) and `signal` (a done channel) are honoured.
 func (e *ContainerEntity) Stream(action string, args map[string]any, callopts map[string]any) <-chan any {
 	out := make(chan any)
 
@@ -360,14 +347,6 @@ func (e *ContainerEntity) runOp(ctx *core.Context, postDone func()) (any, error)
 		return out, doneErr
 	}
 
-	// An operation resolves to the ENTITY, not the raw data. Entities are
-	// stateful: post_done has just absorbed resdata/resmatch into this
-	// instance, and the caller reaches the record through data(). Two
-	// structural exceptions: `list` resolves to the ARRAY of entity
-	// instances make_result built, and a failed op with throwing disabled
-	// hands back the error payload unchanged. `remove` additionally marks
-	// the entity deleted; it KEEPS its data, so a caller can still read
-	// what was removed. See AGENTS.md "Entity operations return ENTITIES".
 	opname := ""
 	if ctx.Op != nil {
 		opname = ctx.Op.Name

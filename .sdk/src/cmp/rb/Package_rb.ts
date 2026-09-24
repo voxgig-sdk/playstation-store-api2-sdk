@@ -28,9 +28,6 @@ const Package = cmp(async function Package(props: any) {
   // constant here did.
   const author = authorInfo(model, target.name)
 
-  // Gem name is namespaced to model.origin (e.g. "voxgig-sdk"). RubyGems
-  // names can't contain "/", so the parts are hyphen-joined. The require
-  // path (`${model.name}_sdk`) is unchanged.
   const ns = model.origin || 'voxgig-sdk'
   const pkgBase = ns.endsWith('-sdk') ? model.name : `${model.name}-sdk`
   const gemName = packageName(model, target.name)
@@ -39,7 +36,6 @@ const Package = cmp(async function Package(props: any) {
   const versionOf = (d: { version: string; source: 'feature' | 'target' }) =>
     d.source === 'target' ? (d.version || '0.0') : d.version
 
-  // Generate Gemfile
   File({ name: 'Gemfile' }, () => {
     Content(`source "https://rubygems.org"
 
@@ -53,7 +49,6 @@ gemspec
     }
   })
 
-  // Generate gemspec
   File({ name: model.const.Name + '_sdk.gemspec' }, () => {
     // RubyGems rejects a gemspec that declares the same runtime dependency
     // twice (Gem::InvalidSpecificationException at `gem build`), so the

@@ -7,38 +7,6 @@ import {
 } from '@voxgig/apidef'
 
 
-// Emits test/readme_examples_test.rb — a Minitest COMPLETENESS GATE that
-// guarantees every fenced ruby code example in the package docs is unit-tested.
-// It reads ALL THREE docs — the root (multi-language) ../../README.md, the
-// Ruby-specific ../README.md, and ../REFERENCE.md — extracts every fenced ruby
-// block (tagged by source doc + index) and enforces four properties:
-//
-//   1. SYNTAX — `ruby -c` on every block. Every documented example must parse.
-//   2. RUN — every RUNNABLE block (one that constructs the SDK, drives
-//      client., or performs an entity op) is EXECUTED offline in seeded test
-//      mode against the real SDK. The captured stdout+stderr is scanned for
-//      FATAL programming-error markers REGARDLESS of exit code, so a bug that a
-//      documented begin/rescue swallows and prints is still caught. Only a
-//      not-found / domain error is tolerated.
-//   3. COMPLETENESS — every block is partitioned into exactly one of
-//      {executed, syntaxchecked-nonrunnable, illustration} and the counts must
-//      sum to the total. "illustration" is a NARROW explicit class (a
-//      signature / method-table block that names the SDK class or a documented
-//      method but never uses a live client) — never a catch-all. A
-//      runnable-looking block that was NOT executed lands in neither bucket and
-//      FAILS the gate: no runnable example can be silently skipped.
-//   4. A per-doc summary (total / executed / syntaxchecked / illustration) is
-//      printed.
-//
-// A runnable block is rewritten so its client is a test-mode client
-// (<Sdk>SDK.test) seeded with an in-memory fixture for every entity it
-// references; any real .new/.test constructor is rewritten and the doc's own
-// require of the SDK file is stripped (we require it by absolute path). A block
-// that only *uses* `client` (constructed in an earlier fenced block) gets a
-// test client prepended.
-//
-// The emitted Ruby builds the ``` fence via 96.chr and shells out via Open3,
-// so this generator string contains no backticks of its own.
 const ReadmeExamplesTest = cmp(function ReadmeExamplesTest(props: any) {
   const { target } = props
   const { model } = props.ctx$

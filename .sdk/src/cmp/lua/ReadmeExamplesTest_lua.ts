@@ -6,30 +6,6 @@ import {
 } from '@voxgig/apidef'
 
 
-// Emits lua/test/readme_examples_test.lua — a busted spec that is a
-// COMPLETENESS GATE over every ```lua block in ALL THREE docs that ship
-// lua examples:
-//   - the root README.md (top-level, multi-language quick start)
-//   - the per-language lua/README.md
-//   - the per-language lua/REFERENCE.md
-//
-// For every ```lua block, tagged by (source doc, index):
-//   1. Syntax: it must compile with Lua's load() — catches malformed
-//      example code (missing end, bad token, ...).
-//   2. Offline run: every RUNNABLE block (one that builds a client via
-//      sdk.new/sdk.test or references `client`) is EXECUTED with the mock
-//      transport (no network). Each client constructor is rewritten to the
-//      seeded test-mode form, and fragments that only use `client` get a
-//      seeded test client injected. A call to a method that does not exist
-//      — e.g. a lowercase entity accessor after the API capitalised it to
-//      client:Entity() — raises "call a nil value" and FAILS the test.
-//      Entity operations return a (value, err) tuple, so a seeded-fixture
-//      miss surfaces as a tolerated (nil, err) not-found domain error.
-//   3. Completeness: every block is partitioned into {executed, illustration}
-//      and total == executed + illustration is asserted per doc. A block that
-//      is neither runnable nor a NARROW explicit illustration (a comment-only
-//      / --[[ ]] placeholder) is a silently-untested example and FAILS the
-//      gate — "illustration" is never a catch-all.
 const ReadmeExamplesTest = cmp(function ReadmeExamplesTest(props: any) {
   const { ctx$: { model } } = props
 

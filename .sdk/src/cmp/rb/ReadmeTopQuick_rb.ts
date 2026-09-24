@@ -47,8 +47,6 @@ client = ${ctor}
     // Ruby keyword (e.g. `self`) would otherwise emit uncompilable code.
     const eVar = exampleVarName(eName.toLowerCase(), 'rb')
     const opnames = Object.keys(exampleEntity.op || {})
-    // Model-driven id key: null when the entity has no id-like field, in which
-    // case the load example takes no match argument.
     const idF = entityIdField(exampleEntity)
 
     let hasCall = false
@@ -62,9 +60,6 @@ puts ${eVar}s
     }
 
     if (opnames.includes('load')) {
-      // Every REQUIRED load-match key (id first, then parent path params like
-      // page_id) — the same shape the runtime resolves path params from, so
-      // the example always works.
       const loadItems = opRequestShape(exampleEntity, 'load').items
         .filter((it: any) => !it.optional || it.name === idF)
         .sort((a: any, b: any) =>

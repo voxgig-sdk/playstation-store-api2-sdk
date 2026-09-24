@@ -17,27 +17,6 @@ import {
 } from './utility_go'
 
 
-// THE GENERATED SCHEMA MODULE: the model's schemas, as data the SDK can run.
-//
-// The go peer of src/cmp/ts/Schema_ts.ts. Same two exports, same source:
-// OPTSPEC from `main.kit.optspec` plus each feature's own `config.options`,
-// ENTITYSPEC from the entity field sentinels — both built by the shared
-// helpers, so what go validates against and what ts validates against cannot
-// drift.
-//
-// EMBEDDED AS JSON, PARSED AT LOAD, where ts emits an object literal. JSON is
-// a subset of TypeScript's own literal syntax and is not a subset of go's, so
-// the literal ts writes directly is a `map[string]any{...}` tree here — which
-// this could render (utility_go has the formatter config.go's literal branch
-// uses), but the JSON string is the smaller, simpler artefact and every
-// target this is being ported to already carries one for its config.
-//
-// The round-trip is exact because the spec holds only strings and booleans:
-// pinned by "strings and booleans only, so the JSON round-trip is lossless"
-// in ts/test/optspec.test.ts. That is not incidental. json.Unmarshal decodes
-// EVERY JSON number as float64, and struct reads a spec by example, so one
-// number in here would mean something different in go than in ts — the same
-// disagreement configNormalise exists to repair in config.go.
 const Schema = cmp(async function Schema(props: any) {
   const ctx$ = props.ctx$
   const target = props.target
@@ -57,7 +36,7 @@ import (
 // ${model.const.Name} ${target.Name} SDK: generated schemas. Do not edit.
 //
 // Generated from the model: \`main.kit.optspec\` and each feature's
-// \`config.options\` for OPTSPEC; entity \`fields[].type\` for ENTITYSPEC.
+// \`config.options\` for OPTSPEC; entity \`fields{}.type\` for ENTITYSPEC.
 
 const optspecJSON = ${formatGoString(JSON.stringify(optspec))}
 

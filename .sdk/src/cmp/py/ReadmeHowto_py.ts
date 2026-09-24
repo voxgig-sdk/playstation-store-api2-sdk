@@ -8,7 +8,6 @@ import {
 } from '@voxgig/apidef'
 
 
-// A type-correct Python literal for a field's canonical type.
 function pyLit(type: any): string {
   const k = canonScalarKey(type)
   if ('INTEGER' === k || 'NUMBER' === k) return '1'
@@ -31,8 +30,6 @@ const ReadmeHowto = cmp(function ReadmeHowto(props: any) {
   // Sanitise the local variable name — an entity whose lowercased name is a
   // Python keyword (e.g. `class`) would otherwise emit uncompilable code.
   const eVar = exampleVarName(eName.toLowerCase(), 'py')
-  // Model-driven id key: null when the entity has no id-like field, so a
-  // match op takes no argument.
   const idF = exampleEntity ? entityIdField(exampleEntity) : null
   const isMatchOp = 'load' === primaryOp || 'remove' === primaryOp
   let testArg = ''

@@ -35,8 +35,8 @@ class PlaystationStoreApi2TestFeature extends PlaystationStoreApi2BaseFeature
 
         $this->client->mode = 'test';
 
-        // Ensure entity ids are correct.
-        \Voxgig\Struct\Struct::walk($entity_data, function ($key, $val, $parent, $path) {
+        // Ensure entity ids are correct (walk is by value: keep its result).
+        $entity_data = \Voxgig\Struct\Struct::walk($entity_data, function ($key, $val, $parent, $path) {
             if (count($path) === 2 && is_array($val) && $key !== null) {
                 $val['id'] = $key;
             }
@@ -103,9 +103,8 @@ class PlaystationStoreApi2TestFeature extends PlaystationStoreApi2BaseFeature
 
             // PHP-portable equivalent of TS buildArgs+select: a flat-key
             // filter that matches by exact-equality on each provided key,
-            // with alias fallback. Empty match matches all entries — load
-            // with empty match returns the first fixture entry (or last
-            // create), list returns all entries.
+            // with alias fallback. An empty match matches every entry, as an
+            // empty `$AND` does in select; a non-empty miss matches nothing.
             $find_first = function (array $entmap, $match, $alias) {
                 if (!is_array($match) || empty($match)) {
                     foreach ($entmap as $e) {
@@ -158,6 +157,23 @@ class PlaystationStoreApi2TestFeature extends PlaystationStoreApi2BaseFeature
 
             $alias = is_object($op) ? ($op->alias ?? null) : \Voxgig\Struct\Struct::getprop($op, 'alias');
 
+            // Every op filters through buildArgs, which keeps `id` and the
+            // point's required params and drops the rest. find_first/find_all
+            // take a flat map, so take the primary key of each $OR clause;
+            // they do their own alias fallback.
+            $query_match = function ($args) use ($fctx, $op) {
+                $flat = [];
+                foreach (($this->buildArgs($fctx, $op, $args)['$AND'] ?? []) as $clause) {
+                    $ors = $clause['$OR'] ?? [];
+                    if (is_array($ors) && count($ors) > 0 && is_array($ors[0])) {
+                        foreach ($ors[0] as $lk => $lv) {
+                            $flat[$lk] = $lv;
+                        }
+                    }
+                }
+                return $flat;
+            };
+
             // For single-entity ops (load, remove) with an empty explicit
             // match, fall back to the id the entity client already knows from a
             // prior create/load (carried in $fctx->match / $fctx->data). This
@@ -176,7 +192,7 @@ class PlaystationStoreApi2TestFeature extends PlaystationStoreApi2BaseFeature
             };
 
             if ($op->name === 'load') {
-                $ent = $find_first($entmap, $resolve_match($fctx->reqmatch), $alias);
+                $ent = $find_first($entmap, $query_match($resolve_match($fctx->reqmatch)), $alias);
                 if ($ent === null) {
                     return $respond(404, null, ['statusText' => 'Not found']);
                 }
@@ -185,37 +201,7 @@ class PlaystationStoreApi2TestFeature extends PlaystationStoreApi2BaseFeature
                 return $respond(200, $out);
 
             } elseif ($op->name === 'list') {
-                // FILTER THE MATCH THE WAY THE TS MOCK DOES.
-                //
-                // This branch used the whole of reqmatch, while load goes
-                // through resolve_match and the TS mock runs every op through
-                // buildArgs — which keeps `id` and the point's REQUIRED params
-                // and drops the rest. buildArgs is right here in this file and
-                // its docblock says it mirrors the TS one; list simply did not
-                // call it.
-                //
-                // So a match key that is neither `id` nor a required route
-                // param matched NOTHING in php and was IGNORED in ts. trello's
-                // board_star lists on `board_id`, which is not a field of that
-                // entity (id, pos, member_id, id_board) and not a route param:
-                // php returned an empty list and BoardStarEntityTest failed on
-                // an assertion that ts, js and every other port passed.
-                //
-                // buildArgs returns a struct query; find_all takes a flat map,
-                // so take the primary key of each $OR clause. find_all already
-                // does its own alias fallback, which is what the second $OR
-                // element carries.
-                $listargs = $this->buildArgs($fctx, $op, $fctx->reqmatch);
-                $listmatch = [];
-                foreach (($listargs['$AND'] ?? []) as $clause) {
-                    $ors = $clause['$OR'] ?? [];
-                    if (is_array($ors) && count($ors) > 0 && is_array($ors[0])) {
-                        foreach ($ors[0] as $lk => $lv) {
-                            $listmatch[$lk] = $lv;
-                        }
-                    }
-                }
-                $found = $find_all($entmap, $listmatch, $alias);
+                $found = $find_all($entmap, $query_match($fctx->reqmatch), $alias);
                 $cleaned = [];
                 foreach ($found as $e) {
                     if (is_array($e)) unset($e['$KEY']);
@@ -245,14 +231,13 @@ class PlaystationStoreApi2TestFeature extends PlaystationStoreApi2BaseFeature
                 if (empty($update_match)) {
                     $update_match = $resolve_match([]);
                 }
-                $ent = $find_first($entmap, $update_match, $alias);
+                $ent = $find_first($entmap, $query_match($update_match), $alias);
                 if ($ent === null) {
+                    // update miss: 404, never another record
                     return $respond(404, null, ['statusText' => 'Not found']);
                 }
                 if (is_array($fctx->reqdata)) {
-                    foreach ($fctx->reqdata as $k => $v) {
-                        $ent[$k] = $v;
-                    }
+                    $ent = \Voxgig\Struct\Struct::merge([$ent, $fctx->reqdata]);
                 }
                 $id = is_array($ent) ? ($ent['id'] ?? null) : null;
                 if ($id !== null) {
@@ -264,7 +249,7 @@ class PlaystationStoreApi2TestFeature extends PlaystationStoreApi2BaseFeature
                 return $respond(200, $out);
 
             } elseif ($op->name === 'remove') {
-                $ent = $find_first($entmap, $resolve_match($fctx->reqmatch), $alias);
+                $ent = $find_first($entmap, $query_match($resolve_match($fctx->reqmatch)), $alias);
                 // Remove only the first matched entity. If nothing matches,
                 // succeed as a no-op rather than erroring.
                 $id = is_array($ent) ? ($ent['id'] ?? null) : null;

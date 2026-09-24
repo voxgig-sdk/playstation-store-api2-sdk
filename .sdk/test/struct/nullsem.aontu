@@ -1,0 +1,79 @@
+
+
+
+getprop: {
+  set: [
+    { in: { val: {x:null}, key: x, alt: 'ALT' }, out: 'ALT' }
+    { in: { val: {},       key: x, alt: 'ALT' }, out: 'ALT' }
+
+    { in: { val: {x:null}, key: x } }
+
+    # A stored null must not leak past its own key.
+    { in: { val: {x:null, y:1}, key: y, alt: 'ALT' }, out: 1 }
+    { in: { val: {x:1, y:null}, key: x, alt: 'ALT' }, out: 1 }
+
+    { in: { val: {x:false}, key: x, alt: 'ALT' }, out: false }
+    { in: { val: {x:0},     key: x, alt: 'ALT' }, out: 0 }
+    { in: { val: {x:''},    key: x, alt: 'ALT' }, out: '' }
+
+    { in: { val: [null], key: 0, alt: 'ALT' }, out: 'ALT' }
+    { in: { val: [null, 1], key: 1, alt: 'ALT' }, out: 1 }
+  ]
+}
+
+
+# getelem is the list-index reader. Same rule, different entry point - and it
+# is a separate function in every port, so it needs its own cases.
+getelem: {
+  set: [
+    { in: { val: [null], key: 0, alt: 'ALT' }, out: 'ALT' }
+    { in: { val: [10, null, 30], key: 1, alt: 'ALT' }, out: 'ALT' }
+    { in: { val: [10, null, 30], key: 2, alt: 'ALT' }, out: 30 }
+
+    { in: { val: [10, null], key: -1, alt: 'ALT' }, out: 'ALT' }
+    { in: { val: [null, 20], key: -1, alt: 'ALT' }, out: 20 }
+
+    { in: { val: [false], key: 0, alt: 'ALT' }, out: false }
+  ]
+}
+
+
+# A path that lands on a stored null, and - the case that actually bites - a
+# path that must TRAVERSE one. Traversal through a null is not the same
+# question as reading one, and a port can get the leaf right and still walk
+# into a null parent.
+getpath: {
+  set: [
+    { in: { path: 'a', store: {a:null} } }
+    { in: { path: 'a.b', store: {a:null} } }
+    { in: { path: 'a.b.c', store: {a:{b:null}} } }
+    { in: { path: 'a.b', store: {a:{b:null}} } }
+    { in: { path: 'a.b', store: {a:{b:1}} }, out: 1 }
+    { in: { path: 'a.b', store: {a:{b:false}} }, out: false }
+  ]
+}
+
+
+haskey: {
+  set: [
+    { in: { src: {x:null}, key: x }, out: false }
+    { in: { src: {},       key: x }, out: false }
+    { in: { src: {x:1},    key: x }, out: true }
+
+    { in: { src: {x:false}, key: x }, out: true }
+    { in: { src: {x:0},     key: x }, out: true }
+    { in: { src: {x:''},    key: x }, out: true }
+
+    { in: { src: [null], key: 0 }, out: false }
+    { in: { src: [1],    key: 0 }, out: true }
+  ]
+}
+
+
+keysof: {
+  set: [
+    { in: {a:null}, out: [a] }
+    { in: {a:null, b:1}, out: [a, b] }
+    { in: {a:1, b:null}, out: [a, b] }
+  ]
+}

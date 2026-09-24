@@ -5,6 +5,14 @@ from projectname_sdk.utility.voxgig_struct import voxgig_struct as vs
 from projectname_sdk.core.helpers import to_map
 
 
+# `$action` selects the point (see make_point_util); it is never an API field,
+# so the body is a copy without it. The caller's dict is left untouched.
+def _strip_action(reqdata):
+    if not isinstance(reqdata, dict) or "$action" not in reqdata:
+        return reqdata
+    return {k: v for k, v in reqdata.items() if k != "$action"}
+
+
 def transform_request_util(ctx):
     spec = ctx.spec
     point = ctx.point
@@ -14,14 +22,14 @@ def transform_request_util(ctx):
 
     transform = to_map(vs.getprop(point, "transform"))
     if transform is None:
-        return ctx.reqdata
+        return _strip_action(ctx.reqdata)
 
     reqform = vs.getprop(transform, "req")
     if reqform is None:
-        return ctx.reqdata
+        return _strip_action(ctx.reqdata)
 
     reqdata = vs.transform({
         "reqdata": ctx.reqdata,
     }, reqform)
 
-    return reqdata
+    return _strip_action(reqdata)

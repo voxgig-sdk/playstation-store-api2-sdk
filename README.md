@@ -14,7 +14,7 @@ Metadata kindly supplied by [www.freepublicapis.com](https://www.freepublicapis.
 
 > TypeScript, Python, PHP, Golang, Ruby, Lua SDKs, a CLI with an interactive REPL, and an MCP server for AI agents — all generated from one OpenAPI spec by [@voxgig/sdkgen](https://github.com/voxgig/sdkgen).
 
-> **Features:** `ratelimit`, `retry`, `test`, `timeout` — opt-in,
+> **Features:** `undefined`, `undefined`, `undefined`, `undefined` — opt-in,
 > inactive until switched on, and configured per client. See the Features
 > section of any SDK README below for what each one does.
 
@@ -123,14 +123,8 @@ import { PlaystationStoreApi2SDK } from '@voxgig-sdk/playstation-store-api2-sdk'
 
 const client = new PlaystationStoreApi2SDK()
 
-
-// Load a specific container (returns a Container)
-const container = await client.Container().load({
-  age_limit: 'example_age_limit',
-  container_id: 'example_container_id',
-  country: 'example_country',
-  language: 'example_language',
-})
+// Load container data (returns a Container)
+const container = await client.Container().load()
 console.log(container)
 ```
 
@@ -213,11 +207,8 @@ import sdk "github.com/voxgig-sdk/playstation-store-api2-sdk/go"
 
 client := sdk.New()
 
-
-// Load a specific container
-container, err := client.Container(nil).Load(
-    map[string]any{"age_limit": "example_age_limit", "container_id": "example_container_id", "country": "example_country", "language": "example_language"}, nil,
-)
+// Load container data
+container, err := client.Container(nil).Load(map[string]any{"age_limit": "example_age_limit", "container_id": "example_container_id", "country": "example_country", "language": "example_language"}, nil)
 if err != nil {
     panic(err)
 }

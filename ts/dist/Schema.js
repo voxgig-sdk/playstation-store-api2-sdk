@@ -2,7 +2,7 @@
 // PlaystationStoreApi2 Ts SDK: generated schemas. Do not edit.
 //
 // Generated from the model: `main.kit.optspec` and each feature's
-// `config.options` for OPTSPEC; entity `fields[].type` for ENTITYSPEC.
+// `config.options` for OPTSPEC; entity `fields{}.type` for ENTITYSPEC.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ENTITYSPEC = exports.OPTSPEC = void 0;
 const OPTSPEC = {

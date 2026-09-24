@@ -35,8 +35,6 @@ local client = sdk.new()
 
 ### 3. Load a container
 
-Container is nested under age_limit, so provide the `age_limit`.
-
 ```lua
 local container, err = client:Container():load({ age_limit = "example_age_limit", container_id = "example_container_id", country = "example_country", language = "example_language" })
 if err then error(err) end

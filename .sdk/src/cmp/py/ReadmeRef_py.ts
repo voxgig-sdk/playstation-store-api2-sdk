@@ -1,5 +1,5 @@
 
-import { cmp, each, Content, canonToType, canonKey, canonScalarKey, File, isAuthActive, entityIdField, opRequestShape, safeVarName, exampleVarName, matchArg, idLiteral } from '@voxgig/sdkgen'
+import { cmp, each, Content, canonToType, canonKey, canonScalarKey, File, isAuthActive, entityIdField, opRequestShape, safeVarName, exampleVarName, matchArg, idLiteral, targetFeatures } from '@voxgig/sdkgen'
 import { ReadmeRefFeatures } from '@voxgig/sdkgen'
 
 import {
@@ -21,11 +21,6 @@ function pyLit(type: any, placeholder: string = 'example'): string {
 }
 
 
-// A `list()` on a NESTED entity needs its parent path params. The
-// quickstart used to emit `client.Moon().list()` for an entity at
-// `/planet/{planet_id}/moon`, which 404s against a live server from a
-// half-built URL — indistinguishable from "no such record". The model
-// already marks those params `reqd: true`; matchArg renders exactly them.
 function listMatchArg(ent: any): string {
   const idF = entityIdField(ent)
   return matchArg('py', ent, 'list', idF, idLiteral(ent, 'list', idF))
@@ -66,7 +61,7 @@ const ReadmeRef = cmp(function ReadmeRef(props: any) {
   const { model } = props.ctx$
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  const feature = getModelPath(model, `main.${KIT}.feature`)
+  const feature = targetFeatures(model, target)
 
   const publishedEntities = each(entity).filter((e: any) => e.active !== false)
 
@@ -129,7 +124,6 @@ client = ${model.const.Name}SDK.test()
 `)
 
 
-    // Entity factory methods
     publishedEntities.map((ent: any) => {
       Content(`#### \`${ent.Name}(data=None)\`
 
@@ -171,10 +165,9 @@ Prepare a fetch definition without sending. Returns the \`fetchdef\` and raises 
 `)
 
 
-    // Entity reference sections
     publishedEntities.map((ent: any) => {
       const opnames = Object.keys(ent.op || {})
-      const fields = ent.fields || []
+      const fields = Object.values(ent.fields || {})
       // Model-driven id key: null when this entity has no id-like field, in
       // which case load/remove match on no argument and update omits the id.
       const idF = entityIdField(ent)
@@ -202,7 +195,6 @@ ${eVar} = client.${ent.Name}()
 `)
 
 
-      // Field schema
       if (fields.length > 0) {
         Content(`### Fields
 
@@ -210,9 +202,9 @@ ${eVar} = client.${ent.Name}()
 | --- | --- | --- | --- |
 `)
         each(fields, (field: any) => {
-          const req = field.req ? 'Yes' : 'No'
-          const desc = field.short || ''
-          Content(`| \`${field.name}\` | \`${canonToType(field.type, target.name)}\` | ${req} | ${desc} |
+          const req = field.r ? 'Yes' : 'No'
+          const desc = field.sh || ''
+          Content(`| \`${field.n}\` | \`${canonToType(field.t, target.name)}\` | ${req} | ${desc} |
 `)
         })
 
@@ -239,7 +231,7 @@ ${eVar} = client.${ent.Name}()
               if (fop.active === false) return '-'
               return 'Yes'
             })
-            Content(`| \`${field.name}\` | ${cols.join(' | ')} |
+            Content(`| \`${field.n}\` | ${cols.join(' | ')} |
 `)
           })
 
@@ -249,7 +241,6 @@ ${eVar} = client.${ent.Name}()
       }
 
 
-      // Operation details
       if (opnames.length > 0) {
         Content(`### Operations
 
@@ -337,7 +328,6 @@ ${updateLines}    # Fields to update
       }
 
 
-      // Common methods
       Content(`### Common Methods
 
 #### \`data_get() -> dict\`
@@ -368,7 +358,6 @@ Return the entity name.
     })
 
 
-    // Features section
     const activeFeatures = each(feature).filter((f: any) => f.active)
     if (activeFeatures.length > 0) {
       Content(`
@@ -404,9 +393,6 @@ client = ${model.const.Name}SDK({
 \`\`\`
 
 `)
-      // The shared feature reference: options, defaults, usage and the
-      // considerations. Model facts, identical in every target, so they are
-      // written once in cmp/ReadmeRefFeatures.ts rather than here.
       ReadmeRefFeatures({ target })
     }
 

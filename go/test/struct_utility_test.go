@@ -1,6 +1,3 @@
-// Vendored from github.com/voxgig/struct/go/voxgigstruct_test.go
-// RUN: go test
-// RUN-SOME: go test -v -run=TestStructUtility/getpath
 
 package sdktest
 
@@ -160,13 +157,6 @@ func TestStructUtility(t *testing.T) {
 	})
 
 	t.Run("minor-escurl", func(t *testing.T) {
-		// Passed BARE, like every other minor subject. This used to wrap
-		// EscUrl in ReplaceAll(..., "+", "%20") because the vendored copy
-		// implemented it with net/url.QueryEscape, which form-encodes: a
-		// space became '+' rather than '%20'. The workaround made the
-		// shared corpus pass while make_url.go still emitted '+' into real
-		// paths and query strings. Upstream's EscUrl matches the reference
-		// encodeURIComponent exactly, so there is nothing left to paper over.
 		structRunSet(t, minorSpec["escurl"], voxgigstruct.EscUrl)
 	})
 
@@ -179,21 +169,6 @@ func TestStructUtility(t *testing.T) {
 				val = "null"
 			}
 
-			// Go has no `undefined`. Upstream Stringify renders nil as
-			// "null" ON PURPOSE - in Go nil IS JSON null, and
-			// JSON.stringify(null) is "null" - so the corpus's two
-			// separate cases,
-			//
-			//   {"val": null} -> "null"      and      {} -> ""
-			//
-			// both arrive here as a nil val and cannot be told apart by
-			// VALUE. They can be told apart by PRESENCE: the second case
-			// is the JavaScript stringify(undefined), and an absent key
-			// is the only thing Go has that means undefined.
-			//
-			// The runner is the right place for this: it is the seam
-			// between a language-neutral corpus and one language's type
-			// system, and it already bridges the same gap for pathify.
 			if !hasVal {
 				return ""
 			}
@@ -658,12 +633,6 @@ func TestStructUtility(t *testing.T) {
 				ks = *k
 			}
 
-			// The ROOT node has no parent. The reference passes
-			// `undefined` there and logs `p=`; Go has only nil, which
-			// Stringify renders as "null" (its documented choice - see
-			// minor-stringify above). Rendering the absent parent as ""
-			// keeps the log identical to the reference's, which is what
-			// the corpus records.
 			ps := ""
 			if nil != p {
 				ps = voxgigstruct.Stringify(p)
@@ -1506,13 +1475,6 @@ func IsSameFunc(target any, candidate any) bool {
 	return reflect.ValueOf(target).Pointer() == reflect.ValueOf(candidate).Pointer()
 }
 
-// ---------------------------------------------------------------------
-// Struct-corpus SUPPORT, retained from the retired struct_runner_test.go
-// (its engine half is superseded by the vendored omni runner driven
-// through omniresolver_test.go). The StructSDK below is the client the
-// runner wraps for the struct sections; NullModifier names struct's own
-// *voxgigstruct.Injection and so cannot live in the language-neutral
-// resolver; Fdt/ToJSONString are debug helpers, not runner API.
 
 type StructUtility struct {
 	IsNode     func(val any) bool

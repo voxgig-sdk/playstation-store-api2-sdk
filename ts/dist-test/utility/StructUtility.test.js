@@ -213,12 +213,6 @@ const { equal, deepEqual } = node_assert_1.default;
         deepEqual(delprop(intarr0, 2), [2, 3, 7, 11]);
         deepEqual(delprop(intarr1, '2'), [2, 3, 7, 11]);
     });
-    // The struct.nullsem section: does a PRESENT key holding a JSON null
-    // read as "no value"? Opt-in per target (create-sdkgen ships it; an
-    // older project corpus may predate it - the skip below says so OUT
-    // LOUD rather than passing vacuously). All lanes run {null: false}:
-    // without the flag the runner rewrites every null to '__NULL__' and
-    // the section asserts nothing about null at all.
     (0, node_test_1.test)('nullsem', async (t) => {
         const nullsem = spec.nullsem;
         if (null == nullsem) {
@@ -552,7 +546,6 @@ const { equal, deepEqual } = node_assert_1.default;
         const extra = {
             $INTEGER: (inj) => {
                 const { key } = inj;
-                // let out = getprop(current, key)
                 let out = struct.getprop(inj.dparent, key);
                 let t = typeof out;
                 if ('number' !== t && !Number.isInteger(out)) {

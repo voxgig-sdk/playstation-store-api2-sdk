@@ -29,7 +29,7 @@ class PrimaryUtilityTest < Minitest::Test
   TEST_JSON_FILE = "../../.sdk/test/test.json"
 
   # Sections deliberately left empty in the shared corpus
-  # (.sdk/test/primary/<name>.aon carries a PENDING header). Everything
+  # (.sdk/test/primary/<name>.aontu carries a PENDING header). Everything
   # else MUST contribute cases.
   PENDING = %w[
     fetcher makeFetchDef makeResult
@@ -533,7 +533,24 @@ class PrimaryUtilityTest < Minitest::Test
       unwrap(@utility.prepare_auth.call(ctx))
     end
 
-    runsection("prepareAuth", subject)
+    # The corpus writes the credential as `headers.authorization`: a
+    # PLACEHOLDER each runner points at the container and name this API
+    # actually uses.
+    cred = auth_credential(auth_client)
+    refute_nil cred, "prepare_auth placed no credential in headers or query"
+
+    # An absent section is runsection's report to make.
+    section = @spec.is_a?(Hash) ? @spec["prepareAuth"] : nil
+    swap = section.is_a?(Hash) &&
+      !("headers" == cred["where"] && "authorization" == cred["name"])
+    original = swap ? section["basic"] : nil
+    section["basic"] = retarget_auth(original, cred) if swap
+
+    begin
+      runsection("prepareAuth", subject)
+    ensure
+      section["basic"] = original if swap
+    end
   end
 
 
@@ -648,6 +665,47 @@ class PrimaryUtilityTest < Minitest::Test
       overrides.each { |k, v| ctxmap[k] = v }
     end
     utility.make_context.call(ctxmap, client.get_root_ctx)
+  end
+
+  # Where this SDK's prepare_auth actually puts the credential: the name is
+  # the API's OWN scheme name, not always `authorization`, so it is
+  # discovered by running prepare_auth once.
+  def auth_credential(client)
+    utility = client.get_utility
+    ctx = make_test_ctx(client, utility, nil)
+    ctx.spec = PlaystationStoreApi2Spec.new({ "headers" => {}, "query" => {}, "step" => "s" })
+    _, err = utility.prepare_auth.call(ctx)
+    return nil unless err.nil?
+    ["headers", "query"].each do |where|
+      # A cookie credential rides the header bag, because a cookie IS a header.
+      bag = "query" == where ? ctx.spec.query : ctx.spec.headers
+      bag.each { |name, _value| return { "where" => where, "name" => name } }
+    end
+    nil
+  end
+
+  # Rename the corpus's `headers` bag to the real container, and the
+  # `authorization` key inside it to the real credential name. Applied only
+  # to the prepareAuth section, so real header assertions elsewhere are
+  # untouched.
+  def retarget_auth(node, cred)
+    return node.map { |child| retarget_auth(child, cred) } if node.is_a?(Array)
+    return node unless node.is_a?(Hash)
+
+    out = {}
+    node.each do |key, value|
+      if "headers" == key
+        bag = {}
+        (value.is_a?(Hash) ? value : {}).each do |bagkey, bagvalue|
+          name = "authorization" == bagkey ? cred["name"] : bagkey
+          bag[name] = retarget_auth(bagvalue, cred)
+        end
+        out[cred["where"]] = bag
+      else
+        out[key] = retarget_auth(value, cred)
+      end
+    end
+    out
   end
 
   # === Helper: make_test_full_ctx ===

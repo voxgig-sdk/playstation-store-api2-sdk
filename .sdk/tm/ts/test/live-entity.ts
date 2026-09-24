@@ -5,26 +5,26 @@ import { isControlSkipped, liveDelayMs } from './utility'
 
 // The offline flow keeps its deterministic fixture assertions. Live flows
 // resolve real prerequisites per operation and collect failures until done.
-async function runLiveEntity(setup: any, entity: any, flow: any, accessor: string) {
+async function runLiveEntity(setup: any, entity: any, flow: any, accessor: string, facts: any = {}) {
   const { client, transport } = setup
-  const steps: any[] = flow.step || []
+  const steps: any[] = (flow.step || []).filter((step: any) => false !== step.a)
   const created = new Map<string, any>()
   const listed: any[] = []
   const marks = new Map<string, { name: string, value: any }>()
   const idField = entity.id?.field || 'id'
   const copy = (value: any) => JSON.parse(JSON.stringify(value ?? {}))
-  const hasCreate = steps.some(step => step.op === 'create')
+  const hasCreate = steps.some(step => step.o === 'create')
   const report = await runLiveSteps(steps.map((step, index) => {
-    const ref = step.input?.ref || entity.name + '_ref01'
-    const op = step.op
+    const ref = step.i?.ref || entity.name + '_ref01'
+    const op = step.o
     const excluded = isControlSkipped('entityOp', entity.name + '.' + op, 'live')
     return {
       id: entity.name + '.' + op + '.' + index,
-      cleanup: op === 'remove' || (step.valid || []).some((v: any) => v.apply === 'ItemNotExists'),
+      cleanup: op === 'remove' || (step.v || []).some((v: any) => v.apply === 'ItemNotExists'),
       excluded: excluded.skip ? excluded.reason || 'Excluded by test control' : undefined,
       run: async (context: any) => {
         transport.enter(context)
-        const points = entity.op?.[op]?.points || []
+        const points = (entity.op?.[op]?.points || []).filter((point: any) => false !== point.a)
         if (!points.length) throw new LiveBlocked('No modelled operation point')
         const record = created.get(ref)
         // A failed create must not turn a later update/remove into a write
@@ -41,7 +41,7 @@ async function runLiveEntity(setup: any, entity: any, flow: any, accessor: strin
 
         let input: any = op === 'create'
           ? copy(setup.data.new?.[entity.name]?.[ref]) : {}
-        for (const [name, binding] of Object.entries({ ...step.match, ...step.data })) {
+        for (const [name, binding] of Object.entries({ ...step.m, ...step.d })) {
           const value = setup.idmap[binding as string] ?? setup.idmap[name]
           if (undefined !== value) input[name] = value
         }
@@ -57,34 +57,34 @@ async function runLiveEntity(setup: any, entity: any, flow: any, accessor: strin
         let selected: any
         const missing = new Set<string>()
         for (const point of points) {
-          if (point.select?.$action !== input.$action) continue
+          if (point.q?.$action !== input.$action) continue
           const candidate = { ...input }
           let viable = true
-          const params = point.args?.params || []
-          const query = (point.args?.query || []).filter((arg: any) => arg.reqd)
+          const params = point.g?.params || []
+          const query = (point.g?.query || []).filter((arg: any) => arg.r)
           for (const arg of [...params, ...query]) {
-            if (undefined !== candidate[arg.name] && null !== candidate[arg.name]) continue
-            const key = arg.name === 'id' ? entity.name + '01' : arg.name.replace(/_id$/, '') + '01'
-            const value = setup.idmap[key] ?? setup.idmap[arg.name] ?? loaded?.[arg.name] ?? arg.example
-            if (undefined !== value && null !== value) candidate[arg.name] = value
-            else if (arg.reqd !== false) { viable = false; missing.add(arg.name) }
+            if (undefined !== candidate[arg.n] && null !== candidate[arg.n]) continue
+            const key = arg.n === 'id' ? entity.name + '01' : arg.n.replace(/_id$/, '') + '01'
+            const value = setup.idmap[key] ?? setup.idmap[arg.n] ?? loaded?.[arg.n] ?? arg.ex
+            if (undefined !== value && null !== value) candidate[arg.n] = value
+            else if (arg.r !== false) { viable = false; missing.add(arg.n) }
           }
           if (viable) { resolved = candidate; selected = point; break }
         }
         if (!resolved) throw new LiveBlocked('No usable route; missing arguments: ' + [...missing].join(', '))
         input = resolved
-        if (op === 'create' && selected.contract) {
-          const facts = JSON.parse(selected.contract.json)
-          const request = requestContract(facts)
-          if (request.schema) input = { ...synthesizeInput(request.schema, facts.live?.input ?? request.example) }
-          else if (facts.protocol === 'http') input = {}
-          for (const arg of selected.args?.params || []) if (resolved[arg.name] !== undefined) input[arg.name] = resolved[arg.name]
+        if (op === 'create' && facts[selected.m + ' ' + selected.o]) {
+          const selectedFacts = facts[selected.m + ' ' + selected.o]
+          const request = requestContract(selectedFacts)
+          if (request.schema) input = { ...synthesizeInput(request.schema, selected.li?.input ?? request.example) }
+          else if (selectedFacts.protocol === 'http') input = {}
+          for (const arg of selected.g?.params || []) if (resolved[arg.n] !== undefined) input[arg.n] = resolved[arg.n]
         }
         let intendedMark: { name: string, value: any } | undefined
         if (op === 'update') {
-          for (const spec of step.spec || []) {
-            if (spec.apply === 'TextFieldMark' && step.input?.textfield) {
-              const mark = { name: step.input.textfield, value: spec.def.mark + '_' + setup.now }
+          for (const spec of step.s || []) {
+            if (spec.apply === 'TextFieldMark' && step.i?.textfield) {
+              const mark = { name: step.i.textfield, value: spec.def.mark + '_' + setup.now }
               input[mark.name] = mark.value
               intendedMark = mark
             }
@@ -103,7 +103,7 @@ async function runLiveEntity(setup: any, entity: any, flow: any, accessor: strin
           })
           listed.splice(0, listed.length, ...data)
           context.publish(data)
-          for (const validation of step.valid || []) {
+          for (const validation of step.v || []) {
             const previous = created.get(validation.def?.ref)
             const id = previous?.[idField] ?? previous?.id
             if (undefined === id) continue

@@ -24,68 +24,142 @@
         "repr": "auto"
       },
       "contributor": {},
+      "doc": {
+        "active": true,
+        "assets": {
+          "path": ".sdk/doc/assets"
+        },
+        "brand": {
+          "label": "",
+          "notice": "",
+          "shortNotice": "",
+          "url": ""
+        },
+        "ci": {
+          "active": true,
+          "branch": "main"
+        },
+        "content": {
+          "path": ".sdk/doc/content"
+        },
+        "edition": {
+          "summary": {
+            "active": true,
+            "base": "node_modules/@voxgig/docgen/project/.sdk",
+            "brand": {},
+            "filter": {
+              "entities": [],
+              "features": [],
+              "targets": []
+            },
+            "kind": "summary",
+            "name": "summary",
+            "origname": "",
+            "output": {
+              "path": "SUMMARY.md"
+            },
+            "package": "@voxgig/docgen",
+            "published": false,
+            "site": {
+              "active": true
+            },
+            "style": {},
+            "title": ""
+          }
+        },
+        "qa": {
+          "vocabulary": []
+        },
+        "style": {
+          "color": {
+            "accent": "#00c6d8",
+            "background": "#f5f5f9",
+            "darkBackground": "#0f1117",
+            "darkText": "#e6edf3",
+            "primary": "#e70042",
+            "text": "#0a0a0a"
+          },
+          "font": "Nunito, system-ui, sans-serif",
+          "fontFile": "",
+          "headingFont": "Nunito, system-ui, sans-serif",
+          "headingFontFile": "",
+          "logo": "",
+          "mode": "light",
+          "mono": "ui-monospace, monospace",
+          "monoFile": ""
+        },
+        "target": {}
+      },
       "entity": {
         "container": {
           "active": true,
           "alias": {
             "field": {}
           },
-          "fields": [
-            {
-              "active": true,
-              "name": "age_limit",
-              "req": false,
-              "short": "Age limit for the content",
-              "type": "`$INTEGER`"
+          "fields": {
+            "age_limit": {
+              "a": true,
+              "h": "Age Limit",
+              "n": "age_limit",
+              "r": false,
+              "sh": "Age limit for the content",
+              "t": "`$INTEGER`"
             },
-            {
-              "active": true,
-              "name": "attributes",
-              "req": false,
-              "type": "`$OBJECT`"
+            "attributes": {
+              "a": true,
+              "h": "Attributes",
+              "n": "attributes",
+              "r": false,
+              "t": "`$OBJECT`"
             },
-            {
-              "active": true,
-              "name": "container_type",
-              "req": false,
-              "short": "Type of container",
-              "type": "`$STRING`"
+            "container_type": {
+              "a": true,
+              "h": "Container Type",
+              "n": "container_type",
+              "r": false,
+              "sh": "Type of container",
+              "t": "`$STRING`"
             },
-            {
-              "active": true,
-              "name": "content_origin",
-              "req": false,
-              "short": "Content origin identifier",
-              "type": "`$INTEGER`"
+            "content_origin": {
+              "a": true,
+              "h": "Content Origin",
+              "n": "content_origin",
+              "r": false,
+              "sh": "Content origin identifier",
+              "t": "`$INTEGER`"
             },
-            {
-              "active": true,
-              "name": "dob_required",
-              "req": false,
-              "short": "Whether date of birth is required",
-              "type": "`$BOOLEAN`"
+            "dob_required": {
+              "a": true,
+              "h": "Dob Required",
+              "n": "dob_required",
+              "r": false,
+              "sh": "Whether date of birth is required",
+              "t": "`$BOOLEAN`"
             },
-            {
-              "active": true,
-              "name": "id",
-              "req": false,
-              "short": "Container unique identifier",
-              "type": "`$STRING`"
+            "id": {
+              "a": true,
+              "h": "Id",
+              "n": "id",
+              "r": false,
+              "sh": "Container unique identifier",
+              "t": "`$STRING`"
             },
-            {
-              "active": true,
-              "name": "images",
-              "req": false,
-              "type": "`$ARRAY`"
+            "images": {
+              "a": true,
+              "h": "Images",
+              "n": "images",
+              "r": false,
+              "t": "`$ARRAY`"
             },
-            {
-              "active": true,
-              "name": "links",
-              "req": false,
-              "short": "List of products in the container",
-              "type": "`$ARRAY`"
+            "links": {
+              "a": true,
+              "h": "Links",
+              "n": "links",
+              "r": false,
+              "sh": "List of products in the container",
+              "t": "`$ARRAY`"
             }
-          ],
+          },
           "id": {
             "field": "id",
             "from": {
@@ -107,126 +181,142 @@
               "name": "load",
               "points": [
                 {
-                  "active": true,
-                  "args": {
+                  "a": true,
+                  "co": {
+                    "id": "GET /container/{country}/{language}/{age_limit}/{container_id}",
+                    "source": "openapi3",
+                    "version": 2
+                  },
+                  "g": {
                     "params": [
                       {
-                        "active": true,
-                        "example": "999",
-                        "kind": "param",
-                        "name": "age_limit",
-                        "orig": "age_limit",
-                        "reqd": true,
-                        "type": "`$STRING`"
+                        "a": true,
+                        "ex": "999",
+                        "k": "param",
+                        "n": "age_limit",
+                        "or": "age_limit",
+                        "r": true,
+                        "t": "`$STRING`"
                       },
                       {
-                        "active": true,
-                        "example": "STORE-MSF75508-FULLGAMES",
-                        "kind": "param",
-                        "name": "container_id",
-                        "orig": "container_id",
-                        "reqd": true,
-                        "type": "`$STRING`"
+                        "a": true,
+                        "ex": "STORE-MSF75508-FULLGAMES",
+                        "k": "param",
+                        "n": "container_id",
+                        "or": "container_id",
+                        "r": true,
+                        "t": "`$STRING`"
                       },
                       {
-                        "active": true,
-                        "example": "ch",
-                        "kind": "param",
-                        "name": "country",
-                        "orig": "country",
-                        "reqd": true,
-                        "type": "`$STRING`"
+                        "a": true,
+                        "ex": "ch",
+                        "k": "param",
+                        "n": "country",
+                        "or": "country",
+                        "r": true,
+                        "t": "`$STRING`"
                       },
                       {
-                        "active": true,
-                        "example": "de",
-                        "kind": "param",
-                        "name": "language",
-                        "orig": "language",
-                        "reqd": true,
-                        "type": "`$STRING`"
+                        "a": true,
+                        "ex": "de",
+                        "k": "param",
+                        "n": "language",
+                        "or": "language",
+                        "r": true,
+                        "t": "`$STRING`"
                       }
                     ],
                     "query": [
                       {
-                        "active": true,
-                        "kind": "query",
-                        "name": "game_content_type",
-                        "orig": "game_content_type",
-                        "reqd": false,
-                        "type": "`$STRING`"
+                        "a": true,
+                        "k": "query",
+                        "n": "game_content_type",
+                        "or": "game_content_type",
+                        "r": false,
+                        "t": "`$STRING`"
                       },
                       {
-                        "active": true,
-                        "kind": "query",
-                        "name": "genre",
-                        "orig": "genre",
-                        "reqd": false,
-                        "type": "`$STRING`"
+                        "a": true,
+                        "k": "query",
+                        "n": "genre",
+                        "or": "genre",
+                        "r": false,
+                        "t": "`$STRING`"
                       },
                       {
-                        "active": true,
-                        "kind": "query",
-                        "name": "platform",
-                        "orig": "platform",
-                        "reqd": false,
-                        "type": "`$STRING`"
+                        "a": true,
+                        "k": "query",
+                        "n": "platform",
+                        "or": "platform",
+                        "r": false,
+                        "t": "`$STRING`"
                       },
                       {
-                        "active": true,
-                        "kind": "query",
-                        "name": "price",
-                        "orig": "price",
-                        "reqd": false,
-                        "type": "`$STRING`"
+                        "a": true,
+                        "k": "query",
+                        "n": "price",
+                        "or": "price",
+                        "r": false,
+                        "t": "`$STRING`"
                       },
                       {
-                        "active": true,
-                        "kind": "query",
-                        "name": "release_date",
-                        "orig": "release_date",
-                        "reqd": false,
-                        "type": "`$STRING`"
+                        "a": true,
+                        "k": "query",
+                        "n": "release_date",
+                        "or": "release_date",
+                        "r": false,
+                        "t": "`$STRING`"
                       },
                       {
-                        "active": true,
-                        "example": 20,
-                        "kind": "query",
-                        "name": "size",
-                        "orig": "size",
-                        "reqd": false,
-                        "type": "`$INTEGER`"
+                        "a": true,
+                        "ex": 20,
+                        "k": "query",
+                        "n": "size",
+                        "or": "size",
+                        "r": false,
+                        "t": "`$INTEGER`"
                       },
                       {
-                        "active": true,
-                        "example": "release_date",
-                        "kind": "query",
-                        "name": "sort",
-                        "orig": "sort",
-                        "reqd": false,
-                        "type": "`$STRING`"
+                        "a": true,
+                        "ex": "release_date",
+                        "k": "query",
+                        "n": "sort",
+                        "or": "sort",
+                        "r": false,
+                        "t": "`$STRING`"
                       },
                       {
-                        "active": true,
-                        "example": 0,
-                        "kind": "query",
-                        "name": "start",
-                        "orig": "start",
-                        "reqd": false,
-                        "type": "`$INTEGER`"
+                        "a": true,
+                        "ex": 0,
+                        "k": "query",
+                        "n": "start",
+                        "or": "start",
+                        "r": false,
+                        "t": "`$INTEGER`"
                       }
                     ]
                   },
-                  "contract": {
-                    "id": "GET /container/{country}/{language}/{age_limit}/{container_id}",
-                    "json": "{\"operationId\":\"getContainer\",\"parameters\":[{\"description\":\"Country code (e.g., 'ch' for Switzerland)\",\"in\":\"path\",\"name\":\"country\",\"required\":true,\"schema\":{\"example\":\"ch\",\"type\":\"string\"}},{\"description\":\"Language code (e.g., 'de' for German)\",\"in\":\"path\",\"name\":\"language\",\"required\":true,\"schema\":{\"example\":\"de\",\"type\":\"string\"}},{\"description\":\"Age limit for content filtering\",\"in\":\"path\",\"name\":\"age_limit\",\"required\":true,\"schema\":{\"example\":\"999\",\"type\":\"string\"}},{\"description\":\"Container identifier (e.g., 'STORE-MSF75508-FULLGAMES' for full games)\",\"in\":\"path\",\"name\":\"container_id\",\"required\":true,\"schema\":{\"example\":\"STORE-MSF75508-FULLGAMES\",\"type\":\"string\"}},{\"description\":\"Number of items to return per page\",\"in\":\"query\",\"name\":\"size\",\"required\":false,\"schema\":{\"default\":20,\"maximum\":100,\"minimum\":1,\"type\":\"integer\"}},{\"description\":\"Offset for pagination (starting index)\",\"in\":\"query\",\"name\":\"start\",\"required\":false,\"schema\":{\"default\":0,\"minimum\":0,\"type\":\"integer\"}},{\"description\":\"Sort order for results\",\"in\":\"query\",\"name\":\"sort\",\"required\":false,\"schema\":{\"default\":\"release_date\",\"enum\":[\"release_date\",\"name\",\"price\"],\"type\":\"string\"}},{\"description\":\"Filter by platform (ps4, ps5, ps3, vita, psp)\",\"in\":\"query\",\"name\":\"platform\",\"required\":false,\"schema\":{\"enum\":[\"ps4\",\"ps5\",\"ps3\",\"vita\",\"psp\"],\"type\":\"string\"}},{\"description\":\"Filter by price range\",\"in\":\"query\",\"name\":\"price\",\"required\":false,\"schema\":{\"enum\":[\"0-249\",\"250-499\",\"500-999\",\"1000-1999\",\"2000-2999\",\"3000-3999\",\"4000-4999\",\"5000-5999\",\"6000-7999\",\"8000-*\"],\"type\":\"string\"}},{\"description\":\"Filter by game genre\",\"in\":\"query\",\"name\":\"genre\",\"required\":false,\"schema\":{\"enum\":[\"action\",\"adventure\",\"arcade\",\"racing\",\"shooter\",\"sports\",\"rpg\",\"puzzle\",\"strategy\",\"simulation\"],\"type\":\"string\"}},{\"description\":\"Filter by game content type\",\"in\":\"query\",\"name\":\"game_content_type\",\"required\":false,\"schema\":{\"enum\":[\"bundles\",\"games\",\"timed_trials\"],\"type\":\"string\"}},{\"description\":\"Filter by release date range\",\"in\":\"query\",\"name\":\"release_date\",\"required\":false,\"schema\":{\"enum\":[\"coming_soon\",\"last_7_days\",\"last_30_days\"],\"type\":\"string\"}}],\"protocol\":\"http\",\"responses\":{\"200\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"age_limit\":{\"description\":\"Age limit for the content\",\"type\":\"integer\"},\"attributes\":{\"properties\":{\"facets\":{\"properties\":{\"game_content_type\":{\"items\":{\"properties\":{\"count\":{\"description\":\"Number of items matching this facet\",\"type\":\"integer\"},\"key\":{\"description\":\"Unique key for the facet\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the facet\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"game_demo\":{\"items\":{\"properties\":{\"count\":{\"description\":\"Number of items matching this facet\",\"type\":\"integer\"},\"key\":{\"description\":\"Unique key for the facet\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the facet\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"game_type\":{\"items\":{\"properties\":{\"count\":{\"description\":\"Number of items matching this facet\",\"type\":\"integer\"},\"key\":{\"description\":\"Unique key for the facet\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the facet\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"genre\":{\"items\":{\"properties\":{\"count\":{\"description\":\"Number of items matching this facet\",\"type\":\"integer\"},\"key\":{\"description\":\"Unique key for the facet\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the facet\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"platform\":{\"items\":{\"properties\":{\"count\":{\"description\":\"Number of items matching this facet\",\"type\":\"integer\"},\"key\":{\"description\":\"Unique key for the facet\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the facet\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"price\":{\"items\":{\"properties\":{\"count\":{\"description\":\"Number of items matching this facet\",\"type\":\"integer\"},\"key\":{\"description\":\"Unique key for the facet\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the facet\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"relationship\":{\"items\":{\"properties\":{\"count\":{\"description\":\"Number of items matching this facet\",\"type\":\"integer\"},\"key\":{\"description\":\"Unique key for the facet\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the facet\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"release_date\":{\"items\":{\"properties\":{\"count\":{\"description\":\"Number of items matching this facet\",\"type\":\"integer\"},\"key\":{\"description\":\"Unique key for the facet\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the facet\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"subtitle_lang\":{\"items\":{\"properties\":{\"count\":{\"description\":\"Number of items matching this facet\",\"type\":\"integer\"},\"key\":{\"description\":\"Unique key for the facet\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the facet\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"top_category\":{\"items\":{\"properties\":{\"count\":{\"description\":\"Number of items matching this facet\",\"type\":\"integer\"},\"key\":{\"description\":\"Unique key for the facet\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the facet\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"voice_lang\":{\"items\":{\"properties\":{\"count\":{\"description\":\"Number of items matching this facet\",\"type\":\"integer\"},\"key\":{\"description\":\"Unique key for the facet\",\"type\":\"string\"},\"name\":{\"description\":\"Display name of the facet\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"}},\"type\":\"object\"},\"next\":{\"description\":\"Next page token for pagination\",\"items\":{\"type\":\"string\"},\"type\":\"array\"}},\"type\":\"object\"},\"container_type\":{\"description\":\"Type of container\",\"type\":\"string\"},\"content_origin\":{\"description\":\"Content origin identifier\",\"type\":\"integer\"},\"dob_required\":{\"description\":\"Whether date of birth is required\",\"type\":\"boolean\"},\"id\":{\"description\":\"Container unique identifier\",\"type\":\"string\"},\"images\":{\"items\":{\"properties\":{\"type\":{\"description\":\"Image type identifier\",\"type\":\"integer\"},\"url\":{\"description\":\"Image URL\",\"format\":\"uri\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"links\":{\"description\":\"List of products in the container\",\"items\":{\"properties\":{\"bucket\":{\"description\":\"Product bucket category\",\"type\":\"string\"},\"cloud_only_platform\":{\"description\":\"Cloud-only platforms\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"container_type\":{\"description\":\"Type of container\",\"type\":\"string\"},\"content_type\":{\"description\":\"Content type identifier\",\"type\":\"string\"},\"default_sku\":{\"properties\":{\"amortizeFlag\":{\"description\":\"Amortization flag\",\"type\":\"boolean\"},\"bundleExclusiveFlag\":{\"description\":\"Bundle exclusive flag\",\"type\":\"boolean\"},\"chargeImmediatelyFlag\":{\"description\":\"Charge immediately flag\",\"type\":\"boolean\"},\"charge_type_id\":{\"description\":\"Charge type identifier\",\"type\":\"integer\"},\"credit_card_required_flag\":{\"description\":\"Credit card required flag\",\"type\":\"integer\"},\"defaultSku\":{\"description\":\"Whether this is the default SKU\",\"type\":\"boolean\"},\"display_price\":{\"description\":\"Formatted display price\",\"type\":\"string\"},\"eligibilities\":{\"items\":{\"properties\":{\"description\":{\"description\":\"Eligibility description\",\"type\":\"string\"},\"drms\":{\"items\":{\"properties\":{\"id\":{\"type\":\"string\"},\"libraryPath\":{\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"entitlement_type\":{\"description\":\"Entitlement type\",\"nullable\":true,\"type\":\"string\"},\"id\":{\"description\":\"Eligibility identifier\",\"type\":\"string\"},\"name\":{\"description\":\"Eligibility name\",\"type\":\"string\"},\"operand\":{\"description\":\"Operand for eligibility check\",\"type\":\"string\"},\"operator\":{\"description\":\"Operator for eligibility check\",\"type\":\"string\"},\"rightOperand\":{\"description\":\"Right operand for eligibility check\",\"nullable\":true,\"type\":\"string\"},\"unionIndex\":{\"description\":\"Union index\",\"nullable\":true,\"type\":\"integer\"}},\"type\":\"object\"},\"type\":\"array\"},\"entitlements\":{\"items\":{\"properties\":{\"description\":{\"description\":\"Entitlement description\",\"nullable\":true,\"type\":\"string\"},\"drms\":{\"items\":{\"properties\":{\"drm_category_type\":{\"description\":\"DRM category type\",\"type\":\"integer\"},\"id\":{\"description\":\"DRM identifier\",\"type\":\"string\"},\"is_streamable\":{\"description\":\"Whether content is streamable\",\"type\":\"integer\"},\"media_prop\":{\"description\":\"Media properties\",\"type\":\"object\"},\"size\":{\"description\":\"Size in bytes\",\"type\":\"integer\"},\"type\":{\"description\":\"DRM type\",\"type\":\"integer\"}},\"type\":\"object\"},\"type\":\"array\"},\"duration\":{\"description\":\"Duration\",\"type\":\"integer\"},\"durationOverrideTypeId\":{\"nullable\":true,\"type\":\"integer\"},\"exp_after_first_use\":{\"description\":\"Expiration after first use\",\"type\":\"integer\"},\"feature_type_id\":{\"description\":\"Feature type identifier\",\"type\":\"integer\"},\"id\":{\"description\":\"Entitlement identifier\",\"type\":\"string\"},\"license_type\":{\"description\":\"License type\",\"type\":\"integer\"},\"metadata\":{\"nullable\":true,\"type\":\"object\"},\"name\":{\"description\":\"Entitlement name\",\"type\":\"string\"},\"packageType\":{\"nullable\":true,\"type\":\"string\"},\"packages\":{\"items\":{\"type\":\"object\"},\"type\":\"array\"},\"preorder_placeholder_flag\":{\"description\":\"Preorder placeholder flag\",\"type\":\"boolean\"},\"size\":{\"description\":\"Size in bytes\",\"type\":\"integer\"},\"subType\":{\"description\":\"Entitlement subtype\",\"type\":\"integer\"},\"subtitle_language_codes\":{\"items\":{\"type\":\"string\"},\"nullable\":true,\"type\":\"array\"},\"type\":{\"description\":\"Entitlement type\",\"type\":\"integer\"},\"use_count\":{\"description\":\"Use count\",\"type\":\"integer\"},\"voice_language_codes\":{\"items\":{\"type\":\"string\"},\"nullable\":true,\"type\":\"array\"}},\"type\":\"object\"},\"type\":\"array\"},\"id\":{\"description\":\"SKU unique identifier\",\"type\":\"string\"},\"is_original\":{\"description\":\"Whether this is the original SKU\",\"type\":\"boolean\"},\"name\":{\"description\":\"SKU name\",\"type\":\"string\"},\"offerOnlyFlag\":{\"description\":\"Offer only flag\",\"type\":\"boolean\"},\"platforms\":{\"description\":\"Platform identifiers\",\"items\":{\"type\":\"integer\"},\"type\":\"array\"},\"price\":{\"description\":\"Price in smallest currency unit (e.g., cents)\",\"type\":\"integer\"},\"rewards\":{\"items\":{\"type\":\"object\"},\"type\":\"array\"},\"seasonPassExclusiveFlag\":{\"description\":\"Season pass exclusive flag\",\"type\":\"boolean\"},\"skuAvailabilityOverrideFlag\":{\"description\":\"SKU availability override flag\",\"type\":\"boolean\"},\"sku_type\":{\"description\":\"SKU type identifier\",\"type\":\"integer\"},\"type\":{\"description\":\"SKU type\",\"type\":\"string\"}},\"type\":\"object\"},\"gameContentTypesList\":{\"items\":{\"properties\":{\"key\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"game_contentType\":{\"description\":\"Game content type\",\"type\":\"string\"},\"id\":{\"description\":\"Product unique identifier\",\"type\":\"string\"},\"images\":{\"items\":{\"properties\":{\"type\":{\"description\":\"Image type identifier\",\"type\":\"integer\"},\"url\":{\"description\":\"Image URL\",\"format\":\"uri\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"},\"name\":{\"description\":\"Product name\",\"type\":\"string\"},\"playable_platform\":{\"description\":\"Platforms where the product can be played\",\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"provider_name\":{\"description\":\"Name of the content provider\",\"type\":\"string\"},\"release_date\":{\"description\":\"Release date in ISO 8601 format\",\"format\":\"date-time\",\"type\":\"string\"},\"restricted\":{\"description\":\"Whether the product has restrictions\",\"type\":\"boolean\"},\"revision\":{\"description\":\"Product revision number\",\"type\":\"integer\"},\"short_name\":{\"description\":\"Short name of the product\",\"type\":\"string\"},\"timestamp\":{\"description\":\"Unix timestamp in milliseconds\",\"format\":\"int64\",\"type\":\"integer\"},\"top_category\":{\"description\":\"Top category classification\",\"type\":\"string\"},\"url\":{\"description\":\"URL to product details\",\"format\":\"uri\",\"type\":\"string\"}},\"type\":\"object\"},\"type\":\"array\"}},\"type\":\"object\"}}},\"description\":\"Successful response with container content\"},\"400\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"code\":{\"description\":\"Error code\",\"type\":\"string\"},\"error\":{\"description\":\"Error message\",\"type\":\"string\"},\"message\":{\"description\":\"Detailed error message\",\"type\":\"string\"}},\"type\":\"object\"}}},\"description\":\"Bad request - Invalid parameters\"},\"404\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"code\":{\"description\":\"Error code\",\"type\":\"string\"},\"error\":{\"description\":\"Error message\",\"type\":\"string\"},\"message\":{\"description\":\"Detailed error message\",\"type\":\"string\"}},\"type\":\"object\"}}},\"description\":\"Container not found\"},\"500\":{\"content\":{\"application/json\":{\"schema\":{\"properties\":{\"code\":{\"description\":\"Error code\",\"type\":\"string\"},\"error\":{\"description\":\"Error message\",\"type\":\"string\"},\"message\":{\"description\":\"Detailed error message\",\"type\":\"string\"}},\"type\":\"object\"}}},\"description\":\"Internal server error\"}},\"securitySource\":\"unspecified\"}",
-                    "source": "openapi3",
-                    "version": 1
+                  "k": "http",
+                  "m": "GET",
+                  "o": "/container/{country}/{language}/{age_limit}/{container_id}",
+                  "q": {
+                    "exist": [
+                      "age_limit",
+                      "container_id",
+                      "country",
+                      "game_content_type",
+                      "genre",
+                      "language",
+                      "platform",
+                      "price",
+                      "release_date",
+                      "size",
+                      "sort",
+                      "start"
+                    ]
                   },
-                  "kind": "http",
-                  "method": "GET",
-                  "orig": "/container/{country}/{language}/{age_limit}/{container_id}",
-                  "segments": [
+                  "r": {},
+                  "s": [
                     {
                       "lit": "container"
                     },
@@ -243,23 +333,7 @@
                       "var": "container_id"
                     }
                   ],
-                  "select": {
-                    "exist": [
-                      "age_limit",
-                      "container_id",
-                      "country",
-                      "game_content_type",
-                      "genre",
-                      "language",
-                      "platform",
-                      "price",
-                      "release_date",
-                      "size",
-                      "sort",
-                      "start"
-                    ]
-                  },
-                  "transform": {
+                  "t": {
                     "req": "`reqdata`",
                     "res": "`body`"
                   }
@@ -268,11 +342,7 @@
             }
           },
           "relations": {
-            "ancestors": [
-              [
-                "container"
-              ]
-            ]
+            "ancestors": []
           }
         }
       },
@@ -692,22 +762,22 @@
           "param": {},
           "step": [
             {
-              "active": true,
-              "data": {},
-              "input": {
+              "a": true,
+              "d": {},
+              "i": {
                 "ref": "container_ref01",
                 "srcdatavar": "container_ref01_data",
                 "suffix": "_dt0"
               },
-              "match": {
+              "m": {
                 "age_limit": "age_limit01",
                 "country": "country01",
                 "id": "container01",
                 "language": "language01"
               },
-              "op": "load",
-              "spec": [],
-              "valid": [
+              "o": "load",
+              "s": [],
+              "v": [
                 {
                   "apply": "TextFieldMark",
                   "def": {

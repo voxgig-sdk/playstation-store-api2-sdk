@@ -23,7 +23,6 @@ function makeUrl(ctx: Context): Error | string {
   }
 
 
-  // TODO: use parts to avoid regexp?
   let url = join([spec.base, spec.prefix, spec.path, spec.suffix], '/', true)
   let resmatch: Record<string, any> = {}
 

@@ -38,7 +38,6 @@ client = PlaystationStoreApi2SDK()
 
 ### 3. Load a container
 
-Container is nested under age_limit, so provide the `age_limit`.
 `load()` returns the ENTITY — call data_get() for the record — and raises on error.
 
 ```python

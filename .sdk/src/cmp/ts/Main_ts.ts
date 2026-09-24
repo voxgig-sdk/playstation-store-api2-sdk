@@ -35,7 +35,6 @@ import { SdkError } from './SdkError_ts'
 
 const Main = cmp(async function Main(props: any) {
 
-  // Needs type: target object
   const { target } = props
   const { model } = props.ctx$
 
@@ -82,8 +81,6 @@ const Main = cmp(async function Main(props: any) {
         return Line(`import { ${cls} } from './entity/${cls}'`)
       })
 
-      // Re-export the generated typed models so consumers can
-      // `import { Advice, AdviceLoadMatch } from '<pkg>'`.
       Line(`export type * from './${model.const.Name}Types'\n`)
 
       Fragment(
@@ -92,14 +89,6 @@ const Main = cmp(async function Main(props: any) {
           replace: {
             ...props.ctx$.stdrep,
 
-            // SECRETS. All five slots are emitted only when the secrets
-            // feature applies to this target AND the model activates it.
-            // An unconditional edit here would land in every generated SDK
-            // and break the inactive-output gate: a model without the
-            // feature must generate byte-identically to pre-migration.
-            //
-            // `feature` is already gated by targetFeatures, so a target
-            // that does not provide 'sekreto' never reaches these.
             '// #SecretsImport': () => secrets ?
               Line(`import * as sekreto from './feature/secrets/sekreto'`) : undefined,
 
@@ -116,15 +105,6 @@ secrets() {
 }
 `) : undefined,
 
-            // prepare() bypasses the feature hook pipeline, so the PreSpec
-            // hook that resolves the secret for entity ops never runs on
-            // this path and the resolve has to be explicit.
-            //
-            // It RETURNS the Error rather than rejecting: _rawRequest
-            // awaits prepare() outside its try, and direct()/graphql() are
-            // documented to return a value or an Error, never reject. The
-            // prototype rejected here, which would have turned a broken
-            // vault into an unhandled rejection on the direct path.
             '// #SecretsResolve': ({ indent }: any) => secrets ?
               Content({ indent }, `
 if (null != this._secrets) {
@@ -164,7 +144,6 @@ if (fres instanceof Promise) { await fres }
           }
         },
 
-        // Entities
         () => {
           each(entity, (entity: ModelEntity) => {
             const entitySDK = getModelPath(model, `main.${KIT}.entity.${entity.name}`)
@@ -173,13 +152,6 @@ if (fres instanceof Promise) { await fres }
           })
         })
 
-      // Station self-registration (station design §6.2 path 1;
-      // station-declarative-config §11 item 2): emitted ONLY when the model
-      // carries an ACTIVE station feature (installed via
-      // `package add @voxgig/sdkgen-station`). The library package name
-      // comes from the feature model's own `deps.ts` block — the same entry
-      // collectDeps flows into package.json — so the manifest dependency
-      // and the emitted require cannot disagree.
       const stationPkg = stationLibrary(model, target.name)
       if (null != stationPkg) {
         Fragment({

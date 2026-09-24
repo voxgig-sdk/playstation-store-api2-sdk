@@ -7,39 +7,6 @@ import {
 } from '@voxgig/apidef'
 
 
-// Emits test/ReadmeExamplesTest.php — a PHPUnit COMPLETENESS GATE that
-// guarantees every fenced php code example in the package docs is unit-tested.
-// It reads ALL THREE docs — the root (multi-language) ../../README.md, the
-// PHP-specific ../README.md, and ../REFERENCE.md — extracts every fenced php
-// block (tagged by source doc + index) and enforces four properties:
-//
-//   1. SYNTAX — `php -l` on every block (a leading <?php is prepended when the
-//      snippet omits one). Every documented example must parse.
-//   2. RUN — every RUNNABLE block (one that constructs the SDK, drives
-//      $client->, or performs an entity op) is EXECUTED offline in seeded test
-//      mode against the real SDK. The captured stdout+stderr is scanned for
-//      FATAL programming-error markers REGARDLESS of exit code, so a bug that a
-//      documented try/catch swallows and echoes via getMessage() is still
-//      caught. Only a not-found / domain error is tolerated.
-//   3. COMPLETENESS — every block is partitioned into exactly one of
-//      {executed, syntaxchecked-nonrunnable, illustration} and the counts must
-//      sum to the total. "illustration" is a NARROW explicit class (a
-//      signature / method-table block that names the SDK class or a documented
-//      method but never uses a live client) — never a catch-all. A
-//      runnable-looking block that was NOT executed lands in neither bucket and
-//      FAILS the gate: no runnable example can be silently skipped.
-//   4. A per-doc summary (total / executed / syntaxchecked / illustration) is
-//      printed to STDERR.
-//
-// A runnable block is rewritten so its client is a test-mode client
-// (<Sdk>SDK::test) seeded with an in-memory fixture for every entity it
-// references; any real constructor is rewritten and the doc's own require of
-// the SDK file is stripped (we require it by absolute path). A block that only
-// *uses* $client (constructed in an earlier fenced block) gets a test client
-// prepended.
-//
-// The emitted PHP builds the ``` fence via chr(96) so this generator string
-// contains no backticks of its own.
 const ReadmeExamplesTest = cmp(function ReadmeExamplesTest(props: any) {
   const { target } = props
   const { model } = props.ctx$

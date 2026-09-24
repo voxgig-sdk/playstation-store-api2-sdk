@@ -22,7 +22,7 @@ class PlaystationStoreApi2PrepareQuery
             foreach ($items as $item) {
                 $key = $item[0];
                 $val = $item[1];
-                if ($val !== null && is_string($key) && !in_array($key, $params, true)) {
+                if ($val !== null && is_string($key) && '$action' !== $key && !in_array($key, $params, true)) {
                     $out[$key] = $val;
                 }
             }

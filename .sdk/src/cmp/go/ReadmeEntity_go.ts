@@ -41,14 +41,9 @@ const ReadmeEntity = cmp(function ReadmeEntity(props: any) {
 `)
 
   publishedEntities.map((entity: any) => {
-    // ACTIVE ops only — an inactive op generates no method, so an example
-    // calling it would not compile.
     const opnames = entityOps(entity)
-    const fields = entity.fields || []
-    // Model-driven id key: null when this entity has no id-like field.
+    const fields = Object.values(entity.fields || {})
     const idF = entityIdField(entity)
-    // camelCase Go identifier (a `status_embed_config` entity must not bind a
-    // snake_case Go variable, and a `type`/`range` entity not a Go keyword).
     const eVar = goVarName(entity.name)
 
     Content(`
@@ -92,8 +87,8 @@ const ReadmeEntity = cmp(function ReadmeEntity(props: any) {
 `)
 
       each(fields, (field: any) => {
-        const desc = field.short || ''
-        Content(`| \`${field.name}\` | \`${canonToType(field.type, target.name)}\` | ${desc} |
+        const desc = field.sh || ''
+        Content(`| \`${field.n}\` | \`${canonToType(field.t, target.name)}\` | ${desc} |
 `)
       })
 

@@ -10,6 +10,9 @@ function Control.new(opts)
   self.throw_err = opts.throw_err
   self.err = nil
   self.explain = opts.explain
+  -- Per-call feature inputs (audit actor, paging cursor/page).
+  self.actor = opts.actor
+  self.paging = opts.paging
   return self
 end
 

@@ -611,59 +611,176 @@ class PipelineTest extends TestCase
 
     // --- prepare_auth ------------------------------------------------------------
 
-    private static function auth_ctx(array $options, ?array $headers): PlaystationStoreApi2Context
+    /**
+     * A cookie credential as prepare_auth writes it: `<scheme>=K` for the
+     * probe key, with no scheme prefix and nothing else in the bag.
+     */
+    private const COOKIE_PAIR = '/^[^=;]+=K$/';
+
+    private static function auth_ctx(array $options, ?PlaystationStoreApi2Spec $spec): PlaystationStoreApi2Context
     {
         $client = new PlClient($options);
         return self::ctx([
             'client' => $client,
-            'spec' => $headers === null ? null : new PlaystationStoreApi2Spec(['headers' => $headers]),
+            'spec' => $spec,
         ]);
+    }
+
+    private static function auth_bags(): PlaystationStoreApi2Spec
+    {
+        return new PlaystationStoreApi2Spec(['headers' => [], 'query' => []]);
+    }
+
+    /**
+     * `basic: false` is explicit: an HTTP Basic API's generated config carries
+     * `auth.basic: true`, and a client that merges it in takes a branch that
+     * needs a secret as well. With none supplied that branch deliberately
+     * writes nothing, which the probe would read as a public API.
+     */
+    private static function auth_block(string $prefix): array
+    {
+        return ['prefix' => $prefix, 'basic' => false];
+    }
+
+    /**
+     * Run prepare_auth with both containers present and see which one the
+     * generated utility writes to, and under what name. Null means this SDK
+     * places no credential at all - a public API - which is a legitimate
+     * shape, and the tests below assert exactly that instead. `pair` is the
+     * `<scheme>=` lead-in of a COOKIE credential, which rides the header bag
+     * under the key `cookie` instead of taking a header of its own.
+     *
+     * @return array{where:string,name:string,value:mixed,pair:string}|null
+     */
+    private static function auth_probe(array $options): ?array
+    {
+        $ctx = self::auth_ctx($options, self::auth_bags());
+        PlaystationStoreApi2PrepareAuth::call($ctx);
+        foreach (['headers', 'query'] as $where) {
+            // A cookie credential rides the header bag, because a cookie IS
+            // a header.
+            $bag = 'query' === $where ? $ctx->spec->query : $ctx->spec->headers;
+            foreach ($bag as $name => $value) {
+                $pair = '';
+                if ('headers' === $where && 'cookie' === $name && is_string($value)
+                    && 1 === preg_match(self::COOKIE_PAIR, $value)) {
+                    $pair = substr($value, 0, -1);
+                }
+                return ['where' => $where, 'name' => $name, 'value' => $value, 'pair' => $pair];
+            }
+        }
+        return null;
+    }
+
+    /** @return array{where:string,name:string,value:mixed,pair:string}|null */
+    private static function auth_credential(): ?array
+    {
+        return self::auth_probe(
+            ['apikey' => 'K', 'auth' => self::auth_block('Bearer')]);
+    }
+
+    /**
+     * Every credential this SDK could possibly place: both credentials and
+     * Basic switched on, so whichever branch the API has, something lands
+     * unless the API is public.
+     *
+     * @return array{where:string,name:string,value:mixed,pair:string}|null
+     */
+    private static function auth_any_credential(): ?array
+    {
+        return self::auth_probe([
+            'apikey' => 'K', 'secret' => 'S',
+            'auth' => ['prefix' => 'Bearer', 'basic' => true],
+        ]);
+    }
+
+    /** @return array{0:mixed,1:bool} the value left in the credential slot, and whether it is there */
+    private static function auth_placed(array $options, $seed = null): array
+    {
+        $cred = self::auth_credential();
+        $spec = self::auth_bags();
+        if (null !== $cred && null !== $seed) {
+            if ('query' === $cred['where']) {
+                $spec->query[$cred['name']] = $seed;
+            } else {
+                $spec->headers[$cred['name']] = $seed;
+            }
+        }
+        $ctx = self::auth_ctx($options, $spec);
+        PlaystationStoreApi2PrepareAuth::call($ctx);
+        if (null === $cred) {
+            return [null, false];
+        }
+        $bag = 'query' === $cred['where'] ? $ctx->spec->query : $ctx->spec->headers;
+        return [$bag[$cred['name']] ?? null, array_key_exists($cred['name'], $bag)];
     }
 
     public function test_prepare_auth_guards_a_missing_spec(): void
     {
-        $ctx = self::auth_ctx(['auth' => ['prefix' => ''], 'apikey' => 'K'], null);
+        $ctx = self::auth_ctx(['auth' => self::auth_block(''), 'apikey' => 'K'], null);
         [, $err] = PlaystationStoreApi2PrepareAuth::call($ctx);
         $this->assertSame('auth_no_spec', self::code($err));
     }
 
-    public function test_prepare_auth_an_apikey_with_a_prefix_is_space_joined(): void
+    /**
+     * Without this the cases below cannot fail for an SDK whose credential the
+     * probe misses: every one of them takes the public-API path instead.
+     */
+    public function test_prepare_auth_probe_finds_the_credential_this_sdk_places(): void
     {
-        $ctx = self::auth_ctx(['apikey' => 'K', 'auth' => ['prefix' => 'Bearer']], []);
-        [, $err] = PlaystationStoreApi2PrepareAuth::call($ctx);
-        $this->assertNull($err);
-        $this->assertSame('Bearer K', $ctx->spec->headers['authorization']);
+        $this->assertSame(
+            null === self::auth_credential(), null === self::auth_any_credential());
+    }
+
+    public function test_prepare_auth_places_the_apikey_where_this_api_puts_it(): void
+    {
+        $cred = self::auth_credential();
+        if (null === $cred) {
+            // A public API places nothing, and that is the whole assertion.
+            [, $has] = self::auth_placed(['apikey' => 'K', 'auth' => self::auth_block('Bearer')]);
+            $this->assertFalse($has);
+            return;
+        }
+        $this->assertContains($cred['where'], ['headers', 'query']);
+        if ('' !== $cred['pair']) {
+            // A cookie credential is a `<scheme>=<key>` pair, and the scheme
+            // name leaves no room for the option's prefix.
+            $this->assertMatchesRegularExpression(self::COOKIE_PAIR, $cred['value']);
+            return;
+        }
+        // A header credential is prefix-joined; a query credential is the raw
+        // key, because a query parameter has nowhere to put a scheme name.
+        $this->assertSame('query' === $cred['where'] ? 'K' : 'Bearer K', $cred['value']);
     }
 
     public function test_prepare_auth_a_raw_apikey_goes_in_as_is(): void
     {
-        $ctx = self::auth_ctx(['apikey' => 'K', 'auth' => ['prefix' => '']], []);
-        PlaystationStoreApi2PrepareAuth::call($ctx);
-        $this->assertSame('K', $ctx->spec->headers['authorization']);
+        [$value, $has] = self::auth_placed(['apikey' => 'K', 'auth' => self::auth_block('')]);
+        $cred = self::auth_credential();
+        if (null === $cred) {
+            $this->assertFalse($has);
+            return;
+        }
+        $this->assertSame($cred['pair'] . 'K', $value);
     }
 
-    public function test_prepare_auth_an_empty_apikey_drops_the_header(): void
+    public function test_prepare_auth_an_empty_apikey_drops_the_credential(): void
     {
-        $ctx = self::auth_ctx(
-            ['apikey' => '', 'auth' => ['prefix' => 'Bearer']],
-            ['authorization' => 'stale']
-        );
-        PlaystationStoreApi2PrepareAuth::call($ctx);
-        $this->assertArrayNotHasKey('authorization', $ctx->spec->headers);
+        [, $has] = self::auth_placed(
+            ['apikey' => '', 'auth' => self::auth_block('Bearer')], 'stale');
+        $this->assertFalse($has);
     }
 
-    public function test_prepare_auth_a_public_api_drops_the_header(): void
+    public function test_prepare_auth_a_public_api_drops_the_credential(): void
     {
-        $ctx = self::auth_ctx(['apikey' => 'K'], ['authorization' => 'stale']);
-        PlaystationStoreApi2PrepareAuth::call($ctx);
-        $this->assertArrayNotHasKey('authorization', $ctx->spec->headers);
+        [, $has] = self::auth_placed(['apikey' => 'K'], 'stale');
+        $this->assertFalse($has);
     }
 
-    public function test_prepare_auth_a_missing_apikey_option_drops_the_header(): void
+    public function test_prepare_auth_a_missing_apikey_option_drops_the_credential(): void
     {
-        $ctx = self::auth_ctx(['auth' => ['prefix' => 'Bearer']], ['authorization' => 'stale']);
-        PlaystationStoreApi2PrepareAuth::call($ctx);
-        $this->assertArrayNotHasKey('authorization', $ctx->spec->headers);
+        [, $has] = self::auth_placed(['auth' => self::auth_block('Bearer')], 'stale');
+        $this->assertFalse($has);
     }
 
 

@@ -240,6 +240,14 @@ def _subset(actual, expect, path):
         "{}: got {!r}, want {!r}".format(path, actual, expect)
 
 
+# Whether the SDK built the feature at all. The activity record is the
+# wrong probe: most features create theirs on first use, so an idle client
+# has none and every section but the eager ones read as inert.
+def _present(client, name):
+    return any(getattr(f, "name", None) == name
+               for f in (getattr(client, "features", None) or []))
+
+
 def _record(client, name):
     return getattr(client, "_" + name, None)
 
@@ -280,7 +288,9 @@ class TestFeatureCorpus:
         # Probed by ACTIVATING it: the feature defaults to inactive, so an
         # idle client never builds it and its absence says nothing.
         probe = _client({"feature": [{"name": name, "active": True}]})
-        if _record(probe, name) is None:
+        if not _present(probe, name):
+            # The one line every runner prints for an inert section.
+            print("feature.{}: inert (this SDK does not generate the feature)".format(name))
             pytest.skip("this SDK was generated without the {} feature".format(name))
 
         ops = _usable_ops(2)

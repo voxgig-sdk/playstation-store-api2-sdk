@@ -2,10 +2,6 @@
 import { Context } from '../types'
 
 
-/* Convert data from respnse into a structure suitable for use as entity data.
- *
- * The operation (op) property `resform` is used to perform the data extraction.
- */
 function transformResponse(ctx: Context) {
   const spec = ctx.spec
   const result = ctx.result

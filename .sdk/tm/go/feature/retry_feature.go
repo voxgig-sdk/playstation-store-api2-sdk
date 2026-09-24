@@ -7,12 +7,6 @@ import (
 	"GOMODULE/core"
 )
 
-// Automatic retry of transient failures with exponential backoff and
-// jitter. Wraps the active transport so a single operation call may make
-// several HTTP attempts. A failure is retryable when the transport returns
-// an error, or responds with a status in `statuses`
-// (default: 408, 425, 429, 500, 502, 503, 504). An HTTP 429/503 with a
-// `Retry-After` header overrides the computed backoff.
 type RetryFeature struct {
 	BaseFeature
 	client  *core.PlaystationStoreApi2SDK

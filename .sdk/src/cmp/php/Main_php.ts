@@ -48,27 +48,12 @@ const Main = cmp(async function Main(props: any) {
   // Copy tm/php files with replacements
   Copy({
     from: 'tm/' + target.name,
-    // ANCHORED at the template root. Copy's exclude matches the
-    // SOURCE-RELATIVE path, so the old unanchored /src\// also pruned
-    // `feature/secrets/sekreto/src/` - the vendored sekreto core, whose
-    // directory depth is fixed by upstream and by the vendoring guard. The
-    // anchored form prunes the same top-level `tm/php/src/` placeholder
-    // tree (a `src` directory entry matches on the `$` arm, so the whole
-    // subtree is still pruned at the directory) and nothing else.
-    //
-    // pluginExcludes: the generate-time plugin trim (an INACTIVE plugin
-    // group's declared files stay out of the tree - the model's `path`
-    // entries are target-root-relative, which is this Copy's root). With
-    // no active feature declaring a plugin catalogue it is EMPTY, so a
-    // simple SDK's output is unchanged. The FEATURE-level trim for php
-    // stays an add-time concern (vendor-tag rollout, Decision 5).
     exclude: [/^src(\/|$)/, TEST_CONTROL_EXCLUDE, ...pluginExcludes(model)],
     replace: {
       ...props.ctx$.stdrep,
     }
   })
 
-  // Generate main SDK file
   File({ name: model.const.Name.toLowerCase() + '_sdk.' + target.ext }, () => {
 
     Fragment(

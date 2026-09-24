@@ -36,7 +36,6 @@ async function makeRequest(ctx: Context): Promise<Response | Error> {
 
     spec.step = 'prerequest'
 
-    // TODO: see js code, use `native` prop here
     const fetched = await fetcher(ctx, fetchdef.url, fetchdef)
 
     if (null == fetched) {

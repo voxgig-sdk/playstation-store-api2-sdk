@@ -70,8 +70,66 @@ local function get_spec(base, ...)
 end
 
 
+-- Where this SDK's prepare_auth actually puts the credential: the name is
+-- the API's OWN scheme name, not always `authorization`, so it is discovered
+-- by running prepare_auth once.
+local function auth_credential(auth_client, auth_utility)
+  local ctx = auth_utility.make_context({
+    opname = "load",
+    client = auth_client,
+    utility = auth_utility,
+  }, auth_client:get_root_ctx())
+  ctx.spec = Spec.new({ headers = {}, query = {} })
+  local _, err = auth_utility.prepare_auth(ctx)
+  if err ~= nil then
+    return nil
+  end
+  for _, where in ipairs({ "headers", "query" }) do
+    -- A cookie credential rides the header bag, because a cookie IS a header.
+    local bag = ctx.spec.headers
+    if "query" == where then bag = ctx.spec.query end
+    for name, _value in pairs(bag) do
+      return { where = where, name = name }
+    end
+  end
+  return nil
+end
+
+
+-- Rename the corpus's `headers` bag to the real container, and the
+-- `authorization` key inside it to the real credential name. Applied only to
+-- the prepareAuth section, so real header assertions elsewhere are untouched.
+local function retarget_auth(node, cred)
+  if type(node) ~= "table" then
+    return node
+  end
+
+  -- The metatable carries the corpus's `__jsontype` marker, which the struct
+  -- library's islist/ismap read to tell a one-element list from a map. A
+  -- plain-table copy leaves the rebuilt `set` unrecognisable.
+  local out = setmetatable({}, getmetatable(node))
+  for key, value in pairs(node) do
+    if "headers" == key then
+      local bag = {}
+      if type(value) == "table" then
+        setmetatable(bag, getmetatable(value))
+        for bagkey, bagvalue in pairs(value) do
+          local name = bagkey
+          if "authorization" == bagkey then name = cred.name end
+          bag[name] = retarget_auth(bagvalue, cred)
+        end
+      end
+      out[cred.where] = bag
+    else
+      out[key] = retarget_auth(value, cred)
+    end
+  end
+  return out
+end
+
+
 -- Sections deliberately left empty in the shared corpus
--- (.sdk/test/primary/<name>.aon carries a PENDING header). Everything else
+-- (.sdk/test/primary/<name>.aontu carries a PENDING header). Everything else
 -- MUST contribute cases.
 local PENDING = {
   fetcher = true,
@@ -749,7 +807,23 @@ describe("PrimaryUtility", function()
     local auth_client = sdk.test(nil, setup_opts)
     local auth_utility = auth_client:get_utility()
 
-    runsection("prepareAuth", function(cin)
+    -- The corpus writes the credential as `headers.authorization`: a
+    -- PLACEHOLDER each runner points at the container and name this API
+    -- actually uses.
+    local cred = auth_credential(auth_client, auth_utility)
+    assert(cred ~= nil, "prepare_auth placed no credential in headers or query")
+
+    -- An absent section is runsection's report to make.
+    local section = get_spec(spec, "prepareAuth")
+    local original = nil
+    if section ~= nil
+      and not ("headers" == cred.where and "authorization" == cred.name)
+    then
+      original = section.basic
+      section.basic = retarget_auth(original, cred)
+    end
+
+    local subject = function(cin)
       if type(cin) ~= "table" then
         cin = {}
       end
@@ -758,15 +832,21 @@ describe("PrimaryUtility", function()
 
       unwrap(utility.prepare_auth(ctx))
 
-      -- Write live-context spec headers back for match checking
+      -- Write the live-context spec bags back for match checking. QUERY as
+      -- well as headers: this API may place its credential there.
       if ctx.spec ~= nil then
         cin["spec"] = {
           headers = ctx.spec.headers,
+          query = ctx.spec.query,
         }
       end
 
       return nil
-    end)
+    end
+
+    local ok, failure = pcall(runsection, "prepareAuth", subject)
+    if original ~= nil then section.basic = original end
+    if not ok then error(failure) end
   end)
 
 

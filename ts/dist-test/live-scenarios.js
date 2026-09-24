@@ -50,6 +50,13 @@ async function runLiveScenarios(SDK, plan, envPrefix, liveDefaults = {}) {
             excluded: control.skip ? control.reason || 'Excluded by test control' : hint.excluded,
             run: async (ctx) => {
                 transport.enter(ctx);
+                // Every operation point is planned, not only the hinted ones; a hint
+                // only decides whether this file is generated. Absent a recipe there
+                // is no consent to call the operation, so block rather than
+                // synthesize input for it. Blocked fails assertLiveReport, so an
+                // omission surfaces instead of passing quietly.
+                if (!point.facts.live)
+                    throw new live_runner_1.LiveBlocked('No live recipe: add a live hint for this operation in the guide, or give it an explicit excluded reason');
                 if (point.contractVersion && point.contractVersion !== 1)
                     throw new live_runner_1.LiveBlocked('Unsupported operation contract version');
                 if (point.op === 'remove' || hint.cleanup) {
@@ -64,10 +71,10 @@ async function runLiveScenarios(SDK, plan, envPrefix, liveDefaults = {}) {
                 let input = request.schema ? (0, live_contract_1.synthesizeInput)(request.schema, explicit) : explicit ?? {};
                 for (const kind of ['params', 'query', 'header', 'cookie'])
                     for (const arg of point.args?.[kind] || []) {
-                        if (arg.reqd && input[arg.name] === undefined) {
-                            if (arg.example === undefined)
-                                throw new live_runner_1.LiveBlocked('Missing required argument: ' + arg.name);
-                            input[arg.name] = arg.example;
+                        if (arg.r && input[arg.n] === undefined) {
+                            if (arg.ex === undefined)
+                                throw new live_runner_1.LiveBlocked('Missing required argument: ' + arg.n);
+                            input[arg.n] = arg.ex;
                         }
                     }
                 const role = hint.auth || (point.facts.security?.length === 0 || point.facts.securitySource === 'unspecified' ? 'public' : 'account');

@@ -33,8 +33,6 @@ $client = new PlaystationStoreApi2SDK();
 
 ### 3. Load a container
 
-Container is nested under age_limit, so provide the `age_limit`.
-
 ```php
 try {
     // load() returns the ENTITY — call data_get() for the Container record (throws on error).

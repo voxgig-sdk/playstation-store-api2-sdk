@@ -1,0 +1,35 @@
+# BasicContainerFlow
+
+main: kit: flow: BasicContainerFlow:
+{
+  entity: "container",
+  kind: "basic",
+  name: "BasicContainerFlow",
+  step: [
+    {
+      i: {
+        ref: "container_ref01",
+        srcdatavar: "container_ref01_data",
+        suffix: "_dt0"
+      }
+
+      m: {
+        age_limit: "age_limit01",
+        country: "country01",
+        id: "container01",
+        language: "language01"
+      }
+
+      o: "load",
+      v: [
+        {
+          apply: "TextFieldMark",
+          def: {
+            mark: "Mark01-container_ref01"
+          }
+        }
+      ]
+    }
+  ],
+  "key$": "BasicContainerFlow"
+}

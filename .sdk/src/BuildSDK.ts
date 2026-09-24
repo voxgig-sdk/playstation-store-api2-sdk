@@ -31,7 +31,6 @@ const BuildSDK = cmp(function BuildSDK(props: any) {
   const ctx$ = props.ctx$
   const model: Model = ctx$.model
 
-  // TODO: should come from ctx$ options
   const sdkBuildFolder = '.sdk'
 
   const entityMap: ModelEntity = getModelPath(model, `main.${KIT}.entity`)
@@ -77,13 +76,6 @@ function makeEntityTestData(_model: Model, entity: ModelEntity) {
   const pathParams = collectEntityPathParams(entity)
 
   const hasEntId = null != (entity as any).id
-  // Some entities don't declare a top-level `id` field but still need an
-  // `id` value in their fixture: any entity that has a non-list op (remove,
-  // update, load) will hit `data["id"]` in the generated test code. The
-  // test mock is lenient about extra/missing path params, so synthesising
-  // an `id` here keeps tests green for entities like
-  //   `/{namespace}/{key}` (no `id` in URL) or `/{resource}/{id}`
-  // alongside the simple `{id}`-only case.
   const needsFixtureId = hasEntId || entityHasMutatingOp(entity)
 
   let i = 1
@@ -113,23 +105,20 @@ function makeEntityTestData(_model: Model, entity: ModelEntity) {
   makeEntityTestFields(entity, i++, ent)
   delete ent.id
 
-  // Request contracts are separate from synthetic stored mock records.
+  // WHICH operations this entity exposes, not what the specification says
+  // about them. The facts are apidef's resolved definition, and copying them
+  // here made the test data a second copy of the model's own copy of them.
   data.requests = {}
   for (const op of Object.values(entity.op || {}) as any[]) for (const point of op.points || []) {
-    if (point.contract) data.requests[point.contract.id] = {
-      provenance: 'operation-contract', contract: JSON.parse(point.contract.json),
+    if (point.co) data.requests[point.co.id] = {
+      provenance: 'operation-contract', version: point.co.version,
+      source: point.co.source,
     }
   }
   return data
 }
 
 
-// Detect whether the entity has any op other than `list` (which doesn't
-// take a per-item id). Used to decide whether the fixture needs a
-// synthesised `id` — the test code for load/update/remove ops references
-// `data["id"]` unconditionally in Python (and similarly in other strict
-// languages), so the fixture must provide one even when the URL path
-// params are named differently (e.g. `/{namespace}/{key}`).
 function entityHasMutatingOp(entity: any): boolean {
   const ops = entity?.op || {}
   for (const opname of Object.keys(ops)) {
@@ -139,12 +128,6 @@ function entityHasMutatingOp(entity: any): boolean {
 }
 
 
-// Walk every op point on the entity, collect the names of path params, and
-// pair each with its canonical idmap value. The canonical value mirrors the
-// flow generator's path-param defaulting in apidef:
-//   `step.match[name] = name.replace(/_id$/,'') + '01'`
-// Then setup.idmap maps that lower ref to upper:  `company01 → COMPANY01`.
-// So the value seeded into existing test data is the upper form: `COMPANY01`.
 function collectEntityPathParams(entity: any): [string, string][] {
   const out = new Map<string, string>()
   const ops = entity?.op || {}
@@ -152,17 +135,17 @@ function collectEntityPathParams(entity: any): [string, string][] {
     const op = ops[opname]
     const points = op?.points || []
     for (const point of points) {
-      const params = point?.args?.params || []
-      const renameMap: Record<string, string> = point?.rename?.param || {}
+      const params = point?.g?.params || []
+      const renameMap: Record<string, string> = point?.r?.param || {}
       for (const param of params) {
-        if (!param?.name) continue
-        if ('id' === param.name) continue
+        if (!param?.n) continue
+        if ('id' === param.n) continue
         // Skip params that ARE the entity's own id under URL rename.
-        const camel = lcf(camelify(param.name))
+        const camel = lcf(camelify(param.n))
         if ('id' === renameMap[camel]) continue
-        if (out.has(param.name)) continue
-        const baseName = param.name.replace(/_id$/, '')
-        out.set(param.name, baseName.toUpperCase() + '01')
+        if (out.has(param.n)) continue
+        const baseName = param.n.replace(/_id$/, '')
+        out.set(param.n, baseName.toUpperCase() + '01')
       }
     }
   }
@@ -174,15 +157,15 @@ function makeEntityTestFields(entity: ModelEntity, start: number, entdata: Recor
   entdata = entdata ?? {}
   let num = (start * size(entity.fields) * 10)
   each(entity.fields, (field: ModelField) => {
-    entdata[field.name] =
-      field.name.endsWith('_id') ?
-        field.name.substring(0, field.name.length - 3).toUpperCase() + '01' :
-        ['`$NUMBER`', '`$INTEGER`'].includes(field.type) ? num :
-          '`$BOOLEAN`' === field.type ? 0 === num % 2 :
-            '`$OBJECT`' === field.type ? {} :
-              '`$MAP`' === field.type ? {} :
-                '`$ARRAY`' === field.type ? [] :
-                  '`$LIST`' === field.type ? [] :
+    entdata[field.n] =
+      field.n.endsWith('_id') ?
+        field.n.substring(0, field.n.length - 3).toUpperCase() + '01' :
+        ['`$NUMBER`', '`$INTEGER`'].includes(field.t) ? num :
+          '`$BOOLEAN`' === field.t ? 0 === num % 2 :
+            '`$OBJECT`' === field.t ? {} :
+              '`$MAP`' === field.t ? {} :
+                '`$ARRAY`' === field.t ? [] :
+                  '`$LIST`' === field.t ? [] :
                     's' + (num.toString(16))
     num++
   })

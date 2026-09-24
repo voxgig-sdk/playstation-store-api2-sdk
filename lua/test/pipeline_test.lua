@@ -536,58 +536,137 @@ describe("pipeline", function()
 
   describe("prepareAuth", function()
 
+    -- A cookie credential as prepare_auth writes it: `<scheme>=K` for the
+    -- probe key, with no scheme prefix and nothing else in the bag.
+    local function is_cookie_pair(value)
+      return "string" == type(value) and nil ~= value:match("^[^=;]+=K$")
+    end
+
     -- Fake client so the exact options.auth / apikey shape is controlled.
-    local function auth_ctx(options, headers)
+    local function auth_ctx(options, spec)
       local ctx = base_ctx({})
       ctx.client = {
         options_map = function(_self)
           return options
         end,
       }
-      if headers == nil then
-        ctx.spec = nil
-      else
-        ctx.spec = Spec.new({ headers = headers })
-      end
+      ctx.spec = spec
       return ctx
     end
 
+    local function auth_bags()
+      return Spec.new({ headers = {}, query = {} })
+    end
+
+    -- A cookie credential rides the header bag, because a cookie IS a header.
+    local function auth_bag(spec, where)
+      if "query" == where then return spec.query end
+      return spec.headers
+    end
+
+    -- `basic = false` is explicit: an HTTP Basic API's generated config
+    -- carries `auth.basic: true`, and a client that merges it in takes a
+    -- branch needing a secret as well. With none supplied that branch writes
+    -- nothing, which the probe would read as a public API.
+    local function auth_block(prefix)
+      return { prefix = prefix, basic = false }
+    end
+
+    -- Run prepare_auth with both containers present and see which one the
+    -- generated utility writes to, and under what name. nil means this SDK
+    -- places no credential at all - a public API - which is a legitimate
+    -- shape, and the tests below assert exactly that instead. `pair` is the
+    -- `<scheme>=` lead-in of a COOKIE credential, which rides the header bag
+    -- under the key "cookie" instead of taking a header of its own.
+    local function auth_probe(options)
+      local ctx = auth_ctx(options, auth_bags())
+      ctx.utility.prepare_auth(ctx)
+      for _, where in ipairs({ "headers", "query" }) do
+        for name, value in pairs(auth_bag(ctx.spec, where)) do
+          local pair = ""
+          if "headers" == where and "cookie" == name and is_cookie_pair(value) then
+            pair = value:sub(1, -2)
+          end
+          return { where = where, name = name, value = value, pair = pair }
+        end
+      end
+      return nil
+    end
+
+    local function auth_credential()
+      return auth_probe({ apikey = "K", auth = auth_block("Bearer") })
+    end
+
+    -- Every credential this SDK could possibly place: both credentials and
+    -- Basic switched on, so whichever branch the API has, something lands
+    -- unless the API is public.
+    local function auth_any_credential()
+      return auth_probe({ apikey = "K", secret = "S",
+        auth = { prefix = "Bearer", basic = true } })
+    end
+
+    local function auth_placed(options, seed)
+      local cred = auth_credential()
+      local spec = auth_bags()
+      if nil ~= cred and nil ~= seed then
+        auth_bag(spec, cred.where)[cred.name] = seed
+      end
+      local ctx = auth_ctx(options, spec)
+      ctx.utility.prepare_auth(ctx)
+      if nil == cred then return nil end
+      return auth_bag(ctx.spec, cred.where)[cred.name]
+    end
+
     it("guards a missing spec", function()
-      local ctx = auth_ctx({ auth = { prefix = "" }, apikey = "K" }, nil)
+      local ctx = auth_ctx({ auth = auth_block(""), apikey = "K" }, nil)
       local _, err = ctx.utility.prepare_auth(ctx)
       assert.are.equal("auth_no_spec", err.code)
     end)
 
-    it("an apikey with a prefix is space-joined", function()
-      local ctx = auth_ctx({ apikey = "K", auth = { prefix = "Bearer" } }, {})
-      ctx.utility.prepare_auth(ctx)
-      assert.are.equal("Bearer K", ctx.spec.headers["authorization"])
+    -- Without this the cases below cannot fail for an SDK whose credential the
+    -- probe misses: every one of them takes the public-API path instead.
+    it("the probe finds the credential this SDK places", function()
+      assert.are.equal(nil == auth_credential(), nil == auth_any_credential())
+    end)
+
+    it("the apikey is placed where this API puts it", function()
+      local cred = auth_credential()
+      if nil == cred then
+        -- A public API places nothing, and that is the whole assertion.
+        assert.is_nil(auth_placed({ apikey = "K", auth = auth_block("Bearer") }))
+        return
+      end
+      assert.is_true("headers" == cred.where or "query" == cred.where)
+      if "" ~= cred.pair then
+        -- A cookie credential is a `<scheme>=<key>` pair, and the scheme name
+        -- leaves no room for the option's prefix.
+        assert.is_true(is_cookie_pair(cred.value), tostring(cred.value))
+        return
+      end
+      -- A header credential is prefix-joined; a query credential is the raw
+      -- key, because a query parameter has nowhere to put a scheme name.
+      local want = "Bearer K"
+      if "query" == cred.where then want = "K" end
+      assert.are.equal(want, cred.value)
     end)
 
     it("a raw apikey (empty prefix) goes in as-is", function()
-      local ctx = auth_ctx({ apikey = "K", auth = { prefix = "" } }, {})
-      ctx.utility.prepare_auth(ctx)
-      assert.are.equal("K", ctx.spec.headers["authorization"])
+      local cred = auth_credential()
+      local want = nil
+      if nil ~= cred then want = cred.pair .. "K" end
+      assert.are.equal(want, auth_placed({ apikey = "K", auth = auth_block("") }))
     end)
 
-    it("an empty apikey drops the header", function()
-      local ctx = auth_ctx({ apikey = "", auth = { prefix = "Bearer" } },
-        { authorization = "stale" })
-      ctx.utility.prepare_auth(ctx)
-      assert.is_nil(ctx.spec.headers["authorization"])
+    it("an empty apikey drops the credential", function()
+      assert.is_nil(auth_placed({ apikey = "", auth = auth_block("Bearer") }, "stale"))
     end)
 
-    it("a public API (no auth block) drops the header", function()
-      local ctx = auth_ctx({ apikey = "K" }, { authorization = "stale" })
-      ctx.utility.prepare_auth(ctx)
-      assert.is_nil(ctx.spec.headers["authorization"])
+    it("a public API (no auth block) drops the credential", function()
+      assert.is_nil(auth_placed({ apikey = "K" }, "stale"))
     end)
 
-    it("a missing apikey option drops the header", function()
-      local ctx = auth_ctx({ auth = { prefix = "Bearer" } },
-        { authorization = "stale" })
-      ctx.utility.prepare_auth(ctx)
-      assert.is_nil(ctx.spec.headers["authorization"])
+    it("a missing apikey option drops the credential", function()
+      assert.is_nil(auth_placed({ auth = auth_block("Bearer") }, "stale"))
     end)
   end)
 

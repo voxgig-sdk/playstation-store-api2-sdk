@@ -19,8 +19,6 @@ const Entity = cmp(function Entity(props: any) {
   const { model, stdrep } = props.ctx$
   const { target, entity } = props
 
-  // Module name: concatenated lowercase
-  // Go module path == repo path on GitHub (org from model.origin).
   const gomodule = goModule(model, target.name)
 
   // Collision-free entity CLASS name (see entityClassName): normally
@@ -37,7 +35,6 @@ const Entity = cmp(function Entity(props: any) {
 
   const ff = Path.normalize(__dirname + '/../../../src/cmp/go/fragment/')
 
-  // Entity files go to entity/ folder with snake_case names
   Folder({ name: 'entity' }, () => {
 
     File({ name: entity.name + '_entity.' + target.ext }, () => {
@@ -74,8 +71,6 @@ const Entity = cmp(function Entity(props: any) {
           EntityName: entity.Name,
           entityname: entity.name,
 
-          // Class/constructor tokens are decoupled from the EntityName data-type
-          // token in Entity.fragment.go so the class can be renamed independently.
           EntyClass: cls,
           NewEntyClass: 'New' + cls,
 

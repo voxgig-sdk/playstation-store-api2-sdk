@@ -1,0 +1,44 @@
+
+main: kit: target: lua: {
+
+  title: Lua
+  ext: lua
+  comment: line: "--"
+  module: name: 'playstation-store-api2'
+  base: 'node_modules/@voxgig/sdkgen/project/.sdk'
+  package: '@voxgig/sdkgen'
+  srcfeature: false
+
+  provides: { sekreto: true, schema: true }
+
+  # Files earlier toolchains generated that this target has RETIRED
+  # (vendor-tag rollout): the struct-corpus runner (test/runner.lua is
+  # support-only and RETAINED). `doctor` reports leftovers; `doctor
+  # prune` deletes them.
+  superseded: [
+    'test/struct_runner.lua'
+  ]
+
+  deps: &: {
+    kind: *'prod' | string
+  }
+
+  # struct utility is vendored under tm/lua/utility/struct - no manifest dep needed
+  deps: {
+    'dkjson': { active: true, version: '2.5' }
+  }
+}
+
+
+main: kit: feature: &: target: lua: deps: &: {
+  kind: *'prod' | string
+}
+
+
+main: kit: target: lua: publish: {
+  registry: {
+    name: 'luarocks'
+    url: 'https://luarocks.org'
+    vault: { alias: 'luarocks', env: 'LUAROCKS_API_KEY' }
+  }
+}

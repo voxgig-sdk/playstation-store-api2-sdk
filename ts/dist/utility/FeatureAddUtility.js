@@ -9,7 +9,6 @@ function featureAdd(ctx, f) {
     const fopts = getprop(f, '_options', {});
     let added = false;
     const features = client._features;
-    // TODO: make this a utility
     if (fopts.__before__ || fopts.__after__ || fopts.__replace__) {
         for (let i = 0; i < features.length; i++) {
             let ef = client._features[i];

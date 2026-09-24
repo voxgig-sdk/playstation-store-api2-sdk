@@ -14,6 +14,7 @@ import {
   packageVersion,
   authorInfo,
   targetFeatures, envName,
+  hasLiveScenarios,
 } from '@voxgig/sdkgen'
 
 
@@ -44,14 +45,11 @@ const Package = cmp(async function Package(props: any) {
   const only = (kind: string, deps: any) =>
     omap(deps, ([k, v]: any) => [v.active && kind === v.kind ? k : undefined, v.version])
 
-  // merge target and feature deps, by kind
   const deps =
     each(feature, (feature: any) =>
       omap(feature.deps?.[target.name], ([k, v]: any) =>
         [v.active ? k : undefined, v]))
 
-      // TODO: sort by version; rules for version choice?
-      // TODO: non-node dep kinds
       .reduce((a: any, deps: any) => (each(deps, (dep: any) =>
         a[dep.kind][dep.key$] = dep.version), a),
         {
@@ -75,37 +73,18 @@ const Package = cmp(async function Package(props: any) {
     type: 'commonjs',
     types: `dist/${SdkName}SDK.d.ts`,
 
-    // What actually ships. Without `files`, `npm publish` packs everything
-    // not gitignored — the test suite, dist-test/, the Makefile, the agent
-    // guides — into the published tarball. `src` IS included: the emitted
-    // .js.map files point back at it, so shipping it is what makes stack
-    // traces in a consumer resolve to SDK source. README/LICENSE/package.json
-    // are always included by npm and need no entry.
     files: ['dist', 'src'],
     scripts: {
-      ...(Object.values(model.main.kit.entity || {}).some((e: any) => Object.values(e.op || {}).some((o: any) => (o.points || []).some((p: any) => p.contract && JSON.parse(p.contract.json).live))) ? {
+      ...(hasLiveScenarios(model) ? {
         'test:live': `npm run build && ${envName(model)}_TEST_LIVE=TRUE node --test dist-test/live.test.js`,
       } : {}),
 
-      // `test` and `test-coverage` run the COMPILED suite in dist-test/, which
-      // a fresh clone does not have — the glob then matches nothing and the
-      // run reports "tests 0, pass 0, fail 0" and exits 0. A green suite that
-      // asserted nothing is worse than a red one, so build first. npm runs a
-      // `pre<script>` automatically, which keeps the test commands readable
-      // and cannot be forgotten by a caller invoking `npm test` directly.
       'pretest': 'npm run build',
       'test': 'node --enable-source-maps --test-concurrency=1 --test \'dist-test/**/*.test.js\'',
       'test-some': 'node --enable-source-maps --experimental-test-isolation=none ' +
         '--test-name-pattern=\"$TEST_PATTERN\" --test \'dist-test/**/*.test.js\'',
       'test-utility': 'node --enable-source-maps --test test/utility/*.test.ts',
 
-      // Coverage gate. Runs the same suite with V8 coverage (no source-maps,
-      // so figures reflect true executed statements) over the SDK source
-      // only (test files excluded) and fails when coverage drops below the
-      // floor — protecting the runtime, utilities and features from silent
-      // regressions. Thresholds are a conservative floor (well under a
-      // healthy SDK's ~92% lines) so they hold across API shapes; raise them
-      // for a stricter local policy.
       'pretest-coverage': 'npm run build',
       'test-coverage': 'node --test-concurrency=1 --experimental-test-coverage ' +
         '--test-coverage-exclude=\'**/dist-test/**\' ' +
@@ -122,7 +101,6 @@ const Package = cmp(async function Package(props: any) {
     },
     author,
 
-    // TODO: needs to be config
     license: 'MIT',
 
     dependencies: deps.prod,
@@ -131,8 +109,6 @@ const Package = cmp(async function Package(props: any) {
   }
 
   File({ name: 'package.json' }, () => {
-    // Trailing newline: POSIX wants one, and without it every diff of a
-    // regenerated package.json reports "\ No newline at end of file".
     Content(JSON.stringify(pkg, null, 2) + '\n')
   })
 })

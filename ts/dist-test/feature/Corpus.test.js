@@ -1,32 +1,10 @@
 "use strict";
-// Feature behaviour, driven by the SHARED corpus.
-//
-// This is the route PrimaryUtility.test.ts already takes for the utilities:
-// language-neutral cases in .sdk/test/test.json, executed against the REAL
-// generated SDK. Features here are ordinary classes in ordinary compiled
-// source, unit-tested the ordinary way — no transpiled templates, and no
-// miniature of the pipeline standing in for the pipeline (which is what
-// harness.ts does, and why its assertions can only be as right as the
-// miniature is). A feature is built through the generated config, wrapped
-// into a client built by the generated constructor, and driven by a real
-// entity operation. What is asserted is what ships.
-//
-// Everything in a case is data: features are activated by name, options are
-// plain JSON, the transport is scripted by `res`, and the assertion is a
-// subset of the client's own record. Turning `res` into a fetcher is the one
-// piece each language writes for itself.
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_test_1 = require("node:test");
 const node_assert_1 = require("node:assert");
 const node_fs_1 = require("node:fs");
 const node_path_1 = require("node:path");
 const index_1 = require("../utility/index");
-// Features with a corpus section — read from the corpus itself, so a
-// project-authored section (a custom feature added under
-// .sdk/test/feature/) runs without editing this file. Read eagerly: the
-// node test runner collects the per-feature tests at describe time,
-// before any `before` hook fires. An SDK generated without a listed
-// feature still skips, not fails.
 const FEATURES = Object.keys((() => {
     try {
         return JSON.parse((0, node_fs_1.readFileSync)((0, node_path_1.join)(__dirname, '..', index_1.TEST_JSON_FILE), 'utf8')).feature || {};
@@ -69,27 +47,12 @@ function scriptedFetcher(res) {
     };
 }
 function makeClient(kase) {
-    // `test: { active: true }` is the OPTION, not the `test` FEATURE.
-    //
-    // It says "this client is not live", which is what makes a REQUIRED
-    // OpenAPI server variable resolve to a deterministic `test-<name>`
-    // rather than refuse to construct (see makeOptions). It installs no
-    // transport, so the scripted fetcher below still stands — the FEATURE
-    // is transport: 'base' and would shadow it, which is why this cannot
-    // just turn the feature on.
     return new index_1.SDK({
         test: { active: true },
         feature: kase.feature,
         utility: { fetcher: scriptedFetcher(kase.res || [{ status: 200, body: {} }]) },
     });
 }
-// Every operation this SDK declares, in a stable order.
-//
-// The corpus cannot name an entity — it is shared by SDKs that have none in
-// common — so the runner finds them here. The generated client exposes one
-// capitalised, zero-argument accessor per entity, and the entity it returns
-// carries the same `name` the config is keyed by; that pairing is what turns
-// a config entry back into a callable method.
 function candidates(client) {
     const entities = client._rootctx.config.entity || {};
     const accessor = {};
@@ -117,14 +80,6 @@ function candidates(client) {
             out.push({ key: entity + '.' + op, accessor: accessor[entity], entity, op });
         }
     }
-    // SAFE OPS FIRST. The corpus calls #OP1 repeatedly and reasons about what
-    // the transport did in between — a cache hit, a retry, a rate-limit wait.
-    // `load`/`list` are the GET ops, and the cache stores only successful GETs,
-    // so an SDK whose first usable op is a `create` (POST) can never satisfy
-    // "a hit served from cache costs nothing": nothing is ever cached, the
-    // second call goes to the network, and cost correctly charges twice. That
-    // reads as a cost defect and is not one. Ordering here rather than
-    // filtering keeps every SDK runnable, including ones with no GET at all.
     const SAFE = { list: 0, load: 1 };
     return out.sort((a, b) => (SAFE[a.op] ?? 2) - (SAFE[b.op] ?? 2) || a.key.localeCompare(b.key));
 }
@@ -201,17 +156,6 @@ function subset(actual, expect, path) {
             byKey[o.key] = o;
         }
     });
-    // A corpus with no `feature` section is a SKIP, not a failure.
-    //
-    // Each project carries its OWN materialised copy of .sdk/test/test.json, so
-    // a project scaffolded before the section existed legitimately has no cases
-    // to run - and a hard assertion here turned that into a red suite in every
-    // SDK on the fleet, for a corpus the project had simply not re-pulled yet.
-    //
-    // The strict check belongs where the corpus is CONTROLLED, not where it is
-    // consumed: sdkgen's own end-to-end lane generates against a corpus it
-    // supplies and requires the cases to actually run, so a section that goes
-    // missing there still fails loudly.
     (0, node_test_1.test)('the corpus carries a feature section', (t) => {
         if (null == corpus.feature) {
             return t.skip('this project\'s test.json has no `feature` section - recompile the ' +
@@ -232,6 +176,7 @@ function subset(actual, expect, path) {
             }
             const probe = makeClient({});
             if (!probe._rootctx.config.hasFeature(name)) {
+                t.diagnostic(`feature.${name}: inert (this SDK does not generate the feature)`);
                 return t.skip(`this SDK was generated without the ${name} feature`);
             }
             const cases = section.basic?.set || [];

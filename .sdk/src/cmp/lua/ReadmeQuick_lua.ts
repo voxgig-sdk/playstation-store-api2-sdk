@@ -15,9 +15,6 @@ const ReadmeQuick = cmp(function ReadmeQuick(props: any) {
 
   const exampleEntity = Object.values(entity).find((e: any) => e.active !== false) as any
 
-  // Find a nested entity if available: one with a parent chain
-  // (relations.ancestors), an active load op, and a required non-id load
-  // param to demonstrate (the parent key, e.g. page_id).
   const nestedEntity = Object.values(entity).find((e: any) =>
     e.active !== false &&
     e.relations && e.relations.ancestors && 0 < e.relations.ancestors.length &&
@@ -73,12 +70,12 @@ local client = ${ctor}
     // `id`, matching the load example and the seeded test fixture.
     const idNames = new Set<string>(['id',
       (exampleEntity.id && exampleEntity.id.field) || 'id'])
-    const fields: any[] = Array.isArray(exampleEntity.fields) ? exampleEntity.fields : []
+    const fields: any[] = Object.values(exampleEntity.fields || {})
     const isStringField = (f: any) =>
-      f && typeof f.type === 'string' && /STRING/i.test(f.type)
+      f && typeof f.t === 'string' && /STRING/i.test(f.t)
     const displayFieldObj =
-      fields.find((f: any) => f && !idNames.has(f.name) && isStringField(f)) ||
-      fields.find((f: any) => f && !idNames.has(f.name))
+      fields.find((f: any) => f && !idNames.has(f.n) && isStringField(f)) ||
+      fields.find((f: any) => f && !idNames.has(f.n))
     const displayField = displayFieldObj ? displayFieldObj.name : null
     const idCol = dataIdF ? `item["${dataIdF}"]` : null
     const dispCol = displayField ? `item["${displayField}"]` : null
@@ -108,9 +105,6 @@ end
       const neArticle = /^[aeiou]/i.test(neName) ? "an" : "a"
       const neVar = exampleVarName(neName.toLowerCase(), 'lua')
 
-      // Model-driven match: every REQUIRED load-match key — the same shape
-      // the runtime resolves path params from, so the example always works.
-      // Parent keys (e.g. page_id) first, the entity's own id last.
       const neIdF = entityIdField(nestedEntity)
       const neRequired = opRequestShape(nestedEntity, 'load').items
         .filter((it: any) => !it.optional)
@@ -136,9 +130,6 @@ print(${neVar})
 `)
     }
     else if (opnames.includes('load')) {
-      // Every REQUIRED load-match key (id first, then parent path params like
-      // page_id) — the same shape the runtime resolves path params from, so
-      // the example always works.
       const loadRequired = opRequestShape(exampleEntity, 'load').items
         .filter((it: any) => !it.optional || it.name === idF)
         .sort((a: any, b: any) =>
@@ -160,20 +151,12 @@ print(${eVar})
 `)
     }
 
-    // Model-driven example fields: derive the create/update body from the op
-    // shape (opRequestShape) so the docs reference REAL writable fields, not a
-    // hardcoded "name" the entity may not have. Literals are Lua-typed by the
-    // field's canonical type; non-identifier keys use bracket syntax. ids are
-    // rendered separately as the match key for update/remove; a REQUIRED
-    // create id stays (the call is invalid without it).
     const examplePairs = (opname: string): string[] => {
       const items = opRequestShape(exampleEntity, opname).items
         .filter((it: any) => !idNames.has(it.name) ||
           ('create' === opname && !it.optional))
       const required = items.filter((it: any) => !it.optional)
       const optional = items.filter((it: any) => it.optional)
-      // create needs ALL required fields; update is a patch, so the required
-      // members plus a sample optional field or two suffice.
       const chosen = 'create' === opname
         ? (required.length ? required : items.slice(0, 2))
         : required.concat(optional).slice(0, Math.max(2, required.length))
@@ -181,8 +164,6 @@ print(${eVar})
         `${luaKey(it.name)} = ${luaLit(it.type, 'example_' + it.name)}`)
     }
 
-    // The id VALUE for an update/remove match: off the returned `created` record
-    // only when its data type carries the id AND a create ran, else a literal.
     const idParamType = (opname: string): any => {
       const it = opRequestShape(exampleEntity, opname).items.find((x: any) => x.name === idF)
       return it && it.type
@@ -211,8 +192,6 @@ client:${eName}():update({ ${updatePairs.join(', ')} })
 `)
       }
       if (opnames.includes('remove')) {
-        // Every REQUIRED remove-match key: the id (off the created record
-        // when possible) plus parent keys like page_id.
         const removePairs = opRequestShape(exampleEntity, 'remove').items
           .filter((it: any) => !it.optional || it.name === idF)
           .sort((a: any, b: any) =>

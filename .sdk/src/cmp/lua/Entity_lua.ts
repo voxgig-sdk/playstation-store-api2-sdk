@@ -35,7 +35,6 @@ const Entity = cmp(function Entity(props: any) {
 
   const ff = Path.normalize(__dirname + '/../../../src/cmp/lua/fragment/')
 
-  // Entity files go to entity/ folder
   Folder({ name: 'entity' }, () => {
 
     File({ name: entity.name + '_entity.' + target.ext }, () => {
@@ -58,14 +57,8 @@ const Entity = cmp(function Entity(props: any) {
           EntityName: entity.Name,
           entityname: entity.name,
 
-          // Class token decoupled from the EntityName data-type token in
-          // Entity.fragment.lua so the class can be renamed independently.
           EntyClass: cls,
 
-          // Feature-hook wiring: the built-in `#Name-Hook` tag replacement
-          // is hardwired to `//` line comments, so Lua's `-- #PrePoint-Hook`
-          // markers were never matched and no pipeline hooks fired in
-          // generated code. Match the Lua-comment hook tags explicitly.
           '/(?<indent>[ \\t]*)-- #(?<name>[A-Za-z0-9]+)-Hook[ \\t]*\\n?/':
             ({ name, indent }: any) =>
               `${indent}utility.feature_hook(ctx, "${name}")\n`,

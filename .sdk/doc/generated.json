@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "roots": [
+    ".github/workflows/docgen.yml",
+    ".sdk/doc/generated.json",
+    ".sdk/doc/qa",
+    ".sdk/doc/qa-manifest.json",
+    "SUMMARY.md"
+  ],
+  "files": [
+    ".github/workflows/docgen.yml",
+    ".sdk/doc/generated.json",
+    ".sdk/doc/qa-manifest.json",
+    ".sdk/doc/qa/STYLE-GUIDE.md",
+    ".sdk/doc/qa/pages-job.yml",
+    ".sdk/doc/qa/styles/Docgen/WordChoice.yml",
+    ".sdk/doc/qa/styles/config/vocabularies/Docgen/accept.txt",
+    ".sdk/doc/qa/styles/config/vocabularies/Docgen/reject.txt",
+    ".sdk/doc/qa/vale.ini",
+    ".sdk/doc/qa/workflow.yml",
+    "SUMMARY.md"
+  ]
+}

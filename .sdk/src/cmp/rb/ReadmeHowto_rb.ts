@@ -8,7 +8,6 @@ import {
 } from '@voxgig/apidef'
 
 
-// A type-correct Ruby literal for a field's canonical type.
 function rbLit(type: any): string {
   const k = canonScalarKey(type)
   if ('INTEGER' === k || 'NUMBER' === k) return '1'
@@ -23,9 +22,6 @@ const ReadmeHowto = cmp(function ReadmeHowto(props: any) {
   const { target, ctx$: { model } } = props
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  // Pick an entity with a real op (prefer a read op) — never fabricate a
-  // `load` on an op-less entity like Cloudsmith's `Abort`. primaryOp is null
-  // only when NO entity exposes any op (a direct()-only SDK).
   const { entity: exampleEntity, primaryOp } = pickExampleEntity(entity)
   const eName = exampleEntity ? nom(exampleEntity, 'Name') : 'Entity'
   // Sanitise the local variable name — an entity whose lowercased name is a
@@ -33,9 +29,6 @@ const ReadmeHowto = cmp(function ReadmeHowto(props: any) {
   // fixture KEY (`"${eName.toLowerCase()}"`) stays raw — it must match the
   // entity's registered name for the mock lookup to resolve.
   const eVar = exampleVarName(eName.toLowerCase(), 'rb')
-  // Model-driven id key: null when the entity has no id-like field (a
-  // response-wrapped spec). When null the fixture seeds no id and a match op
-  // takes no argument.
   const idF = exampleEntity ? entityIdField(exampleEntity) : null
   const isMatchOp = 'load' === primaryOp || 'remove' === primaryOp
   const seedSentence = idF
@@ -44,8 +37,6 @@ const ReadmeHowto = cmp(function ReadmeHowto(props: any) {
   const testCtor = idF
     ? `${model.const.Name}SDK.test({\n  "entity" => { "${eName.toLowerCase()}" => { "test01" => { "${idF}" => "test01" } } },\n})`
     : `${model.const.Name}SDK.test`
-  // A type-correct argument for the primary-op call: a match hash for load/
-  // remove, a required-field body for create/update, nothing for list.
   let testCallArg = ''
   if (exampleEntity && isMatchOp) {
     const items = opRequestShape(exampleEntity, primaryOp).items

@@ -7,31 +7,6 @@ import {
 } from '@voxgig/apidef'
 
 
-// Generates ts/test/readme_examples.test.ts — a COMPLETENESS GATE that
-// guarantees every fenced \`\`\`ts code example across all THREE docs (the
-// repo root README.md, this target's per-language README.md, and its
-// REFERENCE.md) is unit-tested. Every block from every doc is:
-//
-//  (1) TYPE-CHECKED against the real SDK types with the repo's local
-//      \`tsc --noEmit\`. To stay robust against tsc suppressing all semantic
-//      diagnostics program-wide whenever one file has a syntax error, blocks
-//      are compiled one-file-per-block in a fixpoint: compile the batch, drop
-//      the ones that error, recompile the rest, until a pass is clean — so a
-//      real type bug can never hide behind a neighbouring illustration's
-//      syntax error.
-//  (2) EXECUTED, if RUNNABLE (constructs \`new <Sdk>SDK\` / \`<Sdk>SDK.test\`
-//      or drives \`client.\`), by rewriting it to a seeded test-mode client
-//      and running it offline. A programming error (undefined method, wrong
-//      arity, bad symbol) fails; only a 404 / "Not found" domain error for an
-//      unseeded id is tolerated. This now runs for ALL THREE docs (previously
-//      only the root README executed).
-//  (3) PARTITIONED into exactly one of { executed, typechecked-only,
-//      illustration } with the counts asserted to sum to the total. A block
-//      that does NOT type-check is only allowed if it matches the NARROW
-//      illustration allowlist (bare method-signature \`?:\`, \`/* placeholder */\`
-//      value, or a type-SHAPE block). Any other non-type-checking block FAILS
-//      the test, quoting the block — it is NEVER silently skipped. A per-doc
-//      summary line makes the coverage visible in the test output.
 const ReadmeExamplesTest = cmp(function ReadmeExamplesTest(props: any) {
   const { ctx$: { model } } = props
   const Name = model.const.Name

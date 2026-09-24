@@ -14,9 +14,6 @@ import type {
 } from './types'
 
 
-// TODO: needs Entity superclass
-// `D` is the entity's typed data model (e.g. Advice); subclasses bind it via
-// `class AdviceEntity extends ProjectNameEntityBase<Advice>`.
 class ProjectNameEntityBase<D = any> {
   name = ''
   name_ = ''
@@ -32,9 +29,6 @@ class ProjectNameEntityBase<D = any> {
   _match: Partial<D>
   _entctx: Context
 
-  // Set once a successful `remove` resolves on this instance. The entity
-  // KEEPS the data it held — a caller can still read what was deleted — but
-  // it is no longer a live record.
   _deleted: boolean
 
 
@@ -114,15 +108,6 @@ class ProjectNameEntityBase<D = any> {
   }
 
 
-  // Streaming operations. Runs `action` through the full pipeline and returns
-  // an async iterator over result items, so the `streaming` feature's
-  // incremental output is reachable from a generated entity (a normal op call
-  // materialises the whole result). `callopts` parameterises the call:
-  //   - inbound (download): iterate the yielded items/chunks (from the
-  //     streaming feature when active, else the materialised items);
-  //   - outbound (upload): pass an async-iterable `body` to stream a request
-  //     payload — it is attached to the request so the transport can send it;
-  //   - `ctrl` (pipeline control) and `signal` (AbortSignal) are honoured.
   async *stream(this: any, action: string, args?: any, callopts?: any): AsyncGenerator<any> {
     const utility = this._utility
     const {
@@ -197,11 +182,6 @@ class ProjectNameEntityBase<D = any> {
 
   toJSON() {
     const struct = this._utility.struct
-  // The marker is NAMESPACED. It used to be `entity$` — a short, generic
-  // name, and the `$`-suffix convention is not unique to sdkgen. Seneca uses
-  // `entity$` on its own entities to hold the canon, so an SDK record fed
-  // into `entize` silently overwrote it and produced entities claiming a
-  // canon that does not exist: no error, just wrong entities.
     return struct.merge([{}, struct.getdef(this._data, {}), { 'voxgig$entity': this.Name }])
   }
 

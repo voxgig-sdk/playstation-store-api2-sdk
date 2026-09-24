@@ -29,7 +29,8 @@ local function prepare_query_util(ctx)
     for _, item in ipairs(reqmatch_items) do
       local key = item[1]
       local val = item[2]
-      if val ~= nil and type(key) == "string" and not contains_param(params, key) then
+      if val ~= nil and type(key) == "string" and key ~= "$action"
+          and not contains_param(params, key) then
         out[key] = val
       end
     end

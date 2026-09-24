@@ -36,30 +36,7 @@ import {
 } from './utility_rb'
 
 
-// PLUGIN DEFINITION REQUIRES AND THE FEATURE_PLUGINS MAP (the ruby peer of
-// cmp/py/Config_py.ts's pluginImports/pluginDefs).
-//
-// Upstream sekreto replaced its self-registration registry with
-// voxgig/plugin definitions: a provider kind the caller did not pass in via
-// `plugins: [...]` is unknown to that Sekreto. So config requires each
-// active plugin's module and names its exported definition CONSTANT (the
-// model's `def.rb` map), handing the list to the feature through
-// FEATURE_PLUGINS.
-//
-// The `def` map is declared in the model rather than derived from filenames
-// because one module may export several definitions (sekreto's aws.rb
-// exports AWSSECRETS and AWSPARAMS) - hence the de-duplication by path, so
-// a two-definition module yields ONE require. A def value is the module's
-// path under tm/rb, which is this target's root, so the require_relative is
-// that path without its extension.
-//
-// GATED, unlike go and py: the whole block is emitted only when an active
-// feature DECLARES a plugin catalogue for this target. An SDK that does not
-// carry the secrets feature must be byte-identical to what it was before
-// the feature existed, and an unread constant is not a thing a simple SDK
-// should have to explain.
 function rbPlugins(model: any, feature: any) {
-  // path -> [constant, ...], so one require serves a two-definition module.
   const bypath: Record<string, string[]> = {}
   const defs: Record<string, string[]> = {}
   let declared = false
@@ -111,24 +88,12 @@ const Config = cmp(async function Config(props: any) {
   const model: Model = ctx$.model
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  // Gated by the applicability tags, so this target never imports or
-  // registers a feature it has no source for. One rule, one place:
-  // helpers/applicability.
   const feature = targetFeatures(model, target)
 
   const headers = getModelPath(model, `main.${KIT}.config.headers`) || {}
 
   const authActive = isAuthActive(model)
-  // config.auth.prefix override -> spec-derived info.security.prefix -> 'Bearer'
   const authPrefix = resolveAuthPrefix(model)
-  // `in` and `name` travel with the prefix now. They were resolved by
-  // apidef all along and dropped here, so an apiKey-in-query API got an
-  // `authorization` header it does not read. `basic` joins them because
-  // PrepareAuth_rb only emits its HTTP Basic branch for a basic scheme, and
-  // that branch reads this option at runtime.
-  //
-  // Each is emitted ONLY when it differs from the default, so an SDK with a
-  // plain header/Authorization bearer scheme regenerates byte-identical.
   const authBasic = isHttpBasicAuth(model)
   const authIn = resolveAuthIn(model)
   const authName = resolveAuthName(model)
@@ -155,13 +120,6 @@ const Config = cmp(async function Config(props: any) {
         },\n`
     : ''
 
-  // The same config as an OBJECT, built by the shared helper so this target's
-  // literal and the data that replaces it above the threshold are the same
-  // config by construction. The JSON is what the threshold is measured on -
-  // emitted source size varies by language, the model does not.
-  // Passing the target name opts in to the main slug/version/target identity
-  // fields (station descriptor inputs) - the literal path below emits them
-  // too, keeping data and literal reps in step.
   const { def: configDef, json: configJson } = configDefinition(model, target.name)
   const asData = isConfigData(configJson, configReprSetting(model))
 
@@ -170,9 +128,6 @@ const Config = cmp(async function Config(props: any) {
   const pluginRequireBlock = 0 === requires.length ? '' :
     '\n' + requires.join('\n') + '\n'
 
-  // Emitted whenever a catalogue is declared, even with every group off:
-  // the feature module reads the map unconditionally, and an SDK whose
-  // chain is all built-ins still has to answer with an empty list.
   const featurePluginsBlock = !declared ? '' :
     `  # The sekreto plugin DEFINITIONS the model selected per feature,
   # required above from the modules the catalogue's active \`plugin.def\`
@@ -205,17 +160,6 @@ ${featurePluginsBlock}  # Return the process-wide config, built once on first us
 
 `)
 
-    // ABOVE THE THRESHOLD: emit the model as DATA.
-    //
-    // A hash literal makes the Ruby parser build a node per entry and the VM
-    // execute an instruction per entry on every load. A string constant is one
-    // token, and `JSON.parse` (a C extension) builds the hash far faster.
-    //
-    // `JSON.parse` yields exactly what the literal did - String keys, Integer
-    // for whole numbers, true/false/nil - so make_config's result is unchanged.
-    //
-    // A SINGLE-quoted literal, so the JSON survives verbatim: a double-quoted
-    // Ruby string would interpolate any `#{` the model happens to contain.
     if (asData) {
       Content(`  # THE API MODEL, EMBEDDED AS DATA (sdkgen rung L1).
   #

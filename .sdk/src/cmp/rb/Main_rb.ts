@@ -59,7 +59,6 @@ const Main = cmp(async function Main(props: any) {
     }
   })
 
-  // Generate main SDK file
   File({ name: model.const.Name + '_sdk.' + target.ext }, () => {
 
     Fragment(
@@ -83,7 +82,6 @@ utility.feature_hook.call(@_rootctx, "${name}")
         }
       },
 
-      // Entities - injected at SLOT
       () => {
         each(entity, (entity: ModelEntity) => {
           const entitySDK = getModelPath(model, `main.${KIT}.entity.${entity.name}`)
@@ -93,19 +91,11 @@ utility.feature_hook.call(@_rootctx, "${name}")
       })
   })
 
-  // Generate config module
   Folder({ name: '.' }, () => {
     Config({ target })
     Schema({ target })
   })
 
-  // GENERATED, NOT COPIED. Where the credential goes is a fact about the
-  // API, and tm/ can only hold one answer. See PrepareAuth_rb.
-  //
-  // At the TARGET ROOT, not inside the `.` folder above and not inside any
-  // `src`: rb's tree is flat (utility/, core/, feature/ sit at the root),
-  // the component opens the one `utility` folder it needs, and that
-  // reproduces tm/rb/utility/prepare_auth.rb's old path exactly.
   PrepareAuth({ target })
 
   // Generate typed models (<Sdk>_types.rb) — required by the main SDK file.

@@ -7,9 +7,6 @@ import {
 } from '@voxgig/apidef'
 
 
-// A type-correct Ruby literal for a field's canonical type — the create body
-// is EXECUTED by the doc test, so it must carry a real value per field.
-// Strings render the quoted placeholder.
 function rbLit(type: any, placeholder: string = 'example'): string {
   const k = canonScalarKey(type)
   if ('INTEGER' === k || 'NUMBER' === k) return '1'
@@ -53,8 +50,7 @@ const ReadmeEntity = cmp(function ReadmeEntity(props: any) {
 
   publishedEntities.map((entity: any) => {
     const opnames = Object.keys(entity.op || {})
-    const fields = entity.fields || []
-    // Model-driven id key: null when this entity has no id-like field.
+    const fields = Object.values(entity.fields || {})
     const idF = entityIdField(entity)
     // Sanitise the local variable name — an entity whose lowercased name is a
     // Ruby keyword (e.g. `self`) would otherwise emit uncompilable code.
@@ -101,8 +97,8 @@ const ReadmeEntity = cmp(function ReadmeEntity(props: any) {
 `)
 
       each(fields, (field: any) => {
-        const desc = field.short || ''
-        Content(`| \`${field.name}\` | \`${canonToType(field.type, target.name)}\` | ${desc} |
+        const desc = field.sh || ''
+        Content(`| \`${field.n}\` | \`${canonToType(field.t, target.name)}\` | ${desc} |
 `)
       })
 
@@ -111,9 +107,6 @@ const ReadmeEntity = cmp(function ReadmeEntity(props: any) {
     }
 
     if (opnames.includes('load')) {
-      // The id key plus every REQUIRED match key (parent path params like
-      // page_id) — the same shape the runtime resolves path params from, so
-      // the example always works.
       const loadItems = opRequestShape(entity, 'load').items
         .filter((it: any) => !it.optional || it.name === idF)
         .sort((a: any, b: any) =>

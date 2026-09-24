@@ -48,6 +48,40 @@ local function densify_lists(v, seen)
   return v
 end
 
+local function copy_data(v)
+  if type(v) ~= 'table' then
+    return v
+  end
+  local out = {}
+  for k, e in pairs(v) do
+    out[k] = copy_data(e)
+  end
+  return setmetatable(out, getmetatable(v))
+end
+
+-- struct's lua getprop scans every key of the parent to classify it, so
+-- validating a map of n entities costs n^2. Each entity entry validates on its
+-- own, and the config's entries are fixed for this Lua state: validate them
+-- once, and per client only the entries the caller passes.
+local entity_defaults_src = nil
+local entity_defaults = nil
+
+local function validate_entities(entities, spec)
+  local out = vs.validate({ entity = densify_lists(entities) }, { entity = spec })
+  if type(out) == 'table' and type(out.entity) == 'table' then
+    return out.entity
+  end
+  return {}
+end
+
+local function validated_entity_defaults(cfgentity, spec)
+  if entity_defaults_src ~= cfgentity then
+    entity_defaults = validate_entities(vs.clone(cfgentity), spec)
+    entity_defaults_src = cfgentity
+  end
+  return entity_defaults
+end
+
 local function make_options_util(ctx)
   local options = ctx.options or {}
 
@@ -150,6 +184,22 @@ local function make_options_util(ctx)
   -- singleton (see config_shared), and merge would otherwise use its nested
   -- tables as merge TARGETS — one instance's options (server, headers, ...)
   -- would contaminate every instance constructed after it.
+  local cfgentity = cfgopts["entity"]
+  local userentity = opts["entity"]
+  local split = type(cfgentity) == 'table' and vs.ismap(cfgentity)
+    and (userentity == nil or vs.ismap(userentity))
+
+  if split then
+    local rest = {}
+    for k, v in pairs(cfgopts) do
+      if k ~= "entity" then
+        rest[k] = v
+      end
+    end
+    cfgopts = rest
+    opts["entity"] = nil
+  end
+
   local merged = vs.merge({ {}, vs.clone(cfgopts), opts })
 
   -- LUA CANNOT STORE NIL, so `{ a, nil, b }` is a table holding keys 1 and 3
@@ -170,6 +220,21 @@ local function make_options_util(ctx)
     validated = {}
   end
   opts = validated
+
+  if split then
+    local entity = copy_data(validated_entity_defaults(cfgentity, optspec["entity"]))
+    if userentity ~= nil then
+      local picked = {}
+      for name, _ in pairs(userentity) do
+        picked[name] = cfgentity[name]
+      end
+      local own = vs.merge({ {}, vs.clone(picked), userentity })
+      for name, e in pairs(validate_entities(own, optspec["entity"])) do
+        entity[name] = e
+      end
+    end
+    opts["entity"] = entity
+  end
 
   -- Resolve a templated base URL (e.g. https://{tenant_id}.hanko.io).
   -- Every placeholder must resolve to a non-empty value: from

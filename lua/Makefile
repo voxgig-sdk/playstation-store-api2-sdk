@@ -11,8 +11,10 @@
 NATIVE ?=
 -include $(wildcard feature/*/native.mk)
 
+# One Lua state for the whole suite, as the other targets share one process:
+# insulating each file re-requires the SDK and re-decodes its config per file.
 test: build
-	busted -p _test test/
+	busted --no-auto-insulate -p _test test/
 
 build: $(NATIVE)
 	@echo "lua: build complete$(if $(NATIVE), ($(NATIVE)),: no compile step)"

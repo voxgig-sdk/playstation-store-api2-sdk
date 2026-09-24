@@ -13,6 +13,8 @@
 #   result_body utility (it has no parse guard), so that ts case is
 #   omitted.
 
+import re
+
 import pytest
 
 from projectname_sdk import PlaystationStoreApi2SDK
@@ -495,6 +497,10 @@ class TestFeatureOrdering:
 
 class TestPrepareAuth:
 
+    # A cookie credential as prepare_auth writes it: `<scheme>=K` for the
+    # probe key, with no scheme prefix and nothing else in the bag.
+    COOKIE_PAIR = re.compile(r"^[^=;]+=K$")
+
     class _AuthClient:
         def __init__(self, options):
             self._options = options
@@ -503,57 +509,128 @@ class TestPrepareAuth:
             return self._options
 
     # Fake client so the exact options.auth / apikey shape is controlled.
-    def _auth_ctx(self, client, options, headers):
+    def _auth_ctx(self, client, options, spec):
         utility = client._utility
         ctx = utility.make_context({"opname": "load"}, client.get_root_ctx())
         ctx.client = self._AuthClient(options)
-        ctx.spec = None if headers is None else PlaystationStoreApi2Spec(
-            {"headers": headers})
+        ctx.spec = spec
         return ctx
+
+    @staticmethod
+    def _bags():
+        return PlaystationStoreApi2Spec({"headers": {}, "query": {}})
+
+    @staticmethod
+    def _bag(spec, where):
+        # A cookie credential rides the header bag, because a cookie IS a
+        # header.
+        return spec.query if "query" == where else spec.headers
+
+    @staticmethod
+    def _auth(prefix):
+        # `basic: false` is explicit: an HTTP Basic API's generated config
+        # carries `auth.basic: true`, and a client that merges it in takes a
+        # branch that needs a secret as well. With none supplied that branch
+        # deliberately writes nothing, which the probe reads as a public API.
+        return {"prefix": prefix, "basic": False}
+
+    # Run prepare_auth with both containers present and see which one the
+    # generated utility writes to, and under what name. None means this SDK
+    # places no credential at all - a public API - which is a legitimate
+    # shape, and the tests below assert exactly that instead. `pair` is the
+    # `<scheme>=` lead-in of a COOKIE credential, which rides the header bag
+    # under the key `cookie` instead of taking a header of its own.
+    def _probe(self, client, options):
+        ctx = self._auth_ctx(client, options, self._bags())
+        client._utility.prepare_auth(ctx)
+        for where in ("headers", "query"):
+            bag = self._bag(ctx.spec, where)
+            for name in bag:
+                value = bag[name]
+                pair = ""
+                if ("headers" == where and "cookie" == name
+                        and isinstance(value, str)
+                        and self.COOKIE_PAIR.match(value)):
+                    pair = value[:-1]
+                return {"where": where, "name": name, "value": value, "pair": pair}
+        return None
+
+    def _credential(self, client):
+        return self._probe(
+            client, {"apikey": "K", "auth": self._auth("Bearer")})
+
+    # Every credential this SDK could possibly place: both credentials and
+    # Basic switched on, so whichever branch the API has, something lands
+    # unless the API is public.
+    def _any_credential(self, client):
+        return self._probe(client, {
+            "apikey": "K", "secret": "S",
+            "auth": {"prefix": "Bearer", "basic": True}})
+
+    def _placed(self, client, options, seed=None):
+        cred = self._credential(client)
+        spec = self._bags()
+        if cred is not None and seed is not None:
+            self._bag(spec, cred["where"])[cred["name"]] = seed
+        ctx = self._auth_ctx(client, options, spec)
+        client._utility.prepare_auth(ctx)
+        if cred is None:
+            return None
+        return self._bag(ctx.spec, cred["where"]).get(cred["name"])
 
     def test_guards_a_missing_spec(self):
         client = _client()
         ctx = self._auth_ctx(client,
-                             {"auth": {"prefix": ""}, "apikey": "K"}, None)
+                             {"auth": self._auth(""), "apikey": "K"}, None)
         _, err = client._utility.prepare_auth(ctx)
         assert err.code == "auth_no_spec"
 
-    def test_an_apikey_with_a_prefix_is_space_joined(self):
+    # Without this the cases below cannot fail for an SDK whose credential the
+    # probe misses: every one of them takes the public-API path instead.
+    def test_the_probe_finds_the_credential_this_sdk_places(self):
         client = _client()
-        ctx = self._auth_ctx(client,
-                             {"apikey": "K", "auth": {"prefix": "Bearer"}}, {})
-        _, err = client._utility.prepare_auth(ctx)
-        assert err is None
-        assert ctx.spec.headers["authorization"] == "Bearer K"
+        assert (self._credential(client) is None) == (
+            self._any_credential(client) is None)
+
+    def test_the_apikey_is_placed_where_this_api_puts_it(self):
+        client = _client()
+        cred = self._credential(client)
+        if cred is None:
+            # A public API places nothing, and that is the whole assertion.
+            assert self._placed(
+                client, {"apikey": "K", "auth": self._auth("Bearer")}) is None
+            return
+        assert cred["where"] in ("headers", "query")
+        if "" != cred["pair"]:
+            # A cookie credential is a `<scheme>=<key>` pair, and the scheme
+            # name leaves no room for the option's prefix.
+            assert self.COOKIE_PAIR.match(cred["value"]), cred["value"]
+            return
+        # A header credential is prefix-joined; a query credential is the raw
+        # key, because a query parameter has nowhere to put a scheme name.
+        assert cred["value"] == ("K" if "query" == cred["where"] else "Bearer K")
 
     def test_a_raw_apikey_goes_in_as_is(self):
         client = _client()
-        ctx = self._auth_ctx(client,
-                             {"apikey": "K", "auth": {"prefix": ""}}, {})
-        client._utility.prepare_auth(ctx)
-        assert ctx.spec.headers["authorization"] == "K"
+        cred = self._credential(client)
+        expected = None if cred is None else cred["pair"] + "K"
+        assert self._placed(
+            client, {"apikey": "K", "auth": self._auth("")}) == expected
 
-    def test_an_empty_apikey_drops_the_header(self):
+    def test_an_empty_apikey_drops_the_credential(self):
         client = _client()
-        ctx = self._auth_ctx(client,
-                             {"apikey": "", "auth": {"prefix": "Bearer"}},
-                             {"authorization": "stale"})
-        client._utility.prepare_auth(ctx)
-        assert ctx.spec.headers.get("authorization") is None
+        assert self._placed(
+            client, {"apikey": "", "auth": self._auth("Bearer")},
+            "stale") is None
 
-    def test_a_public_api_with_no_auth_block_drops_the_header(self):
+    def test_a_public_api_with_no_auth_block_drops_the_credential(self):
         client = _client()
-        ctx = self._auth_ctx(client, {"apikey": "K"},
-                             {"authorization": "stale"})
-        client._utility.prepare_auth(ctx)
-        assert ctx.spec.headers.get("authorization") is None
+        assert self._placed(client, {"apikey": "K"}, "stale") is None
 
-    def test_a_missing_apikey_option_drops_the_header(self):
+    def test_a_missing_apikey_option_drops_the_credential(self):
         client = _client()
-        ctx = self._auth_ctx(client, {"auth": {"prefix": "Bearer"}},
-                             {"authorization": "stale"})
-        client._utility.prepare_auth(ctx)
-        assert ctx.spec.headers.get("authorization") is None
+        assert self._placed(
+            client, {"auth": self._auth("Bearer")}, "stale") is None
 
 
 class TestResultHelpers:

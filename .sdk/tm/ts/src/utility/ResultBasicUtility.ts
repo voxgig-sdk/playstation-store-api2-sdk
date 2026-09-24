@@ -14,7 +14,6 @@ function resultBasic(ctx: Context) {
     result.status = getprop(response, 'status', -1)
     result.statusText = getprop(response, 'statusText', 'no-status')
 
-    // TODO: use spec!
     if (400 <= result.status) {
       const msg = 'request: ' + result.status + ': ' + result.statusText
       if (result.err) {

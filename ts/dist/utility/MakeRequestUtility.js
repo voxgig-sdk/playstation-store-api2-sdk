@@ -26,7 +26,6 @@ async function makeRequest(ctx) {
             ctx.ctrl.explain.fetchdef = fetchdef;
         }
         spec.step = 'prerequest';
-        // TODO: see js code, use `native` prop here
         const fetched = await fetcher(ctx, fetchdef.url, fetchdef);
         if (null == fetched) {
             response = new types_1.Response({ err: ctx.error('request_no_response', 'response: undefined') });

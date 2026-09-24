@@ -55,13 +55,6 @@ func (f *TestFeature) Init(ctx *core.Context, options map[string]any) {
 	self := f
 
 	testFetcher := func(ctx *core.Context, _fullurl string, _fetchdef map[string]any) (any, error) {
-		// Shape the mock payload the way the real API would, so the op's
-		// response transform recovers the entity from it. A point carrying
-		// `transform.res: ` + "`body.item`" + ` describes an API that answers
-		// {"item": {...}}; handing back the bare entity means the transform
-		// unwraps a property that is not there and the caller gets nil. The
-		// mock has to agree with the model, or it only ever simulates APIs
-		// whose responses happen to be unwrapped. Mirrors the ts mock.
 		envelope := func(data any) any {
 			if data == nil || ctx.Point == nil {
 				return data
@@ -78,8 +71,6 @@ func (f *TestFeature) Init(ctx *core.Context, options map[string]any) {
 			if m == nil {
 				return data
 			}
-			// Multi-segment on purpose: GraphQL ops unwrap body.data.<field>
-			// (and body.data.<field>.<entity> for mutations), not just one level.
 			segs := strings.Split(m[1], ".")
 			out := data
 			for i := len(segs) - 1; 0 <= i; i-- {
@@ -152,13 +143,6 @@ func (f *TestFeature) Init(ctx *core.Context, options map[string]any) {
 			out := vs.Clone(found)
 			return respond(200, out, nil), nil
 		} else if op.Name == "update" {
-			// Match the existing entity by id only (or its alias). Reqdata
-			// also contains the new field values, which would otherwise
-			// cause Select to filter out the entity we want to update.
-			// When reqdata has no id, fall back to the id the entity
-			// client carries from a prior create/load (in ctx.Match /
-			// ctx.Data), mirroring the TS mock where param(ctx,'id')
-			// resolves from accumulated state.
 			updateMatch := map[string]any{}
 			if ctx.Reqdata != nil {
 				if v, has := ctx.Reqdata["id"]; has {
@@ -180,24 +164,12 @@ func (f *TestFeature) Init(ctx *core.Context, options map[string]any) {
 			args := self.buildArgs(ctx, op, updateMatch)
 			found := vs.Select(entmap, args)
 			ent := vs.GetElem(found, 0)
-			if ent == nil && entmap != nil {
-				for _, e := range entmap {
-					if _, ok := e.(map[string]any); ok {
-						ent = e
-						break
-					}
-				}
-			}
 			if ent == nil {
+				// update miss: 404, never another record
 				return respond(404, nil, map[string]any{"statusText": "Not found"}), nil
 			}
-			if entm, ok := ent.(map[string]any); ok {
-				reqdata := ctx.Reqdata
-				if reqdata != nil {
-					for k, v := range reqdata {
-						entm[k] = v
-					}
-				}
+			if _, ok := ent.(map[string]any); ok && ctx.Reqdata != nil {
+				vs.Merge([]any{ent, ctx.Reqdata})
 			}
 			vs.DelProp(ent, "$KEY")
 			out := vs.Clone(ent)
@@ -357,13 +329,6 @@ func (f *TestFeature) buildArgs(ctx *core.Context, op *core.Operation, args map[
 	// (e.g. GET /result?trace_id=), which has no path param at all.
 	paramsPath := vs.GetPath(point, []any{"args", "params"})
 	reqdParams := vs.Select(paramsPath, map[string]any{"reqd": true})
-	// The error return Transform gained in struct go 0.1.3 is discarded
-	// DELIBERATELY here, unlike in transform_request/response: these two
-	// transform a spec the SDK itself built from the point definition, not
-	// user data, so an error means a generator bug rather than something a
-	// caller can act on — and buildArgs has no error seam to route it
-	// through. An empty result is the conservative outcome: no required
-	// fields, which is what an absent spec already produces.
 	reqdFromParams, _ := vs.Transform(reqdParams, []any{"`$EACH`", "", "`$KEY.name`"})
 	queryPath := vs.GetPath(point, []any{"args", "query"})
 	reqdQuery := vs.Select(queryPath, map[string]any{"reqd": true})

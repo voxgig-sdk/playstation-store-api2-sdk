@@ -724,6 +724,33 @@ class TestPagingFeature:
         assert res["result"].paging["cursor"] == "abc"
         assert res["result"].paging["hasMore"] is True
 
+    def test_snake_case_signals_and_ctrl_write_back(self):
+        server, calls = recording_server(lambda n, _fd: make_response(
+            200, {"has_more": True, "next_cursor": "c2"} if n == 1
+            else {"has_more": False}))
+        h = make_client([{"name": "paging"}], server=server)
+        pg = {}
+        ctrl = {"paging": pg}
+        res = h.op(op="list", path="/w", ctrl=ctrl)
+        assert res["result"].paging["hasMore"] is True
+        assert res["result"].paging["cursor"] == "c2"
+        assert pg["cursor"] == "c2" and pg["hasMore"] is True
+        h.op(op="list", path="/w", ctrl=ctrl)
+        assert re.search(r"[?&]cursor=c2(&|$)", calls[1]["url"])
+        assert pg["hasMore"] is False and pg["cursor"] is None
+
+    def test_continues_from_written_back_next_page(self):
+        server, calls = recording_server(lambda n, _fd: make_response(
+            200, {"next_page": 2} if n == 1 else {}, {"x-page": str(n)}))
+        h = make_client([{"name": "paging"}], server=server)
+        pg = {}
+        ctrl = {"paging": pg}
+        h.op(op="list", path="/w", ctrl=ctrl)
+        assert pg["page"] == 1 and pg["nextPage"] == 2 and pg["hasMore"] is True
+        h.op(op="list", path="/w", ctrl=ctrl)
+        assert re.search(r"[?&]page=2(&|$)", calls[1]["url"])
+        assert pg["hasMore"] is False
+
     def test_non_list_op_is_not_paged(self):
         server, calls = recording_server()
         h = make_client([{"name": "paging"}], server=server)

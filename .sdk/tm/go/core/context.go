@@ -9,23 +9,18 @@ import (
 )
 
 type Context struct {
-	Id      string
-	Out     map[string]any
-	Ctrl    *Control
-	Meta    map[string]any
-	Client  *PlaystationStoreApi2SDK
-	Utility *Utility
-	Op      *Operation
-	Point   map[string]any
-	Config  map[string]any
-	Entopts map[string]any
-	Options map[string]any
-	Opmap   map[string]*Operation
-	// Opmu guards Opmap. The map is a CACHE shared by inheritance across
-	// every context derived from the same root (see the Opmap block in
-	// NewContext), so two entity operations running on separate
-	// goroutines otherwise race resolveOp's read-then-write - the mutex
-	// travels WITH the map, inherited from the same base context.
+	Id       string
+	Out      map[string]any
+	Ctrl     *Control
+	Meta     map[string]any
+	Client   *PlaystationStoreApi2SDK
+	Utility  *Utility
+	Op       *Operation
+	Point    map[string]any
+	Config   map[string]any
+	Entopts  map[string]any
+	Options  map[string]any
+	Opmap    map[string]*Operation
 	Opmu     *sync.Mutex
 	Response *Response
 	Result   *Result
@@ -91,7 +86,7 @@ func NewContext(ctxmap map[string]any, basectx *Context) *Context {
 		} else if ctrl, ok := c.(*Control); ok {
 			ctx.Ctrl = ctrl
 		}
-	} else if basectx != nil && basectx.Ctrl != nil {
+	} else if basectx != nil && basectx.Ctrl != nil && getCtxProp(ctxmap, "opname") == nil {
 		ctx.Ctrl = basectx.Ctrl
 	}
 
@@ -238,10 +233,6 @@ func NewContext(ctxmap map[string]any, basectx *Context) *Context {
 }
 
 func (ctx *Context) resolveOp(opname string) *Operation {
-	// Cache key is `<entity>:<opname>` so two entities with the same op
-	// (e.g. both have a "list") get distinct cached Operations. Keying on
-	// opname alone caused the first-resolved entity's points to be served
-	// to every subsequent entity's call.
 	entname := ""
 	if ctx.Entity != nil {
 		entname = ctx.Entity.GetName()

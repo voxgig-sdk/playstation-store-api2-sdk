@@ -9,22 +9,7 @@ import (
 	"GOMODULE/core"
 )
 
-// GraphQL transport. API-INDEPENDENT: every GraphQL SDK this generator
-// produces uses this file unchanged. The API-specific part — which
-// operations exist and what each one's document is — is model data,
-// computed once by apidef and emitted into Config.
-//
-// Two jobs:
-//
-//	GraphqlBody   — build { query, variables } for a point, binding the
-//	                op's arguments to the document's declared variables.
-//
-//	GraphqlErrors — lift a GraphQL failure into an SDK error. GraphQL
-//	                reports failures as a top-level `errors` array under
-//	                HTTP 200, so the status-driven path in resultBasic
-//	                never sees them.
 
-// Content type every GraphQL-over-HTTP request uses.
 const GraphqlContentType = "application/json"
 
 // Map a GraphQL error to the same error codes the HTTP path produces, so a
@@ -56,12 +41,6 @@ func graphqlErrorCodeUtil(gqlerr any) string {
 	return "request_graphql"
 }
 
-// Build the request body for a GraphQL point.
-//
-// Variables come from the op's own arguments: a named variable binds to the
-// like-named argument (`from`), and the input-object variable (empty `from`)
-// takes the request data as a whole — which is what makes a generated
-// create/update call look exactly like its REST equivalent.
 func graphqlBodyUtil(ctx *core.Context) any {
 	gql, _ := vs.GetProp(ctx.Point, "graphql").(map[string]any)
 	if gql == nil {
@@ -110,8 +89,6 @@ func graphqlBodyUtil(ctx *core.Context) any {
 			continue
 		}
 
-		// Only send variables the caller actually supplied: sending an
-		// explicit null would clear a field on many APIs.
 		val := vs.GetProp(reqsrc, from)
 		if val == nil {
 			val = vs.GetProp(datasrc, from)
@@ -129,13 +106,6 @@ func graphqlBodyUtil(ctx *core.Context) any {
 	}
 }
 
-// Inspect a decoded GraphQL response body and record a failure when the
-// server reported one. Returns true when an error was recorded.
-//
-// Partial data (`data` alongside `errors`) is treated as failure: the REST
-// surface has no partial-success concept, and silently returning half an
-// object would be worse than failing. The raw envelope stays available on
-// the result for callers that need it.
 func graphqlErrorsUtil(ctx *core.Context) bool {
 	if ctx.Result == nil || ctx.Point == nil {
 		return false

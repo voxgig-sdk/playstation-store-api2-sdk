@@ -513,52 +513,128 @@ class PipelineTest < Minitest::Test
 
   # === prepare_auth ===
 
-  def auth_ctx(options, headers)
+  # A cookie credential as prepare_auth writes it: `<scheme>=K` for the probe
+  # key, with no scheme prefix and nothing else in the bag.
+  COOKIE_PAIR = /\A[^=;]+=K\z/
+
+  def auth_ctx(options, spec)
     ctx = PlaystationStoreApi2Context.new({
       "client" => OptClient.new(options),
       "utility" => @utility,
       "opname" => "load",
     }, nil)
-    ctx.spec = headers.nil? ? nil : PlaystationStoreApi2Spec.new({ "headers" => headers, "step" => "s" })
+    ctx.spec = spec
     ctx
   end
 
+  def auth_bags
+    PlaystationStoreApi2Spec.new({ "headers" => {}, "query" => {}, "step" => "s" })
+  end
+
+  # A cookie credential rides the header bag, because a cookie IS a header.
+  def auth_bag(spec, where)
+    "query" == where ? spec.query : spec.headers
+  end
+
+  # `basic: false` is explicit: an HTTP Basic API's generated config carries
+  # `auth.basic: true`, and a client that merges it in takes a branch that
+  # needs a secret as well. With none supplied that branch deliberately writes
+  # nothing, which the probe would read as a public API.
+  def auth_block(prefix)
+    { "prefix" => prefix, "basic" => false }
+  end
+
+  # Run prepare_auth with both containers present and see which one the
+  # generated utility writes to, and under what name. nil means this SDK
+  # places no credential at all - a public API - which is a legitimate shape,
+  # and the tests below assert exactly that instead. `pair` is the `<scheme>=`
+  # lead-in of a COOKIE credential, which rides the header bag under the key
+  # `cookie` instead of taking a header of its own.
+  def auth_probe(options)
+    ctx = auth_ctx(options, auth_bags)
+    @utility.prepare_auth.call(ctx)
+    ["headers", "query"].each do |where|
+      bag = auth_bag(ctx.spec, where)
+      bag.each do |name, value|
+        pair = ""
+        if "headers" == where && "cookie" == name && value.is_a?(String) &&
+           COOKIE_PAIR.match?(value)
+          pair = value[0..-2]
+        end
+        return { "where" => where, "name" => name, "value" => value, "pair" => pair }
+      end
+    end
+    nil
+  end
+
+  def auth_credential
+    auth_probe({ "apikey" => "K", "auth" => auth_block("Bearer") })
+  end
+
+  # Every credential this SDK could possibly place: both credentials and Basic
+  # switched on, so whichever branch the API has, something lands unless the
+  # API is public.
+  def auth_any_credential
+    auth_probe({ "apikey" => "K", "secret" => "S",
+                 "auth" => { "prefix" => "Bearer", "basic" => true } })
+  end
+
+  def auth_placed(options, seed = nil)
+    cred = auth_credential
+    spec = auth_bags
+    auth_bag(spec, cred["where"])[cred["name"]] = seed if !cred.nil? && !seed.nil?
+    ctx = auth_ctx(options, spec)
+    @utility.prepare_auth.call(ctx)
+    cred.nil? ? nil : auth_bag(ctx.spec, cred["where"])[cred["name"]]
+  end
+
   def test_prepare_auth_guards_a_missing_spec
-    ctx = auth_ctx({ "auth" => { "prefix" => "" }, "apikey" => "K" }, nil)
+    ctx = auth_ctx({ "auth" => auth_block(""), "apikey" => "K" }, nil)
     _, err = @utility.prepare_auth.call(ctx)
     assert_equal "auth_no_spec", err.code
   end
 
-  def test_prepare_auth_an_apikey_with_a_prefix_is_space_joined
-    ctx = auth_ctx({ "apikey" => "K", "auth" => { "prefix" => "Bearer" } }, {})
-    _, err = @utility.prepare_auth.call(ctx)
-    assert_nil err
-    assert_equal "Bearer K", ctx.spec.headers["authorization"]
+  # Without this the cases below cannot fail for an SDK whose credential the
+  # probe misses: every one of them takes the public-API path instead.
+  def test_prepare_auth_probe_finds_the_credential_this_sdk_places
+    assert_equal auth_credential.nil?, auth_any_credential.nil?
+  end
+
+  def test_prepare_auth_places_the_apikey_where_this_api_puts_it
+    cred = auth_credential
+    if cred.nil?
+      # A public API places nothing, and that is the whole assertion.
+      assert_nil auth_placed({ "apikey" => "K", "auth" => auth_block("Bearer") })
+      return
+    end
+    assert_includes ["headers", "query"], cred["where"]
+    if "" != cred["pair"]
+      # A cookie credential is a `<scheme>=<key>` pair, and the scheme name
+      # leaves no room for the option's prefix.
+      assert_match COOKIE_PAIR, cred["value"]
+      return
+    end
+    # A header credential is prefix-joined; a query credential is the raw
+    # key, because a query parameter has nowhere to put a scheme name.
+    assert_equal("query" == cred["where"] ? "K" : "Bearer K", cred["value"])
   end
 
   def test_prepare_auth_a_raw_apikey_goes_in_as_is
-    ctx = auth_ctx({ "apikey" => "K", "auth" => { "prefix" => "" } }, {})
-    @utility.prepare_auth.call(ctx)
-    assert_equal "K", ctx.spec.headers["authorization"]
+    cred = auth_credential
+    expected = cred.nil? ? nil : cred["pair"] + "K"
+    assert_equal expected, auth_placed({ "apikey" => "K", "auth" => auth_block("") })
   end
 
-  def test_prepare_auth_an_empty_apikey_drops_the_header
-    ctx = auth_ctx({ "apikey" => "", "auth" => { "prefix" => "Bearer" } },
-      { "authorization" => "stale" })
-    @utility.prepare_auth.call(ctx)
-    assert_nil ctx.spec.headers["authorization"]
+  def test_prepare_auth_an_empty_apikey_drops_the_credential
+    assert_nil auth_placed({ "apikey" => "", "auth" => auth_block("Bearer") }, "stale")
   end
 
-  def test_prepare_auth_a_public_api_drops_the_header
-    ctx = auth_ctx({ "apikey" => "K" }, { "authorization" => "stale" })
-    @utility.prepare_auth.call(ctx)
-    assert_nil ctx.spec.headers["authorization"]
+  def test_prepare_auth_a_public_api_drops_the_credential
+    assert_nil auth_placed({ "apikey" => "K" }, "stale")
   end
 
-  def test_prepare_auth_a_missing_apikey_option_drops_the_header
-    ctx = auth_ctx({ "auth" => { "prefix" => "Bearer" } }, { "authorization" => "stale" })
-    @utility.prepare_auth.call(ctx)
-    assert_nil ctx.spec.headers["authorization"]
+  def test_prepare_auth_a_missing_apikey_option_drops_the_credential
+    assert_nil auth_placed({ "auth" => auth_block("Bearer") }, "stale")
   end
 
 

@@ -14,12 +14,8 @@ const ReadmeHowto = cmp(function ReadmeHowto(props: any) {
   const { target, ctx$: { model } } = props
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  // Pick an entity with a real op (prefer a read op) — never fabricate a
-  // `load` on an op-less entity like Cloudsmith's `Abort`. primaryOp is null
-  // only when NO entity exposes any op (a direct()-only SDK).
   const { entity: exampleEntity, primaryOp } = pickExampleEntity(entity)
   const eName = exampleEntity ? nom(exampleEntity, 'Name') : 'Entity'
-  // Variable-safe lowercase name (a `Delete` entity must not bind `delete`).
   const eVar = exampleVarName(eName.toLowerCase(), 'ts')
 
   const primaryOpDef = exampleEntity && primaryOp && exampleEntity.op && exampleEntity.op[primaryOp]
@@ -30,7 +26,6 @@ const ReadmeHowto = cmp(function ReadmeHowto(props: any) {
   const idF = exampleEntity ? entityIdField(exampleEntity) : null
   const dataIdF = exampleEntity ? entityDataIdField(exampleEntity) : null
 
-  // A type-correct, language-idiomatic argument for the primary op call.
   const primaryArg = (idPlaceholder: string): string => {
     if (!exampleEntity || !primaryOp) return ''
     if ('list' === primaryOp) return ''
@@ -47,18 +42,18 @@ const ReadmeHowto = cmp(function ReadmeHowto(props: any) {
           it.name === idF ? idPlaceholder : 'example_' + it.name)}`)
       return `{ ${pairs.join(', ')} }`
     }
-    // create / update: a body of the required writable fields.
+    const isIdField = (it: any) => it.name === idF || it.name === 'id'
     const items = opRequestShape(exampleEntity, primaryOp).items
-      .filter((it: any) => it.name !== idF && it.name !== 'id')
+      .filter((it: any) => !isIdField(it) || !it.optional)
     const required = items.filter((it: any) => !it.optional)
     const chosen = required.length ? required : items.slice(0, 3)
     const pairs = chosen.map((it: any) =>
-      `${jsKey(it.name)}: ${exampleValue(exampleEntity, primaryOpDef, it.name, 'example_' + it.name)}`)
+      `${jsKey(it.name)}: ${exampleValue(exampleEntity, primaryOpDef, it.name,
+        isIdField(it) ? idPlaceholder : 'example_' + it.name)}`)
     return `{ ${pairs.join(', ')} }`
   }
   const testCallArg = primaryArg('test01')
   const stateCallArg = primaryArg('example')
-  // Only read `.id` off the returned record when its data type carries one.
   const stateDataLine = dataIdF
     ? `console.log(data.${dataIdF})`
     : `console.log(data)`

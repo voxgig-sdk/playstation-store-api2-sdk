@@ -1,0 +1,32 @@
+
+main: kit: feature: ratelimit: {
+
+  name: key()
+  title: "Client-side rate limiting via a token bucket"
+  version: '0.0.1'
+  active: true
+  base: 'node_modules/@voxgig/sdkgen/project/.sdk'
+  package: '@voxgig/sdkgen'
+  transport: 'wrap'
+
+  config: {
+    options: {
+      active: false
+      # tokens per second
+      rate: 5
+      # bucket capacity (defaults to `rate` when unset)
+      burst: 5
+    }
+  }
+
+  # Ratelimit wraps the transport in init(); it dispatches no pipeline hooks.
+  hook: {}
+}
+
+
+main: kit: feature: ratelimit: config: optspec: {
+  # injected clock
+  now: '`$FUNCTION`'
+  # injected delay, so a test need not really wait
+  sleep: '`$FUNCTION`'
+}

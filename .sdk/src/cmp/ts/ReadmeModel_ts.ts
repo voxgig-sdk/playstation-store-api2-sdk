@@ -30,9 +30,6 @@ const ReadmeModel = cmp(function ReadmeModel(props: any) {
   const opRows = ['load', 'list', 'create', 'update', 'remove']
     .filter((o) => opUnion.has(o)).map((o) => opRowDefs[o]).join('\n')
 
-  // Model-driven return-value bullets: describe only the operations that
-  // actually exist (single-object ops among load/create/update, plus
-  // list/remove) — never document return semantics for a missing op.
   const singleOps = ['load', 'create', 'update'].filter((o) => opUnion.has(o))
     .map((o) => '`' + o + '`')
   const retBullets: string[] = []
@@ -178,13 +175,13 @@ The \`prepare()\` method returns:
 `)
 
   each(entityList, (ent: any) => {
-    const fields = ent.fields || []
+    const fields = Object.values(ent.fields || {})
     const opnames = Object.keys(ent.op || {})
     const ops = ent.op || {}
     const points = each(ops).map((op: any) =>
       op.points ? each(op.points) : []
     ).flat()
-    const path = points.length > 0 ? (points[0] as any).orig || '' : ''
+    const path = points.length > 0 ? (points[0] as any).o || '' : ''
 
     Content(`#### ${ent.Name}
 
@@ -192,7 +189,7 @@ The \`prepare()\` method returns:
 | --- | --- |
 `)
     each(fields, (field: any) => {
-      Content(`| \`${field.name}\` | ${field.short || ''} |
+      Content(`| \`${field.n}\` | ${field.sh || ''} |
 `)
     })
 

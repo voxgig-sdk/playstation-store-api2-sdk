@@ -1,0 +1,104 @@
+
+
+basic: set: [
+
+  # One point: no selection to do, it is simply the point.
+  {
+    ctx: {
+      opname: 'list'
+      entity: { name: 'planet' }
+      options: { allow: { op: 'list' } }
+      config: { entity: { planet: { op: { list: { points: [
+        { method: 'GET', path: ['api', 'planet'], select: {} }
+      ] } } } } }
+    }
+    out: { method: 'GET', path: ['api', 'planet'], select: {} }
+  }
+
+  # allow.op is the gate: an operation missing from it is refused before any
+  # point is considered.
+  {
+    ctx: {
+      opname: 'list'
+      entity: { name: 'planet' }
+      options: { allow: { op: 'load' } }
+      config: { entity: { planet: { op: { list: { points: [
+        { method: 'GET', path: ['api', 'planet'], select: {} }
+      ] } } } } }
+    }
+    match: { out: { code: 'point_op_allow' } }
+  }
+
+  # An operation declared with no points at all is a model error, reported
+  # rather than returning an undefined point.
+  {
+    ctx: {
+      opname: 'list'
+      entity: { name: 'planet' }
+      options: { allow: { op: 'list' } }
+      config: { entity: { planet: { op: { list: { points: [] } } } } }
+    }
+    match: { out: { code: 'point_no_points' } }
+  }
+
+  {
+    ctx: {
+      opname: 'list'
+      entity: { name: 'planet' }
+      options: { allow: { op: 'list' } }
+      match: { id: 'p01' }
+      config: { entity: { planet: { op: { list: { points: [
+        { method: 'GET', path: ['byid'], select: { exist: ['id'] } }
+        { method: 'GET', path: ['all'], select: {} }
+      ] } } } } }
+    }
+    out: { method: 'GET', path: ['byid'], select: { exist: ['id'] } }
+  }
+
+  {
+    ctx: {
+      opname: 'list'
+      entity: { name: 'planet' }
+      options: { allow: { op: 'list' } }
+      match: { name: 'earth' }
+      config: { entity: { planet: { op: { list: { points: [
+        { method: 'GET', path: ['byid'], select: { exist: ['id'] } }
+        { method: 'GET', path: ['all'], select: {} }
+      ] } } } } }
+    }
+    out: { method: 'GET', path: ['all'], select: {} }
+  }
+
+  # $action selects among points. It is read from reqmatch (the operation
+  # argument) only, never from the entity data.
+  {
+    ctx: {
+      opname: 'list'
+      entity: { name: 'planet' }
+      options: { allow: { op: 'list' } }
+      reqmatch: { '$action': 'stop' }
+      config: { entity: { planet: { op: { list: { points: [
+        { method: 'POST', path: ['start'], select: { '$action': 'start' } }
+        { method: 'POST', path: ['stop'], select: { '$action': 'stop' } }
+      ] } } } } }
+    }
+    out: { method: 'POST', path: ['stop'], select: { '$action': 'stop' } }
+  }
+
+  # An $action naming no point is refused rather than silently falling back
+  # to the last one considered.
+  {
+    ctx: {
+      opname: 'list'
+      entity: { name: 'planet' }
+      options: { allow: { op: 'list' } }
+      reqmatch: { '$action': 'nope' }
+      config: { entity: { planet: { op: { list: { points: [
+        { method: 'POST', path: ['start'], select: { '$action': 'start' } }
+        { method: 'POST', path: ['stop'], select: { '$action': 'stop' } }
+      ] } } } } }
+    }
+    match: { out: { code: 'point_action_invalid' } }
+  }
+
+]

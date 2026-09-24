@@ -1,11 +1,3 @@
-// SDK test SUPPORT: the helpers the generated entity/direct tests and the
-// corpus call sites share - env loading, the sdk-test-control.json skip and
-// pacing machinery, corpus access, and entity-data conversion.
-//
-// Split out of the retired runner_test.go (vendor-tag rollout: the corpus
-// ENGINE half of that file is superseded by the vendored omni runner driven
-// through the resolver in omniresolver_test.go; this support half is
-// retained). Same package, same names - the emitted call sites did not move.
 
 package sdktest
 
@@ -159,23 +151,6 @@ func isControlSkipped(kind, name, mode string) (bool, string) {
 	return false, ""
 }
 
-// liveDelayMs returns the configured per-test live delay in ms; default 500.
-// liveClientOptions returns the extra SDK options every LIVE client is
-// constructed with, from sdk-test-control.json `test.client.options`.
-//
-// The generated live client knows two things: the base URL (from the spec)
-// and the credential (from the environment). Everything else about how a
-// particular API wants to be talked to - which features to switch on, and
-// with what settings - is a property of THAT API, known to the project and
-// to nothing in the toolchain.
-//
-// Merged UNDER the generated fields, so the suite's own base/apikey/server
-// values win: this ADDS to the live client, it does not redirect it.
-//
-// That contract is enforced HERE rather than left to each merge site: the
-// generated map only names a field when the model calls for one, so a
-// "base" in this block would face no competing value and would silently
-// redirect the whole suite - credential included - to another host.
 var liveReserved = map[string]bool{
 	"base": true, "prefix": true, "suffix": true,
 	"server": true, "apikey": true, "secret": true,

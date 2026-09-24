@@ -17,51 +17,19 @@ import {
 } from '@voxgig/apidef'
 
 
-// WHERE THE CREDENTIAL GOES IS A FACT ABOUT THE API, so it is generated
-// rather than templated. The py port of cmp/ts/PrepareAuth_ts.ts; see that
-// file for the full account.
-//
-// This was a static file at `tm/py/pkg/utility/prepare_auth.py` that
-// hardcoded a lowercase `authorization` header. apidef has always resolved
-// the scheme's `in` and `name` into `main.kit.info.security` — joplin's
-// says `in: "query", name: "token"` — and generation dropped both, so the
-// SDK sent a header the API does not read and never sent the query
-// parameter it does.
-//
-// A template cannot fix this, because the three placements need three
-// different bodies and a template has to pick one. A component emits the
-// branch this API actually uses and nothing else — no dead query code in a
-// bearer-token SDK, and no runtime `if` on a value that is fixed at
-// generation time.
 const PrepareAuth = cmp(async function PrepareAuth(props: any) {
   const { target } = props
   const { model } = props.ctx$
 
-  // FOLDER NESTING. Main_py already opened the ONE package folder
-  // (`<name>_sdk`) that everything the SDK owns lives in, and the blanket
-  // `Copy({from: 'tm/py/pkg'})` that used to bring this file in runs inside
-  // that same folder — which is why the template's own path,
-  // `tm/py/pkg/utility/prepare_auth.py`, lands at
-  // `<name>_sdk/utility/prepare_auth.py`. So this component opens exactly
-  // ONE segment, `utility`, to reproduce that path. Opening `<name>_sdk`
-  // again would write to `<name>_sdk/<name>_sdk/utility/`, which nothing
-  // imports, while register.py kept importing the stale copy.
   Folder({ name: 'utility' }, () => {
     File({ name: 'prepare_auth.' + target.ext }, () => {
       Content(render({
-        // The generated package name, spelled the way Config_py spells it.
-        // A Copy applies ctx$.stdrep to the file it copies; Content does
-        // not, so the `projectname_sdk` placeholder the template carried
-        // has to be resolved here.
         pkg: model.const.Name.toLowerCase() + '_sdk',
         Name: model.const.Name,
         active: isAuthActive_py(model),
         where: resolveAuthIn(model),
         name: resolveAuthName(model),
         basic: isHttpBasicAuth(model),
-        // Read so the resolution is visible at generation time even though
-        // the emitted code takes the prefix from options at runtime (the
-        // secrets feature rewrites it there).
         prefix: resolveAuthPrefix(model),
       }))
     })
@@ -113,10 +81,6 @@ def prepare_auth_util(ctx):
 }
 
 
-// HEADER. Byte-for-byte the old template when the scheme resolves to the
-// defaults (header / Authorization), so every header-based SDK regenerates
-// unchanged — only the constant's VALUE moves with the model, plus the
-// HTTP Basic block, which is emitted only for a basic scheme.
 function renderHeader(spec: AuthSpec, head: string): string {
   return head + (spec.basic ? `import base64
 ` : '') + `from ${spec.pkg}.utility.voxgig_struct import voxgig_struct as vs
@@ -211,8 +175,6 @@ function basicBlock(spec: AuthSpec): string {
 }
 
 
-// QUERY. The credential is a query parameter, so it goes in spec.query and
-// the headers are never touched.
 function renderQuery(spec: AuthSpec, head: string): string {
   return head + `from ${spec.pkg}.utility.voxgig_struct import voxgig_struct as vs
 
@@ -257,9 +219,6 @@ def prepare_auth_util(ctx):
 }
 
 
-// COOKIE. A cookie IS a header, so the credential rides the header bag -
-// but the `cookie` header is SHARED with whatever cookies the caller set,
-// so the pair is spliced in and out rather than the header assigned over.
 function renderCookie(spec: AuthSpec, head: string): string {
   return head + `from ${spec.pkg}.utility.voxgig_struct import voxgig_struct as vs
 
@@ -339,28 +298,6 @@ def prepare_auth_util(ctx):
 }
 
 
-// NOT `isAuthActive`, AND THE DIFFERENCE IS LOAD-BEARING. That helper is
-// false whenever the SPEC declares no security scheme (`main.kit.info.auth:
-// false`) — which is a statement about the DEFINITION, not a ban on ever
-// sending a credential. apidef writes it for every spec with no
-// securitySchemes block, GitHub's official OpenAPI included, and those SDKs
-// are still expected to honour an `apikey` the caller passes; the old
-// template placed the credential unconditionally, so they did.
-//
-// Gating the body on `isAuthActive` therefore does not just trim dead code,
-// it removes working authentication from every such SDK. The generated
-// suite catches it: generatedcompile's `py: auth null beats an explicit
-// apikey` lane generates against a fixture that declares
-// `main: kit: info: { ... auth: false }` and then requires
-// `wire({apikey: 'OPTKEY01'})` to reach the transport as an authorization
-// header. With the wider gate it reports
-//
-//   FAIL: baseline broken: an ordinary apikey was not sent:
-//         {'called': True, 'had': False, 'val': None}
-//
-// So the no-op is emitted only when the PROJECT says so — `config.auth.active:
-// false`, an explicit per-SDK switch nobody sets by accident. A spec that is
-// merely silent keeps the credential path it has always had.
 function isAuthActive_py(model: any): boolean {
   const auth = getModelPath(model, `main.${KIT}.config.auth`,
     { only_active: false, required: false })
@@ -368,12 +305,6 @@ function isAuthActive_py(model: any): boolean {
 }
 
 
-// HTTP header names are case-insensitive, and the whole py runtime spells
-// them lowercase - the debug feature's redact list, the secrets feature's
-// in-place rewrite of `fetchdef["headers"]["authorization"]`, and the
-// generated tests all match on the lowercase key. Lowercasing here keeps
-// the default byte-identical to the old template AND keeps a custom header
-// name (`X-API-Key`) findable by all of them.
 function headerName(name: string): string {
   return String(name).toLowerCase()
 }

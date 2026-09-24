@@ -17,22 +17,6 @@ import {
 } from './utility_lua'
 
 
-// THE GENERATED SCHEMA MODULE: the model's schemas, as data the SDK can run.
-//
-// The lua peer of src/cmp/ts/Schema_ts.ts. Same two exports, same source —
-// OPTSPEC from `main.kit.optspec` plus each feature's own `config.options`,
-// ENTITYSPEC from the entity field sentinels — built by the shared helpers,
-// so what lua validates against and what ts validates against cannot drift.
-//
-// EMBEDDED AS JSON IN A LONG BRACKET, PARSED AT LOAD: the mechanism
-// config.lua already uses for the model above the size threshold.
-// `luaLongString` picks a bracket level no `]]` in the content can close, so
-// the sentinels' backticks and the JSON's own quoting survive verbatim with
-// no escaping at all.
-//
-// The round-trip is exact because the spec holds only strings and booleans —
-// pinned by "strings and booleans only, so the JSON round-trip is lossless"
-// in ts/test/optspec.test.ts.
 const Schema = cmp(async function Schema(props: any) {
   const ctx$ = props.ctx$
   const target = props.target
@@ -46,7 +30,7 @@ const Schema = cmp(async function Schema(props: any) {
     Content(`-- ${model.const.Name} ${target.Name} SDK: generated schemas. Do not edit.
 --
 -- Generated from the model: \`main.kit.optspec\` and each feature's
--- \`config.options\` for OPTSPEC; entity \`fields[].type\` for ENTITYSPEC.
+-- \`config.options\` for OPTSPEC; entity \`fields{}.type\` for ENTITYSPEC.
 
 local json = require("dkjson")
 

@@ -35,17 +35,11 @@ const client = new PlaystationStoreApi2SDK()
 
 ### 3. Load a container
 
-Container is nested under age_limit, so provide the `age_limit`.
 `load()` returns the entity directly and throws on failure:
 
 ```ts
 try {
-  const container = await client.Container().load({
-    age_limit: 'example_age_limit',
-    container_id: 'example_container_id',
-    country: 'example_country',
-    language: 'example_language',
-  })
+  const container = await client.Container().load({ age_limit: 'example_age_limit', container_id: 'example_container_id', country: 'example_country', language: 'example_language' })
   console.log(container)
 } catch (err) {
   console.error('load failed:', err)

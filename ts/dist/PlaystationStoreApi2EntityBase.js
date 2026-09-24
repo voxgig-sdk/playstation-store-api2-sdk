@@ -2,9 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PlaystationStoreApi2EntityBase = void 0;
 const node_util_1 = require("node:util");
-// TODO: needs Entity superclass
-// `D` is the entity's typed data model (e.g. Advice); subclasses bind it via
-// `class AdviceEntity extends PlaystationStoreApi2EntityBase<Advice>`.
 class PlaystationStoreApi2EntityBase {
     name = '';
     name_ = '';
@@ -18,9 +15,6 @@ class PlaystationStoreApi2EntityBase {
     _data;
     _match;
     _entctx;
-    // Set once a successful `remove` resolves on this instance. The entity
-    // KEEPS the data it held — a caller can still read what was deleted — but
-    // it is no longer a live record.
     _deleted;
     constructor(client, entopts) {
         entopts = entopts || {};
@@ -76,15 +70,6 @@ class PlaystationStoreApi2EntityBase {
         let out = struct.clone(this._match);
         return out;
     }
-    // Streaming operations. Runs `action` through the full pipeline and returns
-    // an async iterator over result items, so the `streaming` feature's
-    // incremental output is reachable from a generated entity (a normal op call
-    // materialises the whole result). `callopts` parameterises the call:
-    //   - inbound (download): iterate the yielded items/chunks (from the
-    //     streaming feature when active, else the materialised items);
-    //   - outbound (upload): pass an async-iterable `body` to stream a request
-    //     payload — it is attached to the request so the transport can send it;
-    //   - `ctrl` (pipeline control) and `signal` (AbortSignal) are honoured.
     async *stream(action, args, callopts) {
         const utility = this._utility;
         const { makeContext, done, featureHook, makePoint, makeSpec, makeRequest, makeResponse, makeResult, } = utility;
@@ -182,11 +167,6 @@ class PlaystationStoreApi2EntityBase {
     }
     toJSON() {
         const struct = this._utility.struct;
-        // The marker is NAMESPACED. It used to be `entity$` — a short, generic
-        // name, and the `$`-suffix convention is not unique to sdkgen. Seneca uses
-        // `entity$` on its own entities to hold the canon, so an SDK record fed
-        // into `entize` silently overwrote it and produced entities claiming a
-        // canon that does not exist: no error, just wrong entities.
         return struct.merge([{}, struct.getdef(this._data, {}), { 'voxgig$entity': this.Name }]);
     }
     toString() {

@@ -1,0 +1,4 @@
+
+
+basic: pending: 'featureInit calls f.init(ctx, fopts); init is a function, and a fixture compiles to JSON, so the subject cannot be expressed here.'
+basic: set: []

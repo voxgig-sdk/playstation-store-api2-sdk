@@ -1,13 +1,6 @@
 
 import { Context } from '../types'
 
-/* Find value of a match parameter, possibly using an alias.
- *
- * The match parameter may have an alias key. For example, the parameter `foo_id` may be
- * aliased to `id` in the entity data.
- *
- * This function returns `undefined` rather than failing.
- */
 function param(ctx: Context, paramdef: any) {
   const point = ctx.point
   const spec = ctx.spec
@@ -27,7 +20,6 @@ function param(ctx: Context, paramdef: any) {
 
   const pt = typify(paramdef)
 
-  // TODO: review this search algorithm
 
   const key = 0 < (T_string & pt) ? paramdef : getprop(paramdef, 'name')
 

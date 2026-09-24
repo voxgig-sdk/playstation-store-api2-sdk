@@ -4,21 +4,6 @@ exports.GRAPHQL_CONTENT_TYPE = void 0;
 exports.graphqlBody = graphqlBody;
 exports.graphqlErrors = graphqlErrors;
 exports.graphqlErrorCode = graphqlErrorCode;
-// GraphQL transport. API-INDEPENDENT: every GraphQL SDK this generator
-// produces uses this file unchanged. The API-specific part — which
-// operations exist and what each one's document is — is model data,
-// computed once by apidef and emitted into Config.
-//
-// Two jobs:
-//
-//   graphqlBody    — build { query, variables } for a point, binding the
-//                    op's arguments to the document's declared variables.
-//
-//   graphqlErrors  — lift a GraphQL failure into an SDK error. GraphQL
-//                    reports failures as a top-level `errors` array under
-//                    HTTP 200, so the status-driven path in resultBasic
-//                    never sees them.
-// Content type every GraphQL-over-HTTP request uses.
 const GRAPHQL_CONTENT_TYPE = 'application/json';
 exports.GRAPHQL_CONTENT_TYPE = GRAPHQL_CONTENT_TYPE;
 // Map a GraphQL error to the same error codes the HTTP path produces, so a
@@ -42,12 +27,6 @@ function graphqlErrorCode(gqlerr) {
     }
     return 'request_graphql';
 }
-// Build the request body for a GraphQL point.
-//
-// Variables come from the op's own arguments: a named variable binds to the
-// like-named argument (`from`), and the input-object variable (empty `from`)
-// takes the request data as a whole — which is what makes a generated
-// create/update call look exactly like its REST equivalent.
 function graphqlBody(ctx) {
     const utility = ctx.utility;
     const struct = utility.struct;
@@ -90,13 +69,6 @@ function graphqlBody(ctx) {
         variables,
     };
 }
-// Inspect a decoded GraphQL response body and record a failure when the
-// server reported one. Returns true when an error was recorded.
-//
-// Partial data (`data` alongside `errors`) is treated as failure: the REST
-// surface has no partial-success concept, and silently returning half an
-// object would be worse than failing. The raw envelope stays available on
-// the result for callers that need it.
 function graphqlErrors(ctx) {
     const result = ctx.result;
     const point = ctx.point;

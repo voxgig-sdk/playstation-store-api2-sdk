@@ -1104,6 +1104,50 @@ class FeatureTest extends TestCase
         $this->assertTrue($res['result']->paging['hasMore']);
     }
 
+    public function test_paging_snake_case_signals_and_ctrl_write_back(): void
+    {
+        $this->needs('paging');
+        $rec = new FtRecorder(function (int $n) {
+            return FtHarness::response(200, 1 === $n
+                ? ['has_more' => true, 'next_cursor' => 'c2']
+                : ['has_more' => false]);
+        });
+        $h = new FtHarness([
+            ['name' => 'paging'],
+        ], $rec->server());
+        $res = $h->op(['op' => 'list', 'path' => '/w', 'ctrl' => ['paging' => []]]);
+        $this->assertTrue($res['result']->paging['hasMore']);
+        $this->assertSame('c2', $res['result']->paging['cursor']);
+        $written = $res['ctx']->ctrl->paging;
+        $this->assertSame('c2', $written['cursor']);
+        $this->assertTrue($written['hasMore']);
+        // Arrays are values here, so the written-back record is passed on by hand.
+        $res = $h->op(['op' => 'list', 'path' => '/w', 'ctrl' => ['paging' => $written]]);
+        $this->assertStringContainsString('cursor=c2', $rec->calls[1]['url']);
+        $this->assertFalse($res['ctx']->ctrl->paging['hasMore']);
+        $this->assertNull($res['ctx']->ctrl->paging['cursor']);
+    }
+
+    public function test_paging_continues_from_written_back_next_page(): void
+    {
+        $this->needs('paging');
+        $rec = new FtRecorder(function (int $n) {
+            return FtHarness::response(200, 1 === $n ? ['next_page' => 2] : [],
+                ['x-page' => (string) $n]);
+        });
+        $h = new FtHarness([
+            ['name' => 'paging'],
+        ], $rec->server());
+        $res = $h->op(['op' => 'list', 'path' => '/w']);
+        $written = $res['ctx']->ctrl->paging;
+        $this->assertEquals(1, $written['page']);
+        $this->assertEquals(2, $written['nextPage']);
+        $this->assertTrue($written['hasMore']);
+        $res = $h->op(['op' => 'list', 'path' => '/w', 'ctrl' => ['paging' => $written]]);
+        $this->assertStringContainsString('page=2', $rec->calls[1]['url']);
+        $this->assertFalse($res['ctx']->ctrl->paging['hasMore']);
+    }
+
     public function test_paging_non_list_op_is_not_paged(): void
     {
         $this->needs('paging');

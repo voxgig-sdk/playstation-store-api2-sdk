@@ -1,10 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transformRequest = transformRequest;
-/* Convert entity data or match query into a srtucture suitable for use as request data.
- *
- * The operation (op) property `reqform` is used to perform the data preparation.
- */
 function transformRequest(ctx) {
     const spec = ctx.spec;
     const utility = ctx.utility;
@@ -25,22 +21,6 @@ function transformRequest(ctx) {
         return utility.makeError(ctx, err);
     }
 }
-// `$action` selects WHICH POINT of the op to use (see MakePointUtility). It
-// is the SDK's own discriminator, never an API field, so it must not survive
-// into the wire body. The GraphQL path already strips it where it builds its
-// input object; this is the same rule on the REST path, which had no such
-// step and sent it verbatim -- `{"$action":"merge", ...}` to GitHub's merge
-// endpoint. Harmless there, because GitHub ignores unknown keys; not
-// harmless against an API that validates its request bodies strictly.
-//
-// Only a top-level key of a plain object: a body may legitimately be an
-// array or a scalar, and neither can carry a selector.
-//
-// `__proto__` is assigned through Object.defineProperty, never `body[key] =`.
-// It is a legal JSON key and can be a real API field, but plain assignment
-// invokes the inherited setter: the key would vanish from the serialised
-// request and silently become the body's prototype instead. Same treatment
-// as StructUtility's condenseSet, for the same reason.
 function stripAction(reqdata) {
     if (null == reqdata || 'object' !== typeof reqdata || Array.isArray(reqdata)) {
         return reqdata;

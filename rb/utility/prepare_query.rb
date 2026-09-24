@@ -14,7 +14,7 @@ module PlaystationStoreApi2Utilities
     if items
       items.each do |item|
         key, val = item[0], item[1]
-        out[key] = val if val && key.is_a?(String) && !params.include?(key)
+        out[key] = val if val && key.is_a?(String) && key != "$action" && !params.include?(key)
       end
     end
     out

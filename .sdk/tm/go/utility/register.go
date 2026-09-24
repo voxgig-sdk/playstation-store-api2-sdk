@@ -40,25 +40,6 @@ func registerAll(u *core.Utility) {
 	u.TransformResponse = transformResponseUtil
 }
 
-// overrideUtil replaces one utility member from `options.utility`, matching
-// the ts reference: a key naming a real utility member REPLACES it, and any
-// other key is attached as a custom extra.
-//
-// Without this the override was a no-op here. `makeOptions` put every entry
-// in `u.Custom`, which nothing reads, so a caller passing
-// `utility: {"fetcher": myTransport}` - the documented way to script the
-// transport, and the seam the shared feature corpus runs on - was silently
-// ignored while ts and js honoured it. The custom-utility test did not catch
-// it because it asserted the side map rather than the behaviour.
-//
-// Returns false when the key names no member, or when the value is not that
-// member's signature; the caller then keeps it in Custom. A wrong signature
-// is deliberately NOT an error: ts attaches whatever it is given, so a typed
-// port that rejected it outright would diverge in the other direction.
-//
-// Keep this list in step with registerAll above - a utility added to one and
-// not the other is overridable in ts and not here, which is the divergence
-// this exists to remove.
 func overrideUtil(u *core.Utility, key string, val any) bool {
 	switch key {
 	case "clean":
@@ -92,15 +73,6 @@ func overrideUtil(u *core.Utility, key string, val any) bool {
 			return true
 		}
 	case "fetcher":
-		// BOTH SPELLINGS. Fetcher is the one member declared as a NAMED type,
-		// and a type assertion to a defined type matches only that exact
-		// dynamic type. A plain function literal in a map[string]any - the
-		// ordinary way to write this - carries the UNNAMED signature and
-		// asserts to `func(...)` but not to `core.FetcherFunc`; a value the
-		// caller converted asserts to `core.FetcherFunc` but not to the
-		// unnamed one. Accepting only the named type shelved every ordinary
-		// caller's transport in Custom, which is the exact defect this
-		// function exists to remove.
 		if fn, ok := val.(core.FetcherFunc); ok {
 			u.Fetcher = fn
 			return true

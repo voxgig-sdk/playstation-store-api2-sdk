@@ -1,7 +1,5 @@
 import { LiveBlocked } from './live-runner'
 
-// Deliberately conservative: unsupported constraints block preparation instead
-// of labelling an invented value as live-valid. Errors never include values.
 export function validateContract(schema: any, value: any, direction = 'request', depth = 0): void {
   const bad = () => { throw new Error('Operation contract mismatch') }
   if (depth > 40 || schema === false) return bad()

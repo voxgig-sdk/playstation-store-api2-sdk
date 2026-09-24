@@ -1,51 +1,3 @@
-// The corpus test runner: vendored @voxgig/omni driven through its NATIVE
-// API (`omni.MakeRunner(specref, provider)`), presented to the corpus tests
-// in the struct-runner shape they already use (`RunPack.Spec`,
-// `RunPack.RunSet`, `RunPack.RunSetFlags`, `RunPack.Client`). No compat
-// shim is vendored: the adapter below IS the whole bridge, per language,
-// per the vendor-tag rollout (docs/design/vendor-tag-rollout.md,
-// Decision 4). It supersedes the engine halves of the retired
-// runner_test.go and struct_runner_test.go (support lives on in
-// testsupport_test.go).
-//
-// Go-specific decisions, each load-bearing:
-//
-// 1. REFLECTION PROVIDER. The omni provider hooks reach the client by
-//    reflection over the names the clients already expose (Utility() /
-//    GetUtility(), Struct(), Contextify(), Tester()), so ONE resolver
-//    serves both the generated SDK and the struct-corpus client in
-//    struct_utility_test.go. Ported from upstream's go compat shim
-//    (omni go/compat/struct), which this resolver replaces.
-//
-// 2. CONTEXTS STAY MAPS ACROSS THE RUNNER. omni sets `entry.ctx` to the
-//    contextified args[0] and `match: {ctx: ...}` assertions read THROUGH
-//    it with omni's own GetPath, which walks JSON maps only. A typed
-//    *sdk.Context there would make every ctx assertion read "absent". So
-//    Contextify returns the MAP; a corpus subject builds the typed context
-//    with omniCtx(args[0], ...) at the call site, runs the utility, and
-//    writes the observable ctx state back into the same map with
-//    omniSyncCtx - which is what makes the live SDK reachable through
-//    ctx.Client for the generated utilities (the ts resolver gets both for
-//    free from prototype delegation; maps-plus-sync is the go idiom for
-//    the same contract).
-//
-// 3. ZERO-ARGUMENT ENTRIES (novalargs). The corpus carries entries with no
-//    `in`, `args` or `ctx`, meaning "call the subject with NO argument".
-//    omni's native rule passes [clone(entry.in)] - one null. The upstream
-//    go compat shim corrected this by handing such entries the struct
-//    port's own no-value sentinel (NOVAL); that correction is ported here
-//    (novalargs/novalsubject/NOVALMARK), not dropped.
-//
-// 4. THE VENDORED GO PORT LACKS THE omni#54 RUNNER FIXES the TypeScript
-//    port has at this tag (omni#57 tracks porting them): JsonStr has no
-//    cycle guard, and Match clones its base. Both only bite on CYCLIC
-//    values, and go's Clone/FixJson pass non-JSON values (a typed context,
-//    a client) through by reference without walking them - so decision 2
-//    above (JSON-only maps in entries, typed state kept out of them) is
-//    also what keeps every value the runner clones or stringifies acyclic.
-//    The errify half (non-Error throwables) cannot arise in go: subjects
-//    return `error` values, and the Errify hook below keeps the SDK
-//    error's code for `match: {err: {code: ...}}` assertions.
 
 package sdktest
 
@@ -86,7 +38,6 @@ type Subject = omni.Subject
 // RunSet runs one set of test entries, reporting failures to the test.
 type RunSet func(t TestingT, testspec any, testsubject any)
 
-// RunSetFlags runs one set of test entries with flags.
 type RunSetFlags func(t TestingT, testspec any, flags map[string]bool, testsubject any)
 
 // RunPack is what the runner returns for one named spec section - the
@@ -151,7 +102,6 @@ func MakeRunner(testfile any, client any) func(name string, store any) (*RunPack
 	}
 }
 
-// The runner's flags are booleans; omni's carry any value.
 func omniflags(flags map[string]bool) omni.Flags {
 	out := omni.Flags{}
 	for name, flag := range flags {
@@ -160,12 +110,6 @@ func omniflags(flags map[string]bool) omni.Flags {
 	return out
 }
 
-// providerclients maps each omni provider back to the live client it
-// wraps, and defproviders marks the ones a spec's DEF.client built - the
-// only ones omniCtx lets override a call site's explicit client (the base
-// provider rides on EVERY ctx entry, and letting it win would defeat the
-// sections that deliberately construct a differently-optioned client).
-// Guarded: corpus subtests may run concurrently.
 var (
 	providerclientsmu sync.Mutex
 	providerclients   = map[*omni.Provider]any{}
@@ -269,7 +213,6 @@ func omniProvider(client any) *omni.Provider {
 			return ctx
 		},
 
-		// Client options may reference the runner store.
 		Inject: func(options any, store any) any {
 			vs.Inject(options, store)
 			return options
@@ -298,12 +241,6 @@ func omniProvider(client any) *omni.Provider {
 	return provider
 }
 
-// utilityof reaches the client's utility: Utility() on the struct corpus
-// client, GetUtility() on the generated SDK. Only a ZERO-ARGUMENT method
-// counts - a generated SDK with an entity named `utility` has an entity
-// ACCESSOR of the same name that takes options, and calling that here
-// would panic (the fixture model ships reserved-name entities precisely to
-// catch this class of collision).
 func utilityof(client any) reflect.Value {
 	method := findnullarymethod(reflect.ValueOf(client), "utility")
 	if !method.IsValid() {
@@ -452,9 +389,6 @@ func novalargs(testspec any, sentinel any) (any, bool) {
 	return out, true
 }
 
-// NOVALMARK stands in for the port's no-value between novalargs and
-// novalsubject. Deliberately not one of omni's own sentinels: those are
-// meaningful to the runner, and this one must pass through it inert.
 const NOVALMARK = "__OMNIRESOLVER_NOVAL__"
 
 // novalsubject swaps the marker back for the real sentinel at the point of
@@ -490,12 +424,6 @@ func noargs(entry any) bool {
 	return true
 }
 
-// fixnums: an integral JSON number becomes a Go `int`, on both the spec
-// and the result side. The struct port's API is written in `int`
-// (`Typename(t int)`, `Flatten(list, depths ...int)`), and omni's go
-// runner keeps JSON numbers as float64 - handing a subject a type its
-// signature rejects. omni's DeepEqual compares numbers by value, so the
-// normalisation is invisible to assertions.
 func fixnums(val any) any {
 	switch value := val.(type) {
 	case float64:
@@ -641,7 +569,6 @@ func omniCtx(arg any, client *sdk.PlaystationStoreApi2SDK, utility *sdk.Utility)
 		ctx.Spec = sdk.NewSpec(specMap)
 	}
 
-	// Handle result from JSON map
 	if resMap, ok := ctxmap["result"].(map[string]any); ok {
 		ctx.Result = sdk.NewResult(resMap)
 		if errMap, ok := resMap["err"].(map[string]any); ok {
@@ -651,7 +578,6 @@ func omniCtx(arg any, client *sdk.PlaystationStoreApi2SDK, utility *sdk.Utility)
 		}
 	}
 
-	// Handle response from JSON map
 	if respMap, ok := ctxmap["response"].(map[string]any); ok {
 		ctx.Response = sdk.NewResponse(respMap)
 		if body := respMap["body"]; body != nil {

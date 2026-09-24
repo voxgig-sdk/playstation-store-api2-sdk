@@ -267,6 +267,19 @@ class FeatureCorpusTest extends TestCase
         $this->assertSame($expect, $actual, $path);
     }
 
+    // Whether the SDK built the feature at all. The activity record is the
+    // wrong probe: most features create theirs on first use, so an idle
+    // client has none and every section but the eager ones read as inert.
+    private static function present($client, string $name): bool
+    {
+        foreach ($client->features ?? [] as $f) {
+            if (($f->name ?? null) === $name) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static function record($client, string $name)
     {
         $prop = '_' . $name;
@@ -326,7 +339,10 @@ class FeatureCorpusTest extends TestCase
             // Probed by ACTIVATING it: the feature defaults to inactive, so an
             // idle client never builds it and its absence says nothing.
             $probe = self::buildClient(['feature' => [['name' => $name, 'active' => true]]]);
-            if (null === self::record($probe, $name)) {
+            if (!self::present($probe, $name)) {
+                // The one line every runner prints for an inert section.
+                fwrite(STDERR, sprintf(
+                    "feature.%s: inert (this SDK does not generate the feature)\n", $name));
                 continue;
             }
 

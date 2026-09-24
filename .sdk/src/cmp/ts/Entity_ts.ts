@@ -13,7 +13,6 @@ import {
 } from '@voxgig/apidef'
 
 import { EntityOperation } from './EntityOperation_ts'
-// import { EntityTest } from './EntityTest_ts'
 
 
 const Entity = cmp(function Entity(props: any) {
@@ -38,8 +37,6 @@ const Entity = cmp(function Entity(props: any) {
   // string stays entity.Name; only the TYPE reference is ever renamed.
   const dataType = tsSafeTypeName(entity.Name)
 
-  // Import exactly the typed models this entity references: its data type plus
-  // one request type per ACTIVE op (matches what EntityTypes_ts.ts emits).
   const typeNames = [dataType]
   const opnamesAll = Object.keys(entity.op || {})
   ;['load', 'list', 'create', 'update', 'remove'].forEach((opname: string) => {
@@ -76,8 +73,6 @@ const Entity = cmp(function Entity(props: any) {
           EntityName: entity.Name,
           EntityDataType: dataType,
 
-          // Class token decoupled from the EntityName data-type token in
-          // Entity.fragment.ts so the class can be renamed independently.
           EntyClass: cls,
 
           '#TypeImports': ({ indent }: any) => Content({ indent }, typeImport),
@@ -95,7 +90,6 @@ if (fres instanceof Promise) { await fres }
     })
   })
 
-  // EntityTest({ target, entity, entrep, ff })
 })
 
 

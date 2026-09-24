@@ -12,64 +12,18 @@ import {
 } from '@voxgig/sdkgen'
 
 
-// WHERE THE CREDENTIAL GOES IS A FACT ABOUT THE API, so it is generated
-// rather than templated. The lua peer of PrepareAuth_ts.
-//
-// This was a static file at tm/lua/utility/prepare_auth.lua that hardcoded
-// a lower-case "authorization" HEADER. apidef has always resolved the
-// scheme's "in" and "name" into main.kit.info.security - joplin's says
-// in: "query", name: "token" - and generation dropped both. The result was
-// an SDK that sent a header the API does not read and never sent the query
-// parameter it does, so it could not authenticate at all. Four repos in
-// the cedar fleet shipped that way: joplin (token), pipedrive (api_token),
-// trello (key), lm-umbrella (apiKey).
-//
-// A template cannot fix this, because the three placements need three
-// different bodies and a template has to pick one. A component emits the
-// branch this API actually uses and nothing else - no dead query code in a
-// bearer-token SDK, and no runtime branch on a value that is fixed at
-// generation time.
-//
-// The header placement renders BYTE-FOR-BYTE what the template rendered,
-// so every header-based lua SDK regenerates with a zero diff.
 const PrepareAuth = cmp(async function PrepareAuth(props: any) {
   const { target } = props
   const { model } = props.ctx$
 
-  // `!isAuthSuppressed`, NOT `isAuthActive`. The latter is also false when
-  // the SPEC merely declares no security scheme (`main.kit.info.auth:
-  // false`), and those SDKs still carry a credential: optspec always
-  // declares `apikey` and makeOptions fills `options.auth` from its
-  // defaults, so the runtime guard never fired and they have always sent
-  // it. Only an explicit `main.kit.config.auth.active: false` means "no
-  // credential, ever", which is what isAuthSuppressed reads.
   const active = !isAuthSuppressed(model)
   const where = resolveAuthIn(model)
   const prefix = resolveAuthPrefix(model)
   const basic = isHttpBasicAuth(model)
 
-  // A HEADER NAME IS LOWER-CASED HERE; A QUERY OR COOKIE NAME IS NOT.
-  // Every header key the lua SDK writes is lower case (make_spec's
-  // "content-type", the secrets feature's "authorization", fetcher's
-  // lower-casing of the response headers), and HTTP header names are
-  // case-insensitive on the wire - so "Authorization" must arrive here as
-  // the "authorization" the rest of the SDK looks up. A query parameter
-  // and a cookie name are case-SENSITIVE: lm-umbrella's "apiKey" is not
-  // "apikey", and lower-casing it would break exactly the APIs this
-  // change exists to fix.
   const cred = resolveAuthName(model)
   const name = 'header' === where ? cred.toLowerCase() : cred
 
-  // FOLDER NESTING. Main_lua opens NO folder around this call: its
-  // Folder({name:'.'}) around Config is the target root itself, and the
-  // lua tree has no src/ wrapper (tm/lua/src holds only feature
-  // placeholders and Main's Copy excludes it). The template lived at
-  // tm/lua/utility/prepare_auth.lua, which the blanket Copy lands at
-  // <root>/utility/prepare_auth.lua - the one path
-  // require("utility.prepare_auth") in utility/register.lua resolves. So
-  // this component opens the single "utility" folder that path needs.
-  // Opening a second one would write <root>/utility/utility/, where
-  // nothing requires it.
   Folder({ name: 'utility' }, () => {
     File({ name: 'prepare_auth.' + target.ext }, () => {
       Content(render({
@@ -91,8 +45,6 @@ function render(spec: {
 }): string {
   const head = `-- ${spec.project} SDK utility: prepare_auth\n`
 
-  // NO AUTH AT ALL. A public API's SDK gets a prepare_auth that is honest
-  // about it rather than one that deletes a header nobody set.
   if (!spec.active) {
     return head + `
 -- This API declares no authentication, so there is no credential to place.
@@ -166,8 +118,6 @@ return prepare_auth_util
 }
 
 
-// The constant the credential name is bound to, named for where it goes -
-// a reader of the generated file should not have to ask.
 function credConst(where: string): string {
   return 'query' === where ? 'QUERY_AUTH' :
     'cookie' === where ? 'COOKIE_AUTH' : 'HEADER_AUTH'
@@ -200,9 +150,6 @@ function clear(where: string, indent: number): string {
 
 function place(where: string): string {
   if ('query' === where) {
-    // NO PREFIX IN A QUERY STRING. "?token=Bearer%20abc" is not a thing any
-    // API reads; the prefix is a header-value convention and is dropped
-    // here deliberately rather than silently concatenated.
     return `    -- NO PREFIX IN A QUERY STRING: "?token=Bearer%20abc" is not a thing
     -- any API reads, so the auth.prefix a header placement space-joins is
     -- dropped here deliberately rather than concatenated.
@@ -223,8 +170,6 @@ function place(where: string): string {
     cookie_set(headers, apikey_val)`
   }
 
-  // BYTE-FOR-BYTE the template's body, so a header-based SDK regenerates
-  // unchanged.
   return `    local auth_prefix = ""
     local ap = vs.getpath(options, "auth.prefix")
     if type(ap) == "string" then
@@ -243,8 +188,6 @@ function place(where: string): string {
 }
 
 
-// True HTTP Basic Auth: two credentials, base64-joined. Emitted only for a
-// header placement (see render).
 const BASIC = `
   -- True HTTP Basic Auth needs TWO credentials, base64-joined - a single
   -- token in the header (the branch below) can never authenticate against
@@ -322,10 +265,6 @@ end
 `
 
 
-// A cookie header is SHARED: any other cookie the caller set rides in the
-// same string, so the credential pair is rewritten in place and everything
-// else is kept. A plain assignment would throw the caller's cookies away.
-// A nil value removes just our pair.
 const COOKIE_SET = `
 local function cookie_set(headers, value)
   local kept = {}

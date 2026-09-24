@@ -11,19 +11,12 @@ const FEATURE_CLASS = {
     test: TestFeature_1.TestFeature,
     timeout: TimeoutFeature_1.TimeoutFeature,
 };
-// Per-feature plugin DEFINITIONS (voxgig/plugin `Definition` values), from
-// the model's active plugin groups. A feature that takes a `plugins` option
-// (secrets over sekreto) reads its own entry; a feature with no plugins has
-// none. Named imports above make each definition statically reachable, so
-// an SDK carries exactly the plugin modules its model selects — the same
-// leanness the old side-effect registry imports bought, without a registry.
 const FEATURE_PLUGINS = {};
 exports.FEATURE_PLUGINS = FEATURE_PLUGINS;
 class Config {
     makeFeature(fn) {
         const fc = FEATURE_CLASS[fn];
         const fi = new fc();
-        // TODO: errors etc
         return fi;
     }
     // False for a feature added at runtime via options.extend (station's
@@ -114,41 +107,49 @@ class Config {
             "fields": [
                 {
                     "name": "age_limit",
-                    "short": "Age limit for the content",
-                    "type": "`$INTEGER`"
+                    "title": "Age Limit",
+                    "type": "`$INTEGER`",
+                    "short": "Age limit for the content"
                 },
                 {
                     "name": "attributes",
+                    "title": "Attributes",
                     "type": "`$OBJECT`"
                 },
                 {
                     "name": "container_type",
-                    "short": "Type of container",
-                    "type": "`$STRING`"
+                    "title": "Container Type",
+                    "type": "`$STRING`",
+                    "short": "Type of container"
                 },
                 {
                     "name": "content_origin",
-                    "short": "Content origin identifier",
-                    "type": "`$INTEGER`"
+                    "title": "Content Origin",
+                    "type": "`$INTEGER`",
+                    "short": "Content origin identifier"
                 },
                 {
                     "name": "dob_required",
-                    "short": "Whether date of birth is required",
-                    "type": "`$BOOLEAN`"
+                    "title": "Dob Required",
+                    "type": "`$BOOLEAN`",
+                    "short": "Whether date of birth is required"
                 },
                 {
                     "name": "id",
-                    "short": "Container unique identifier",
-                    "type": "`$STRING`"
+                    "title": "Id",
+                    "type": "`$STRING`",
+                    "short": "Container unique identifier"
                 },
                 {
                     "name": "images",
+                    "title": "Images",
                     "type": "`$ARRAY`"
                 },
                 {
                     "name": "links",
-                    "short": "List of products in the container",
-                    "type": "`$ARRAY`"
+                    "title": "Links",
+                    "type": "`$ARRAY`",
+                    "short": "List of products in the container"
                 }
             ],
             "id": {
@@ -172,95 +173,6 @@ class Config {
                     "name": "load",
                     "points": [
                         {
-                            "args": {
-                                "params": [
-                                    {
-                                        "example": "999",
-                                        "kind": "param",
-                                        "name": "age_limit",
-                                        "orig": "age_limit",
-                                        "reqd": true,
-                                        "type": "`$STRING`"
-                                    },
-                                    {
-                                        "example": "STORE-MSF75508-FULLGAMES",
-                                        "kind": "param",
-                                        "name": "container_id",
-                                        "orig": "container_id",
-                                        "reqd": true,
-                                        "type": "`$STRING`"
-                                    },
-                                    {
-                                        "example": "ch",
-                                        "kind": "param",
-                                        "name": "country",
-                                        "orig": "country",
-                                        "reqd": true,
-                                        "type": "`$STRING`"
-                                    },
-                                    {
-                                        "example": "de",
-                                        "kind": "param",
-                                        "name": "language",
-                                        "orig": "language",
-                                        "reqd": true,
-                                        "type": "`$STRING`"
-                                    }
-                                ],
-                                "query": [
-                                    {
-                                        "kind": "query",
-                                        "name": "game_content_type",
-                                        "orig": "game_content_type",
-                                        "type": "`$STRING`"
-                                    },
-                                    {
-                                        "kind": "query",
-                                        "name": "genre",
-                                        "orig": "genre",
-                                        "type": "`$STRING`"
-                                    },
-                                    {
-                                        "kind": "query",
-                                        "name": "platform",
-                                        "orig": "platform",
-                                        "type": "`$STRING`"
-                                    },
-                                    {
-                                        "kind": "query",
-                                        "name": "price",
-                                        "orig": "price",
-                                        "type": "`$STRING`"
-                                    },
-                                    {
-                                        "kind": "query",
-                                        "name": "release_date",
-                                        "orig": "release_date",
-                                        "type": "`$STRING`"
-                                    },
-                                    {
-                                        "example": 20,
-                                        "kind": "query",
-                                        "name": "size",
-                                        "orig": "size",
-                                        "type": "`$INTEGER`"
-                                    },
-                                    {
-                                        "example": "release_date",
-                                        "kind": "query",
-                                        "name": "sort",
-                                        "orig": "sort",
-                                        "type": "`$STRING`"
-                                    },
-                                    {
-                                        "example": 0,
-                                        "kind": "query",
-                                        "name": "start",
-                                        "orig": "start",
-                                        "type": "`$INTEGER`"
-                                    }
-                                ]
-                            },
                             "kind": "http",
                             "method": "GET",
                             "orig": "/container/{country}/{language}/{age_limit}/{container_id}",
@@ -281,6 +193,107 @@ class Config {
                                     "var": "container_id"
                                 }
                             ],
+                            "parts": [
+                                "container",
+                                "{country}",
+                                "{language}",
+                                "{age_limit}",
+                                "{container_id}"
+                            ],
+                            "rename": {},
+                            "transform": {
+                                "req": "`reqdata`",
+                                "res": "`body`"
+                            },
+                            "args": {
+                                "params": [
+                                    {
+                                        "name": "age_limit",
+                                        "orig": "age_limit",
+                                        "type": "`$STRING`",
+                                        "kind": "param",
+                                        "reqd": true,
+                                        "example": "999"
+                                    },
+                                    {
+                                        "name": "container_id",
+                                        "orig": "container_id",
+                                        "type": "`$STRING`",
+                                        "kind": "param",
+                                        "reqd": true,
+                                        "example": "STORE-MSF75508-FULLGAMES"
+                                    },
+                                    {
+                                        "name": "country",
+                                        "orig": "country",
+                                        "type": "`$STRING`",
+                                        "kind": "param",
+                                        "reqd": true,
+                                        "example": "ch"
+                                    },
+                                    {
+                                        "name": "language",
+                                        "orig": "language",
+                                        "type": "`$STRING`",
+                                        "kind": "param",
+                                        "reqd": true,
+                                        "example": "de"
+                                    }
+                                ],
+                                "query": [
+                                    {
+                                        "name": "game_content_type",
+                                        "orig": "game_content_type",
+                                        "type": "`$STRING`",
+                                        "kind": "query"
+                                    },
+                                    {
+                                        "name": "genre",
+                                        "orig": "genre",
+                                        "type": "`$STRING`",
+                                        "kind": "query"
+                                    },
+                                    {
+                                        "name": "platform",
+                                        "orig": "platform",
+                                        "type": "`$STRING`",
+                                        "kind": "query"
+                                    },
+                                    {
+                                        "name": "price",
+                                        "orig": "price",
+                                        "type": "`$STRING`",
+                                        "kind": "query"
+                                    },
+                                    {
+                                        "name": "release_date",
+                                        "orig": "release_date",
+                                        "type": "`$STRING`",
+                                        "kind": "query"
+                                    },
+                                    {
+                                        "name": "size",
+                                        "orig": "size",
+                                        "type": "`$INTEGER`",
+                                        "kind": "query",
+                                        "example": 20
+                                    },
+                                    {
+                                        "name": "sort",
+                                        "orig": "sort",
+                                        "type": "`$STRING`",
+                                        "kind": "query",
+                                        "example": "release_date"
+                                    },
+                                    {
+                                        "name": "start",
+                                        "orig": "start",
+                                        "type": "`$INTEGER`",
+                                        "kind": "query",
+                                        "example": 0
+                                    }
+                                ]
+                            },
                             "select": {
                                 "exist": [
                                     "age_limit",
@@ -296,28 +309,13 @@ class Config {
                                     "sort",
                                     "start"
                                 ]
-                            },
-                            "transform": {
-                                "req": "`reqdata`",
-                                "res": "`body`"
-                            },
-                            "parts": [
-                                "container",
-                                "{country}",
-                                "{language}",
-                                "{age_limit}",
-                                "{container_id}"
-                            ]
+                            }
                         }
                     ]
                 }
             },
             "relations": {
-                "ancestors": [
-                    [
-                        "container"
-                    ]
-                ]
+                "ancestors": []
             }
         }
     };

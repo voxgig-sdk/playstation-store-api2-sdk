@@ -1,0 +1,233 @@
+# Entity: container
+
+main: kit: entity: container: {
+
+  alias: field: {}
+
+  fields: {
+    age_limit: {
+      h: "Age Limit"
+      n: "age_limit"
+      r: false
+      sh: "Age limit for the content"
+      t: "`$INTEGER`"
+    }
+    attributes: {
+      h: "Attributes"
+      n: "attributes"
+      r: false
+      t: "`$OBJECT`"
+    }
+    container_type: {
+      h: "Container Type"
+      n: "container_type"
+      r: false
+      sh: "Type of container"
+      t: "`$STRING`"
+    }
+    content_origin: {
+      h: "Content Origin"
+      n: "content_origin"
+      r: false
+      sh: "Content origin identifier"
+      t: "`$INTEGER`"
+    }
+    dob_required: {
+      h: "Dob Required"
+      n: "dob_required"
+      r: false
+      sh: "Whether date of birth is required"
+      t: "`$BOOLEAN`"
+    }
+    id: {
+      h: "Id"
+      n: "id"
+      r: false
+      sh: "Container unique identifier"
+      t: "`$STRING`"
+    }
+    images: {
+      h: "Images"
+      n: "images"
+      r: false
+      t: "`$ARRAY`"
+    }
+    links: {
+      h: "Links"
+      n: "links"
+      r: false
+      sh: "List of products in the container"
+      t: "`$ARRAY`"
+    }
+  }
+
+  id: {
+    field: "id"
+    from: {
+      age_limit: "age_limit"
+    }
+    name: "id"
+    parts: [
+      "country"
+      "language"
+      "age_limit"
+      "container_id"
+    ]
+    sep: "/"
+  }
+
+  name: "container"
+  op: {
+    load: {
+      name: "load"
+      points: [
+        {
+          co: {
+            id: "GET /container/{country}/{language}/{age_limit}/{container_id}"
+            source: "openapi3"
+            version: 2
+          }
+          g: {
+            params: [
+              {
+                ex: "999"
+                k: "param"
+                n: "age_limit"
+                or: "age_limit"
+                r: true
+                t: "`$STRING`"
+              }
+              {
+                ex: "STORE-MSF75508-FULLGAMES"
+                k: "param"
+                n: "container_id"
+                or: "container_id"
+                r: true
+                t: "`$STRING`"
+              }
+              {
+                ex: "ch"
+                k: "param"
+                n: "country"
+                or: "country"
+                r: true
+                t: "`$STRING`"
+              }
+              {
+                ex: "de"
+                k: "param"
+                n: "language"
+                or: "language"
+                r: true
+                t: "`$STRING`"
+              }
+            ]
+            query: [
+              {
+                k: "query"
+                n: "game_content_type"
+                or: "game_content_type"
+                r: false
+                t: "`$STRING`"
+              }
+              {
+                k: "query"
+                n: "genre"
+                or: "genre"
+                r: false
+                t: "`$STRING`"
+              }
+              {
+                k: "query"
+                n: "platform"
+                or: "platform"
+                r: false
+                t: "`$STRING`"
+              }
+              {
+                k: "query"
+                n: "price"
+                or: "price"
+                r: false
+                t: "`$STRING`"
+              }
+              {
+                k: "query"
+                n: "release_date"
+                or: "release_date"
+                r: false
+                t: "`$STRING`"
+              }
+              {
+                ex: 20
+                k: "query"
+                n: "size"
+                or: "size"
+                r: false
+                t: "`$INTEGER`"
+              }
+              {
+                ex: "release_date"
+                k: "query"
+                n: "sort"
+                or: "sort"
+                r: false
+                t: "`$STRING`"
+              }
+              {
+                ex: 0
+                k: "query"
+                n: "start"
+                or: "start"
+                r: false
+                t: "`$INTEGER`"
+              }
+            ]
+          }
+          m: "GET"
+          o: "/container/{country}/{language}/{age_limit}/{container_id}"
+          q: {
+            exist: [
+              "age_limit"
+              "container_id"
+              "country"
+              "game_content_type"
+              "genre"
+              "language"
+              "platform"
+              "price"
+              "release_date"
+              "size"
+              "sort"
+              "start"
+            ]
+          }
+          s: [
+            {
+              lit: "container"
+            }
+            {
+              var: "country"
+            }
+            {
+              var: "language"
+            }
+            {
+              var: "age_limit"
+            }
+            {
+              var: "container_id"
+            }
+          ]
+          t: {
+            req: "`reqdata`"
+            res: "`body`"
+          }
+        }
+      ]
+    }
+  }
+
+
+
+}

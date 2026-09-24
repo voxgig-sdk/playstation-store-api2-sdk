@@ -5,7 +5,6 @@ const node_util_1 = require("node:util");
 const PlaystationStoreApi2Error_1 = require("./PlaystationStoreApi2Error");
 const StructUtility_1 = require("./utility/StructUtility");
 const Operation_1 = require("./Operation");
-// TODO: move to own file
 class Context {
     id = 'C' + ('' + Math.random()).substring(2, 10);
     // Store the output of each operation step.
@@ -35,7 +34,13 @@ class Context {
     constructor(ctxmap, basectx) {
         this.client = (0, StructUtility_1.getprop)(ctxmap, 'client', (0, StructUtility_1.getprop)(basectx, 'client'));
         this.utility = (0, StructUtility_1.getprop)(ctxmap, 'utility', (0, StructUtility_1.getprop)(basectx, 'utility'));
-        this.ctrl = (0, StructUtility_1.getprop)(ctxmap, 'ctrl', (0, StructUtility_1.getprop)(basectx, 'ctrl', this.ctrl));
+        // An operation gets its OWN control unless the caller passed one: a
+        // paging cursor left on the client's control would otherwise be picked
+        // up by the next, unrelated call. A context with no opname is not an
+        // operation, so it still shares (an entity's, with the client's).
+        const opname = (0, StructUtility_1.getprop)(ctxmap, 'opname');
+        const basectrl = null == opname ? (0, StructUtility_1.getprop)(basectx, 'ctrl', this.ctrl) : this.ctrl;
+        this.ctrl = (0, StructUtility_1.getprop)(ctxmap, 'ctrl', basectrl);
         this.meta = (0, StructUtility_1.getprop)(ctxmap, 'meta', (0, StructUtility_1.getprop)(basectx, 'meta', this.meta));
         this.config = (0, StructUtility_1.getprop)(ctxmap, 'config', (0, StructUtility_1.getprop)(basectx, 'config'));
         this.entopts = (0, StructUtility_1.getprop)(ctxmap, 'entopts', (0, StructUtility_1.getprop)(basectx, 'entopts'));
@@ -51,14 +56,9 @@ class Context {
         this.spec = (0, StructUtility_1.getprop)(ctxmap, 'spec', (0, StructUtility_1.getprop)(basectx, 'spec'));
         this.result = (0, StructUtility_1.getprop)(ctxmap, 'result', (0, StructUtility_1.getprop)(basectx, 'result'));
         this.response = (0, StructUtility_1.getprop)(ctxmap, 'response', (0, StructUtility_1.getprop)(basectx, 'response'));
-        const opname = (0, StructUtility_1.getprop)(ctxmap, 'opname');
         this.op = this.resolveOp(opname);
     }
     resolveOp(opname) {
-        // Cache key is `<entity>:<opname>` so two entities with the same op
-        // (e.g. both have a "list") get distinct cached Operations. Keying on
-        // opname alone caused the first-resolved entity's points to be served
-        // to every subsequent entity's call.
         const entname = (0, StructUtility_1.getprop)(this.entity, 'name', '');
         const cacheKey = entname + ':' + opname;
         let op = (0, StructUtility_1.getprop)(this.opmap, cacheKey);

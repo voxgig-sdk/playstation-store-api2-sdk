@@ -8,7 +8,6 @@ import {
 } from '@voxgig/apidef'
 
 
-// A type-correct Ruby literal for a field's canonical type.
 function rbLit(type: any): string {
   const k = canonScalarKey(type)
   if ('INTEGER' === k || 'NUMBER' === k) return '1'
@@ -24,8 +23,6 @@ const ReadmeTopTest = cmp(function ReadmeTopTest(props: any) {
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
 
-  // Pick an entity with a real op (prefer a read op) — never fabricate a
-  // `load` on an op-less entity like Cloudsmith's `Abort`.
   const { entity: exampleEntity, primaryOp } = pickExampleEntity(entity)
 
   if (exampleEntity && primaryOp) {

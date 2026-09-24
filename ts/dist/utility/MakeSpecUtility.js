@@ -25,7 +25,6 @@ function makeSpec(ctx) {
         step: 'start',
     });
     ctx.spec.method = prepareMethod(ctx);
-    // TODO: Add string utils to StructUtility
     if (!options.allow.method.includes(ctx.spec.method)) {
         return ctx.error('spec_method_allow', 'Method "' + ctx.spec.method +
             '" not allowed by SDK option allow.method value: "' + options.allow.method + '"');
@@ -34,10 +33,6 @@ function makeSpec(ctx) {
     ctx.spec.query = prepareQuery(ctx);
     ctx.spec.headers = prepareHeaders(ctx);
     if ('graphql' === point.kind) {
-        // GraphQL addresses one endpoint: no path parts, no query string, and
-        // the body carries the operation. prepareBody is skipped deliberately —
-        // it only emits a body for data-input ops (create/update), whereas every
-        // GraphQL op posts one, including load/list/remove.
         ctx.spec.body = utility.graphqlBody(ctx);
         ctx.spec.path = '';
         // prepareQuery already copied the op's match arguments into the query

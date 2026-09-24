@@ -22,9 +22,6 @@ const Package = cmp(async function Package(props: any) {
 
   const model: Model = ctx$.model
 
-  // PyPI distribution name is namespaced to model.origin (e.g. "voxgig-sdk").
-  // PyPI names can't contain "/", so the parts are hyphen-joined. The import
-  // package (the `${model.name}_sdk/` dir) is unchanged.
   const ns = model.origin || 'voxgig-sdk'
   const pkgBase = ns.endsWith('-sdk') ? model.name : `${model.name}-sdk`
   const distName = packageName(model, target.name)

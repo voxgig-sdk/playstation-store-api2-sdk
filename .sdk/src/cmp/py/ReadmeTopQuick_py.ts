@@ -22,11 +22,6 @@ function pyLit(type: any, placeholder: string = 'example'): string {
 }
 
 
-// A `list()` on a NESTED entity needs its parent path params. The
-// quickstart used to emit `client.Moon().list()` for an entity at
-// `/planet/{planet_id}/moon`, which 404s against a live server from a
-// half-built URL — indistinguishable from "no such record". The model
-// already marks those params `reqd: true`; matchArg renders exactly them.
 function listMatchArg(ent: any): string {
   const idF = entityIdField(ent)
   return matchArg('py', ent, 'list', idF, idLiteral(ent, 'list', idF))
@@ -42,10 +37,6 @@ const ReadmeTopQuick = cmp(function ReadmeTopQuick(props: any) {
 
   const authActive = isAuthActive(model)
 
-  // Server variables (a templated server URL) are REQUIRED at construction
-  // - the SDK refuses rather than request a URL with a literal
-  // {account_id} in it - so a quickstart that omits them is a quickstart
-  // that fails on its first line.
   const svars = serverVariables(model)
   const pyServerField = 0 === svars.length ? '' :
     `\n    "server": {` +
@@ -72,8 +63,6 @@ client = ${ctor}
     // Python keyword (e.g. `class`) would otherwise emit uncompilable code.
     const eVar = exampleVarName(eName.toLowerCase(), 'py')
     const opnames = Object.keys(exampleEntity.op || {})
-    // Model-driven id key: null when the entity has no id-like field, in which
-    // case the load example takes no match argument.
     const idF = entityIdField(exampleEntity)
 
     let hasCall = false
@@ -88,9 +77,6 @@ for ${eVar} in ${eVar}s:
     }
 
     if (opnames.includes('load')) {
-      // Every REQUIRED load-match key (id first, then parent path params like
-      // page_id) — the same shape the runtime resolves path params from, so
-      // the example always works.
       const loadItems = opRequestShape(exampleEntity, 'load').items
         .filter((it: any) => !it.optional || it.name === idF)
         .sort((a: any, b: any) =>

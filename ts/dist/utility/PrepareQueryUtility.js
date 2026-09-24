@@ -12,7 +12,7 @@ function prepareQuery(ctx) {
     reqmatch = reqmatch || {};
     const out = {};
     for (let [key, val] of items(reqmatch)) {
-        if (null != val && !params.includes(key)) {
+        if (null != val && '$action' !== key && !params.includes(key)) {
             out[key] = val;
         }
     }

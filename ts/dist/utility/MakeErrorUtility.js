@@ -14,9 +14,6 @@ function makeError(ctx, err) {
     err = undefined === err ? reserr : err;
     err = err || ctx.error('unknown', 'unknown error');
     const errmsg = err.message || 'unknown error';
-    // TODO: project name should come from config
-    // avoids spurious changes between template and generated utility
-    // applies for all utility files
     const msg = 'PlaystationStoreApi2SDK: ' + op.name + ': ' + errmsg;
     err.message = (0, CleanUtility_1.clean)(ctx, msg);
     if (result.err) {
@@ -44,7 +41,6 @@ function makeError(ctx, err) {
         'function' === typeof ctx.utility.featureHook) {
         ctx.utility.featureHook(ctx, 'PreUnexpected');
     }
-    // TODO: model option to return instead
     if (false === ctx.ctrl.throw) {
         return result.resdata;
     }

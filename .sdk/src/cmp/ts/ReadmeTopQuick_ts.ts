@@ -10,11 +10,6 @@ import {
 import { exampleValue } from './utility_ts'
 
 
-// A `list()` on a NESTED entity needs its parent path params. The
-// quickstart used to emit `client.Moon().list()` for an entity at
-// `/planet/{planet_id}/moon`, which 404s against a live server from a
-// half-built URL — indistinguishable from "no such record". The model
-// already marks those params `reqd: true`; matchArg renders exactly them.
 function listMatchArg(ent: any): string {
   const idF = entityIdField(ent)
   return matchArg('ts', ent, 'list', idF, idLiteral(ent, 'list', idF))
@@ -87,9 +82,6 @@ for (const ${eVar} of ${eVar}s) {
       const neVar = exampleVarName(neName.toLowerCase(), 'ts')
       const loadOp = nestedEntity.op && nestedEntity.op.load
 
-      // Every REQUIRED load-match key (parent keys first, own id last) — the
-      // same shape that generates <Name>LoadMatch, so the example
-      // type-checks.
       const neIdF = entityIdField(nestedEntity)
       const neMatchLines = opRequestShape(nestedEntity, 'load').items
         .filter((it: any) => !it.optional || it.name === neIdF)
@@ -109,9 +101,6 @@ console.log(${neVar})
       hasCall = true
     }
 
-    // Fallback: APIs with only `load` (no list, no nested) — most public
-    // read-only services. Still show one concrete call. `load()` with no
-    // match is always valid (the match arg is optional).
     if (!hasCall && opnames.includes('load')) {
       Content(`// Load ${eName.toLowerCase()} data (returns a ${eName})
 const ${eVar} = await client.${eName}().load()

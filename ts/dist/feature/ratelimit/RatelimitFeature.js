@@ -2,12 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RatelimitFeature = void 0;
 const BaseFeature_1 = require("../base/BaseFeature");
-// Client-side rate limiting via a token bucket. Each request consumes a
-// token; when the bucket is empty the request waits until the bucket
-// refills at `rate` tokens per second (with capacity `burst`). This keeps
-// the client under a server's published quota rather than discovering it
-// via 429s. The clock (`now`) and the wait (`sleep`) are injectable so the
-// accounting can be tested deterministically without wall-clock timing.
 class RatelimitFeature extends BaseFeature_1.BaseFeature {
     version = '0.0.1';
     name = 'ratelimit';

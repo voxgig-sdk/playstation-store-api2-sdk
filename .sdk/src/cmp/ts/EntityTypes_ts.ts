@@ -1,20 +1,5 @@
 
 
-// Typed-model generator (TypeScript reference target).
-//
-// Reads main.<KIT>.entity.<e>.fields[] and per-op params
-// (op.<name>.points[].args.params[]) and emits one file, src/<Sdk>Types.ts,
-// with a TS `interface <Name>` per active entity plus a request/match type per
-// active op. Field/param sentinels ($STRING, $INTEGER, ...) are turned into
-// real TS types by the shared sdkgen helper `canonToType` (source of truth:
-// @voxgig/apidef VALID_CANON).
-//
-// PORT RECIPE (language X): copy this file to EntityTypes_<X>.ts, keep the SAME
-// type-name scheme (<Name>, <Name>LoadMatch, <Name>ListMatch, <Name>CreateData,
-// <Name>UpdateData, <Name>RemoveMatch), swap the interface syntax for X's
-// struct/class/dataclass syntax, pass 'X' to canonToType, wire it into
-// Main_<X>.ts next to EntityBase, and reference the same type names from the
-// <X> op fragments + entity accessor.
 
 import {
   cmp, each, names,
@@ -32,7 +17,6 @@ import {
 const LANG = 'ts'
 
 
-// A valid TS property key, or a quoted string literal for anything else.
 function propKey(name: string): string {
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : JSON.stringify(name)
 }
@@ -41,10 +25,6 @@ function propKey(name: string): string {
 const EntityTypes = cmp(function EntityTypes(props: any) {
   const { model, log } = props.ctx$
 
-  // only_active:false — getModelPath DROPS active:false entries by default,
-  // but the consumer scaffold (create-sdkgen Root.ts) iterates the RAW entity
-  // collection, so inactive entities still get generated entity code that
-  // references these typed names. The typed model must cover them too.
   const entity = getModelPath(model, `main.${KIT}.entity`, { only_active: false, required: false })
   // Emit for EVERY entity that gets generated entity code: the consumer
   // scaffold (create-sdkgen Root.ts) iterates entities WITHOUT an active
@@ -56,17 +36,14 @@ const EntityTypes = cmp(function EntityTypes(props: any) {
   // entity not yet named (e.g. a fieldless placeholder) would otherwise read
   // `Name = undefined` below. Parity with the go emitter's fix.
 
-  // Surface duplicate generated type names (two entities with the same
-  // PascalCase Name) — they would redeclare a type in statically-typed
-  // targets. Detection only; renaming is a model-level decision.
   warnEntityTypeCollisions(entity, log, LANG)
 
   File({ name: model.const.Name + 'Types.' + LANG }, () => {
 
     Content(`// Typed models for the ${model.const.Name} SDK.
 //
-// GENERATED from the API model: main.${KIT}.entity.<e>.fields[] and per-op
-// params (op.<name>.points[].args.params[]). Field/param types come from the
+// GENERATED from the API model: main.${KIT}.entity.<e>.fields{} and per-op
+// params (op.<name>.points[].g.params[]). Field/param types come from the
 // canonical type sentinels via @voxgig/sdkgen canonToType (source of truth:
 // @voxgig/apidef VALID_CANON). Do not edit by hand.
 
@@ -74,27 +51,21 @@ const EntityTypes = cmp(function EntityTypes(props: any) {
 
     entityList.forEach((ent: any) => {
       const Name = ent.Name
-      // A TS/JS global (Record, Array, Promise, ...) would shadow itself
-      // for the rest of the file — see tsSafeTypeName.
       const TypeName = tsSafeTypeName(Name)
       const fields = (ent.fields ? each(ent.fields) : [])
-        .filter((f: any) => f.active !== false)
+        .filter((f: any) => f.a !== false)
 
-      // Entity data model: one property per field, `req:false` -> optional.
       Content(`export interface ${TypeName} {
 `)
       fields.forEach((f: any) => {
-        const opt = false === f.req ? '?' : ''
-        Content(`  ${propKey(f.name)}${opt}: ${canonToType(f.type, LANG)}
+        const opt = false === f.r ? '?' : ''
+        Content(`  ${propKey(f.n)}${opt}: ${canonToType(f.t, LANG)}
 `)
       })
       Content(`}
 
 `)
 
-      // Per active op: a request/match type. The members and each member's
-      // required/optional decision come from the shared partiality policy
-      // (opRequestShape); this file only renders them as a TS interface.
       const ops = ent.op || {}
       ;['load', 'list', 'create', 'update', 'remove'].forEach((opname: string) => {
         if (null == ops[opname]) {
@@ -112,11 +83,6 @@ const EntityTypes = cmp(function EntityTypes(props: any) {
 `)
         })
 
-        // Custom actions are selected with `$action` in the call's argument
-        // (see the Actions section of REFERENCE.md). Without it in the type,
-        // the ONLY documented way to reach those endpoints does not compile,
-        // and a TypeScript caller has to cast — which is how two of one API's
-        // six endpoints came to be unreachable from the typed interface.
         const actions = opActions(ops[opname])
         if (0 < actions.length) {
           Content(`

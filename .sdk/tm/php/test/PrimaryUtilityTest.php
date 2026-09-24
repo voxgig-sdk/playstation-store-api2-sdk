@@ -38,7 +38,7 @@ class PrimaryUtilityTest extends TestCase
     private const TEST_JSON_FILE = '../../.sdk/test/test.json';
 
     // Sections deliberately left empty in the shared corpus
-    // (.sdk/test/primary/<name>.aon carries a PENDING header). Everything
+    // (.sdk/test/primary/<name>.aontu carries a PENDING header). Everything
     // else MUST contribute cases.
     private const PENDING = [
         'fetcher', 'makeFetchDef', 'makeResult',
@@ -70,7 +70,8 @@ class PrimaryUtilityTest extends TestCase
      * `set` used to pass silently, which defeats the point of a shared
      * oracle. EVERY corpus-backed test goes through here (mirrors ts/py).
      */
-    private function runsection(string $name, callable $subject): void
+    private function runsection(
+        string $name, callable $subject, ?callable $adapt = null): void
     {
         $R = self::runpack();
         $spec = $R['spec'];
@@ -87,6 +88,10 @@ class PrimaryUtilityTest extends TestCase
             $this->fail(
                 "test corpus section '{$name}' is EMPTY - zero cases would run; " .
                 "add cases, or mark the fixture PENDING in .sdk/test/primary/");
+        }
+
+        if (null !== $adapt) {
+            $basic = $adapt($basic);
         }
 
         $R['runset']($basic, $subject);
@@ -109,6 +114,66 @@ class PrimaryUtilityTest extends TestCase
             }
         }
         return ($utility->make_context)($ctxmap, $client->get_root_ctx());
+    }
+
+    /**
+     * Where this SDK's prepare_auth actually puts the credential: the name is
+     * the API's OWN scheme name, not always `authorization`, so it is
+     * discovered by running prepare_auth once.
+     *
+     * @return array{where:string,name:string}|null
+     */
+    private static function auth_credential(
+        PlaystationStoreApi2SDK $client,
+        PlaystationStoreApi2Utility $utility
+    ): ?array {
+        $ctx = self::make_test_ctx($client, $utility);
+        $ctx->spec = new PlaystationStoreApi2Spec(['headers' => [], 'query' => []]);
+        [, $err] = ($utility->prepare_auth)($ctx);
+        // The DEF setup this client is built from carries `auth.basic: false`,
+        // so the single-token branch runs and there is a credential to find.
+        if ($err !== null) {
+            return null;
+        }
+        foreach (['headers', 'query'] as $where) {
+            // A cookie credential rides the header bag, because a cookie IS
+            // a header.
+            $bag = 'query' === $where ? $ctx->spec->query : $ctx->spec->headers;
+            foreach ($bag as $name => $value) {
+                return ['where' => $where, 'name' => $name];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Rename the corpus's `headers` bag to the real container, and the
+     * `authorization` key inside it to the real credential name. Applied only
+     * to the prepareAuth section, so real header assertions elsewhere are
+     * untouched.
+     *
+     * @param array{where:string,name:string} $cred
+     */
+    private static function retarget_auth($node, array $cred)
+    {
+        if (!is_array($node)) {
+            return $node;
+        }
+
+        $out = [];
+        foreach ($node as $key => $value) {
+            if ('headers' === $key) {
+                $bag = [];
+                foreach (is_array($value) ? $value : [] as $bagkey => $bagvalue) {
+                    $name = 'authorization' === $bagkey ? $cred['name'] : $bagkey;
+                    $bag[$name] = self::retarget_auth($bagvalue, $cred);
+                }
+                $out[$cred['where']] = $bag;
+            } else {
+                $out[$key] = self::retarget_auth($value, $cred);
+            }
+        }
+        return $out;
     }
 
     private static function make_test_full_ctx(
@@ -749,6 +814,19 @@ class PrimaryUtilityTest extends TestCase
         $auth_utility = $auth_client->get_utility();
         $utility = self::client()->get_utility();
 
+        // The corpus writes the credential as `headers.authorization`: a
+        // PLACEHOLDER each runner points at the container and name this API
+        // actually uses.
+        $cred = self::auth_credential($auth_client, $auth_utility);
+        $this->assertIsArray($cred,
+            'prepare_auth placed no credential in headers or query');
+
+        $adapt = ('headers' === $cred['where'] && 'authorization' === $cred['name'])
+            ? null
+            : function (array $basic) use ($cred) {
+                return self::retarget_auth($basic, $cred);
+            };
+
         $this->runsection('prepareAuth', function (array $ctxmap) use ($auth_client, $auth_utility, $utility) {
             $ctx = PlaystationStoreApi2Omni::ctx_from_map($ctxmap, $auth_client, $auth_utility);
 
@@ -759,7 +837,7 @@ class PrimaryUtilityTest extends TestCase
                 throw $err;
             }
             return null;
-        });
+        }, $adapt);
     }
 
 

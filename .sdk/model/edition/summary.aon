@@ -1,8 +1,0 @@
-@"@voxgig/docgen/model/docgen.aon"
-main: kit: doc: edition: 'summary': {
-  kind: 'summary'
-  active: *true | boolean
-  base: 'node_modules/@voxgig/docgen/project/.sdk'
-  package: '@voxgig/docgen'
-  output: path: *'SUMMARY.md' | string
-}

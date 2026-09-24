@@ -35,45 +35,11 @@ import {
 } from './utility_php'
 
 
-// PLUGIN DEFINITION REQUIRES AND THE feature_plugins ACCESSOR (the php peer
-// of cmp/rb/Config_rb.ts's rbPlugins and cmp/py/Config_py.ts's
-// pluginImports/pluginDefs).
-//
-// Upstream sekreto replaced its self-registration registry with
-// voxgig/plugin definitions: a provider kind the caller did not pass in via
-// `plugins: [...]` is unknown to that Sekreto. So config names each active
-// plugin's exported DEFINITION FUNCTION (the model's `def.php` map) and
-// hands the list to the feature.
-//
-// A METHOD rather than a constant, and this is php's own constraint: a
-// plugin definition holds CLOSURES (sekreto's Providers.php says so where
-// it declares `builtins()`), and php has no constant that can. The
-// `require_once` calls live INSIDE the method for the same reason upstream
-// puts them inside plugins.php's own accessors - a plugin file is read only
-// when a feature actually asks for its definitions.
-//
-// The `def` map is declared in the model rather than derived from filenames
-// because one file may export several definitions (sekreto's aws.php
-// exports awssecrets AND awsparams) - hence the de-duplication by path, so
-// a two-definition file yields ONE require_once. A def value is the file's
-// path under tm/php, which is this target's root and also config.php's own
-// directory, so the require is that path verbatim.
-//
-// GATED, like rb: the whole block is emitted only when an active feature
-// DECLARES a plugin catalogue for this target. An SDK that does not carry
-// the secrets feature must be byte-identical to what it was before the
-// feature existed, and an unread accessor is not a thing a simple SDK
-// should have to explain. The feature reads it through `method_exists`, so
-// its absence is not a load error.
 function phpPlugins(model: any, feature: any) {
   const defs: Record<string, { paths: string[], syms: string[] }> = {}
   let declared = false
 
   each(feature, (f: any) => {
-    // `only_active: false`, and this is the whole subtlety: the feature
-    // object a component is handed has ALREADY been filtered, so asking it
-    // whether a catalogue EXISTS answers no as soon as every group is off.
-    // (Same trap helpers/featureSource documents one level down.)
     const all = getModelPath(model, `main.${KIT}.feature.${f.name}.plugin`,
       { required: false, only_active: false }) || {}
 
@@ -85,10 +51,6 @@ function phpPlugins(model: any, feature: any) {
     const syms: string[] = []
 
     each(f.plugin, (plugin: any) => {
-      // Filter on `active` HERE rather than trusting the feature object to
-      // arrive filtered: getting it wrong in this direction emits a
-      // require_once for a file the plugin trim just deleted - an SDK that
-      // does not load, rather than one that merely carries too much.
       if (false === plugin.active || null == plugin.active) return
 
       for (const [sym, one] of Object.entries(plugin.def?.php || {})) {
@@ -113,15 +75,11 @@ const Config = cmp(async function Config(props: any) {
   const model: Model = ctx$.model
 
   const entity = getModelPath(model, `main.${KIT}.entity`)
-  // Gated by the applicability tags, so this target never imports or
-  // registers a feature it has no source for. One rule, one place:
-  // helpers/applicability.
   const feature = targetFeatures(model, target)
 
   const headers = getModelPath(model, `main.${KIT}.config.headers`) || {}
 
   const authActive = isAuthActive(model)
-  // config.auth.prefix override -> spec-derived info.security.prefix -> 'Bearer'
   const authPrefix = resolveAuthPrefix(model)
   // `in` and `name` travel with the prefix now. They were resolved by
   // apidef all along and dropped here, so an apiKey-in-query API got an
@@ -134,9 +92,6 @@ const Config = cmp(async function Config(props: any) {
   let baseUrl = ''
   try { baseUrl = getModelPath(model, `main.${KIT}.info.servers.0.url`) } catch (_e) { }
 
-  // Templated server URL: emit the spec's server-variable defaults so the
-  // runtime can substitute {name} placeholders in base (see MakeOptions).
-  // `$` is escaped so a default can never open a PHP interpolation.
   const svars = serverVariables(model)
   const phps = (s: string) => JSON.stringify(s).replace(/\$/g, '\\$')
   const serverBlock = 0 === svars.length ? '' :
@@ -152,21 +107,12 @@ const Config = cmp(async function Config(props: any) {
                 ],\n`
     : ''
 
-  // The same config as an OBJECT, built by the shared helper so this target's
-  // literal and the data that replaces it above the threshold are the same
-  // config by construction. The JSON is what the threshold is measured on -
-  // emitted source size varies by language, the model does not. Passing the
-  // target name opts in to the main.slug/version/target identity fields -
-  // both representations below carry them, keeping the reps interchangeable.
   const { def: configDef, json: configJson } = configDefinition(model, target.name)
   const asData = isConfigData(configJson, configReprSetting(model))
 
   const { defs: pluginDefs, declared: pluginDeclared } = phpPlugins(model, feature)
   const pluginFeatures = Object.keys(pluginDefs).sort()
 
-  // Emitted whenever a catalogue is declared, even with every group off:
-  // the feature asks for the list unconditionally, and an SDK whose chain
-  // is all built-ins still has to be answered with an empty one.
   const featurePluginsBlock = !pluginDeclared ? '' : `
     /**
      * The sekreto plugin DEFINITIONS the model selected per feature, from
@@ -224,25 +170,6 @@ class ${model.const.Name}Config
 
 `)
 
-    // ABOVE THE THRESHOLD: emit the model as DATA.
-    //
-    // An array literal is compiled opcode by opcode and held in the opcache
-    // entry for this file; a string constant is one token, and `json_decode`
-    // (C) builds the array far faster than the equivalent literal.
-    //
-    // PHP cannot tell an empty list from an empty map, so `{}` and `[]` decode
-    // to the same value and the two representations have to AGREE about which
-    // one the literal would have produced. `formatPhpArray` emits `[]` for
-    // every empty map, and the literal branch hand-writes `(object)[]` in
-    // exactly two places - `entity` and `options.entity`, and only when the
-    // model declares no entities at all, because the SDK runtime validator
-    // wants a map there. This reproduces that rule rather than improving on
-    // it: an emission wart is not something the data path gets to fix
-    // unilaterally, or the two branches stop being interchangeable.
-    //
-    // A SINGLE-quoted literal, so the JSON survives verbatim: a double-quoted
-    // PHP string would interpolate any `$name` the model contains - and the
-    // model is full of them (`$STRING`, `$action`).
     if (asData) {
       Content(`    /**
      * THE API MODEL, EMBEDDED AS DATA (sdkgen rung L1).
@@ -323,9 +250,6 @@ class ${model.const.Name}Config
 `)
     })
 
-    // PHP can't distinguish empty list from empty map; the SDK runtime
-    // validator wants an object for `entity` and `feature.test.entity`. Use
-    // `(object)[]` when the map is empty so the merge preserves map shape.
     const entityIsEmpty = Object.keys(entity || {}).length === 0
     if (entityIsEmpty) {
       Content(`            ],

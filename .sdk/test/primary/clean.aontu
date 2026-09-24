@@ -1,0 +1,8 @@
+
+
+basic: set: [
+  { mark:10, args: [ {options:{}}, {a:'A'} ], out: {a:'A'} }
+  { mark:20, args: [ {options:{}}, {} ], out: {} }
+  { mark:30, args: [ {options:{}}, 'plain' ], out: 'plain' }
+  { mark:40, args: [ {options:{}}, [1,2] ], out: [1,2] }
+]

@@ -1,4 +1,4 @@
-import { cmp, File, Content, entityCollection, envName, serverVariables, serverVarEnv } from '@voxgig/sdkgen'
+import { cmp, File, Content, entityCollection, envName, serverVariables, serverVarEnv, liveHint, pointFacts } from '@voxgig/sdkgen'
 import { nom } from '@voxgig/apidef'
 
 const TestLive = cmp(function TestLive(props: any) {
@@ -8,12 +8,18 @@ const TestLive = cmp(function TestLive(props: any) {
     if (entity.active === false) continue
     for (const [op, operation] of Object.entries(entity.op || {}) as any[]) {
       for (const point of operation.points || []) {
-        const facts = point.contract ? JSON.parse(point.contract.json) : {}
-        if (model.main.kit.info?.auth === false) facts.security = []
-        const same = operation.points.filter((p: any) => JSON.stringify(p.select || {}) === JSON.stringify(point.select || {}))
+        // Only what the runner reads, not the whole point.
+        const all: any = pointFacts(props.ctx$, point)
+        const facts: any = {
+          live: liveHint(point),
+          security: model.main.kit.info?.auth === false ? [] : all.security,
+          securitySource: all.securitySource,
+          responses: all.responses,
+        }
+        const same = operation.points.filter((p: any) => JSON.stringify(p.q || {}) === JSON.stringify(point.q || {}))
         plan.push({ entity: entity.name, accessor: nom(entity, 'Name'), op,
-          id: point.contract?.id || point.method + ' ' + point.orig, contractVersion: point.contract?.version, kind: point.kind, graphql: point.graphql, path: point.orig, method: point.method,
-          action: point.select?.$action, rename: point.rename, args: point.args, facts, reachable: same.length === 1 })
+          id: point.m + ' ' + point.o, contractVersion: 1, kind: point.k, graphql: point.gq, path: point.o, method: point.m,
+          action: point.q?.$action, rename: point.r, args: point.g, facts, reachable: same.length === 1 })
       }
     }
   }
