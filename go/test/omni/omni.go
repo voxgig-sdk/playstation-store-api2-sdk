@@ -1,17 +1,6 @@
-// VENDORED: @voxgig/omni sdk-20260917-1242-0 (go/omni.go)
-// Source: https://github.com/voxgig/omni @ b9e6085d185e174be84f9e6123be807ccd9fcb4e  [tag: sdk-20260917-1242-0]
+// VENDORED: @voxgig/omni sdk-20260925-1316-0 (go/omni.go)
+// Source: https://github.com/voxgig/omni @ b909ff51fc644e4955c850e30cc65e74be076df2  [tag: sdk-20260925-1316-0]
 // License: MIT (c) voxgig - see repository LICENSE. Do not edit: resync from upstream.
-// Omni: the shared multi-language test runner.
-//
-// A test spec is plain JSON. The same spec file drives the same tests in
-// every language that ships an omni port.
-//
-// Port of the canonical TypeScript implementation
-// (typescript/src/Runner.ts). Behaviour must match, case for case.
-//
-// Go has no exceptions, so a failing check is returned as an error rather
-// than thrown: `if err := runset(spec, subject); nil != err { t.Fatal(err) }`.
-
 package omni
 
 import (
@@ -44,14 +33,6 @@ type Provider struct {
 	Contextify func(val any) any
 	// Inject resolves references in client options against the store.
 	Inject func(options any, store any) any
-	// Errify builds the `match.err` base from the raised error, REPLACING
-	// the default Errify. A library whose errors carry a code can then
-	// assert on it with `match: {err: {code: "x"}}` instead of
-	// pattern-matching prose.
-	//
-	// `any`, not `map[string]any`, because the canonical is `(err) => Json`
-	// and `match.err` compares a scalar or a list as readily as a map. The
-	// built-in Errify happens to return a map; a hook is not held to that.
 	Errify func(err any) any
 }
 
@@ -81,10 +62,6 @@ func (runpack *RunPack) Set(name string) any {
 // Runner resolves one named section of a spec.
 type Runner func(name string, store any) (*RunPack, error)
 
-// SPECVERSION is the newest spec format version this runner understands. A
-// spec with no OMNI block is version 0: the original, lenient format,
-// frozen forever. Version 1 turns on strict entry validation (see
-// checkentry).
 const SPECVERSION = 1
 
 // CAPABILITIES are the capability strings this runner supports beyond the
@@ -662,15 +639,6 @@ func Match(flags Flags, index int, entry map[string]any, check any, base any) er
 
 		baseval := GetPath(cbase, path)
 
-		// The sentinels are tested BEFORE the identity check below. Otherwise
-		// a subject returning the literal string "__UNDEF__" satisfies an
-		// assertion that the key is absent - two mutually exclusive states
-		// passing one check. A sentinel that accepts its own literal is not a
-		// sentinel. (NULLMARK still accepts NULLMARK: under the default null
-		// flag a real null has already been normalised to it, so the two are
-		// genuinely indistinguishable here - that one needs a raw-value
-		// escape, not an ordering change.)
-
 		// Explicitly absent: satisfied only by a genuinely missing key, never
 		// by a present null (the distinction the sentinels exist to keep).
 		if UNDEFMARK == val {
@@ -702,8 +670,6 @@ func Match(flags Flags, index int, entry map[string]any, check any, base any) er
 			return val
 		}
 
-		// Identical values match. This sits below the sentinel branches on
-		// purpose - see the note above.
 		if DeepEqual(val, baseval) {
 			return val
 		}

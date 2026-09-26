@@ -86,7 +86,7 @@ class ${Name}PrepareAuth
 
   return head + `class ${Name}PrepareAuth
 {
-${constants(spec)}
+${constants(spec)}${cookieHelper(spec)}
     public static function call(${Name}Context $ctx): array
     {
         $spec = $ctx->spec;
@@ -139,14 +139,50 @@ ${secretConst}    private const NOT_FOUND = '__NOTFOUND__';
 }
 
 
+// A spec reaching prepare_auth may already carry the credential pair, and
+// leaving it sends a withdrawn credential.
 function suppressed(where: string): string {
   if ('cookie' === where) {
-    // NOTHING TO CLEAR. The cookie header may carry the caller's own
-    // cookies, and this SDK has not written a pair of its own into this
-    // spec, so removing the header would throw away someone else's state.
-    return ''
+    return `            self::applyCookie($headers, null);\n`
   }
   return `            unset($${bagVar(where)}[self::${credConst(where)}]);\n`
+}
+
+
+// Splicing keeps the caller's other cookies and makes placement idempotent.
+function cookieHelper(spec: AuthSpec): string {
+  if ('cookie' !== spec.where) {
+    return ''
+  }
+
+  return `
+    private static function applyCookie(array &$headers, ?string $value): void
+    {
+        $kept = [];
+        $existing = $headers[self::HEADER_COOKIE] ?? '';
+
+        if (is_string($existing) && '' !== $existing) {
+            foreach (explode(';', $existing) as $part) {
+                $piece = trim($part);
+                if ('' === $piece || $piece === self::COOKIE_AUTH
+                    || str_starts_with($piece, self::COOKIE_AUTH . '=')) {
+                    continue;
+                }
+                $kept[] = $piece;
+            }
+        }
+
+        if (null !== $value) {
+            $kept[] = self::COOKIE_AUTH . '=' . $value;
+        }
+
+        if ([] === $kept) {
+            unset($headers[self::HEADER_COOKIE]);
+        } else {
+            $headers[self::HEADER_COOKIE] = implode('; ', $kept);
+        }
+    }
+`
 }
 
 
@@ -197,15 +233,11 @@ function placeBlock(spec: AuthSpec): string {
     return `
         $missing = ${missing};
 
-        if (!$missing) {
-            // A COOKIE IS APPENDED, NEVER ASSIGNED: the header may already
-            // carry the caller's own cookies, and one \`Cookie:\` header
-            // holds all of them, separated by '; '.
-            $apikey_val = is_string($apikey) ? $apikey : '';
-            $existing = $headers[self::HEADER_COOKIE] ?? '';
-            $pair = self::COOKIE_AUTH . '=' . $apikey_val;
-            $headers[self::HEADER_COOKIE] = $existing === ''
-                ? $pair : "{$existing}; {$pair}";
+        if ($missing) {
+            self::applyCookie($headers, null);
+        } else {
+            // One \`Cookie:\` header holds every cookie, separated by '; '.
+            self::applyCookie($headers, is_string($apikey) ? $apikey : '');
         }
 `
   }

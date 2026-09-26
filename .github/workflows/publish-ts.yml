@@ -8,9 +8,12 @@
 # SET UP ONCE, by a maintainer with publish rights — see .sdk/PUBLISHING.md:
 #
 #   npm trust github @voxgig-sdk/playstation-store-api2-sdk \
-#     --repository <owner>/<repo> \
+#     --repository voxgig-sdk/playstation-store-api2-sdk \
 #     --file publish-ts.yml \
 #     --allow-publish
+#
+# .sdk/admin/setup-npm-trust.sh registers exactly this, and with --check
+# reports any drift from it.
 #
 # THE FILENAME IS PART OF THAT CONFIGURATION. Renaming this file breaks
 # publishing until the npm side is updated to match.

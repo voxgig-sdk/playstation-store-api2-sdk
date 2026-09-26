@@ -31,8 +31,6 @@ const Package = cmp(async function Package(props: any) {
   // Package namespace mirrors the npm scope (model.origin, e.g. "voxgig-sdk").
   // If origin already ends in "-sdk" the slug stands alone; otherwise append
   // "-sdk" (matches the TS Package generator).
-  const ns = model.origin || 'voxgig-sdk'
-  const pkgBase = ns.endsWith('-sdk') ? model.name : `${model.name}-sdk`
   const { repoUrl, issuesUrl } = repoInfo(model)
   const kw = keywords(model).map((k) => `"${k}"`).join(', ')
 

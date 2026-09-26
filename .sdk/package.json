@@ -31,7 +31,7 @@
     "typescript": ">=6.0",
     "@voxgig/apidef": ">=8.17.0",
     "@voxgig/model": ">=12.0.0",
-    "@voxgig/sdkgen": ">=4.25.0",
+    "@voxgig/sdkgen": ">=4.30.0",
     "@voxgig/util": ">=0.5",
     "@voxgig/struct": ">=0.2",
     "jostraca": ">=0.39.0",

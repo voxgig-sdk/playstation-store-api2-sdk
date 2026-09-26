@@ -22,8 +22,6 @@ const Package = cmp(async function Package(props: any) {
 
   const model: Model = ctx$.model
 
-  const ns = model.origin || 'voxgig-sdk'
-  const pkgBase = ns.endsWith('-sdk') ? model.name : `${model.name}-sdk`
   const distName = packageName(model, target.name)
   const { repoUrl, issuesUrl } = repoInfo(model)
   const kw = keywords(model).map((k) => `"${k}"`).join(', ')

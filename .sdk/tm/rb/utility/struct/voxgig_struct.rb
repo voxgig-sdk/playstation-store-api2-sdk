@@ -1765,7 +1765,6 @@ module VoxgigStruct
       end
 
       inj.path = inj.path[0...-1]
-      inj.key = getelem(inj.path, -1)
 
       tvals = parent[1..-1]
       if size(tvals) == 0

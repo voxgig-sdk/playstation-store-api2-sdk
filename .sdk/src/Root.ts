@@ -15,6 +15,8 @@ import {
   AgentGuide,
   Test,
 
+  SdkGenError,
+
 } from '@voxgig/sdkgen'
 
 import {
@@ -29,6 +31,7 @@ import { PointUtil, Content } from 'jostraca'
 
 import { Top } from './Top'
 import { BuildSDK } from './BuildSDK'
+import { rootPlan } from './RootPlan'
 
 
 const {
@@ -69,56 +72,77 @@ const Root = cmp(function Root(props: any) {
   ctx$.stdrep = {}
   names(ctx$.stdrep, model.Name, 'Project' + 'Name')
 
+  const plan = rootPlan(model.main[KIT], SdkGenError)
+
   Project({}, () => {
 
-    Top({})
+    if (plan.top) {
+      Top({})
+    }
 
-    BuildSDK({})
+    if (plan.build) {
+      BuildSDK({})
+    }
 
     each(target, (target: any) => {
+      const place = plan.place[target.name]
+
+      if (null == place) {
+        return
+      }
+
       names(target, target.name)
 
-      Folder({ name: target.name }, () => {
-
-        const phase = target.phase || {}
-        const phaseActive = (name: string): boolean =>
-          false !== (phase[name] && phase[name].active)
-
-        if (phaseActive('entity')) {
-          each(entity).filter((entity: any) => entity.active).map((entity: any) => {
-            names(entity, entity.name)
-            Entity({ target, entity })
-          })
-        }
-
-        if (phaseActive('feature')) {
-          each(feature).filter((feature: any) => feature.active).map((feature: any) => {
-            names(feature, feature.name)
-            Feature({ target, feature })
-          })
-        }
-
-        Main({ target })
-
-        if (phaseActive('readme')) {
-          Readme({ target })
-        }
-
-        // Per-target agent guides: <lang>/AGENTS.md + CLAUDE.md, and (driven
-        // internally by AgentGuide) a guide per active feature under
-        // <lang>/src/feature/<name>/. Placement mirrors Readme.
-        if (phaseActive('agentguide')) {
-          AgentGuide({ target })
-        }
-
-        if (phaseActive('test')) {
-          Test({ target })
-        }
-      })
+      if ('root' === place) {
+        targetPhases(target, entity, feature)
+      }
+      else {
+        Folder({ name: target.name }, () => {
+          targetPhases(target, entity, feature)
+        })
+      }
     })
 
   })
 })
+
+
+function targetPhases(target: any, entity: any, feature: any) {
+  const phase = target.phase || {}
+  const phaseActive = (name: string): boolean =>
+    false !== (phase[name] && phase[name].active)
+
+  if (phaseActive('entity')) {
+    each(entity).filter((entity: any) => entity.active).map((entity: any) => {
+      names(entity, entity.name)
+      Entity({ target, entity })
+    })
+  }
+
+  if (phaseActive('feature')) {
+    each(feature).filter((feature: any) => feature.active).map((feature: any) => {
+      names(feature, feature.name)
+      Feature({ target, feature })
+    })
+  }
+
+  Main({ target })
+
+  if (phaseActive('readme')) {
+    Readme({ target })
+  }
+
+  // Per-target agent guides: <lang>/AGENTS.md + CLAUDE.md, and (driven
+  // internally by AgentGuide) a guide per active feature under
+  // <lang>/src/feature/<name>/. Placement mirrors Readme.
+  if (phaseActive('agentguide')) {
+    AgentGuide({ target })
+  }
+
+  if (phaseActive('test')) {
+    Test({ target })
+  }
+}
 
 
 function makeFlow(def: any, data: any, stepMakers: Record<string, any>) {

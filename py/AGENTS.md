@@ -43,10 +43,10 @@ the runtime under `.sdk/tm/py/feature/` and regenerate.
 
 | Feature | Runtime file | Active hooks |
 | --- | --- | --- |
-| **ratelimit** — Client-side rate limiting via a token bucket | `feature/ratelimit_feature.py` | — |
-| **retry** — Automatic retry of transient failures with exponential backoff | `feature/retry_feature.py` | — |
-| **test** — In-memory mock transport for testing without a live server | `feature/test_feature.py` | `GetData`, `GetMatch`, `PostConstruct`, `PostConstructEntity`, `PrePoint`, `PreRequest`, `PreResponse`, `PreResult`, `PreSpec`, `SetData`, `SetMatch` |
-| **timeout** — Per-request timeout with transport abort | `feature/timeout_feature.py` | — |
+| **ratelimit** — Rate limiting | `feature/ratelimit_feature.py` | — |
+| **retry** — Retry | `feature/retry_feature.py` | — |
+| **test** — Test transport | `feature/test_feature.py` | `GetData`, `GetMatch`, `PostConstruct`, `PostConstructEntity`, `PrePoint`, `PreRequest`, `PreResponse`, `PreResult`, `PreSpec`, `SetData`, `SetMatch` |
+| **timeout** — Timeout | `feature/timeout_feature.py` | — |
 
 ---
 

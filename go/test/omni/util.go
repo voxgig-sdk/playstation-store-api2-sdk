@@ -1,13 +1,6 @@
-// VENDORED: @voxgig/omni sdk-20260917-1242-0 (go/util.go)
-// Source: https://github.com/voxgig/omni @ b9e6085d185e174be84f9e6123be807ccd9fcb4e  [tag: sdk-20260917-1242-0]
+// VENDORED: @voxgig/omni sdk-20260925-1316-0 (go/util.go)
+// Source: https://github.com/voxgig/omni @ b909ff51fc644e4955c850e30cc65e74be076df2  [tag: sdk-20260925-1316-0]
 // License: MIT (c) voxgig - see repository LICENSE. Do not edit: resync from upstream.
-// Omni internal JSON utilities.
-//
-// This file is deliberately self-contained: the omni runner must be able to
-// test *any* library, including libraries that provide these same
-// operations, so it can never borrow them from the system under test.
-// Standard library only, by design.
-
 package omni
 
 import (
@@ -249,7 +242,6 @@ func DeepEqual(a any, b any) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-// NumStr renders a number the same way in every port: 5.0 prints as 5.
 func NumStr(val float64) string {
 	if math.IsNaN(val) || math.IsInf(val, 0) {
 		return "null"
@@ -288,13 +280,6 @@ func Quote(val string) string {
 	return out.String()
 }
 
-// JsonStr is compact JSON text with map keys sorted, so that messages are
-// identical in every port regardless of local map ordering.
-//
-// GUARDED against cycles: this renders FAILURE MESSAGES, and an entry
-// carrying a live cyclic value recursed until the stack gave out. A cycle
-// renders as "[Circular]". The ancestor set tracks the CURRENT PATH only,
-// removed again on the way out, so a DAG still renders in full.
 func JsonStr(val any) string {
 	return jsonstrSeen(val, map[uintptr]bool{})
 }

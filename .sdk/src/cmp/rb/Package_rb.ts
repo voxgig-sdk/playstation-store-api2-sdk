@@ -28,32 +28,12 @@ const Package = cmp(async function Package(props: any) {
   // constant here did.
   const author = authorInfo(model, target.name)
 
-  const ns = model.origin || 'voxgig-sdk'
-  const pkgBase = ns.endsWith('-sdk') ? model.name : `${model.name}-sdk`
   const gemName = packageName(model, target.name)
   const { repoUrl, issuesUrl, changelogUrl } = repoInfo(model)
 
-  const versionOf = (d: { version: string; source: 'feature' | 'target' }) =>
-    d.source === 'target' ? (d.version || '0.0') : d.version
-
-  File({ name: 'Gemfile' }, () => {
-    Content(`source "https://rubygems.org"
-
-gemspec
-
-`)
-
-    for (const d of collectDeps(model, target.name, target.deps, ctx$.log)) {
-      Content(`gem "${d.name}", "~> ${versionOf(d)}"
-`)
-    }
-  })
-
   File({ name: model.const.Name + '_sdk.gemspec' }, () => {
-    // RubyGems rejects a gemspec that declares the same runtime dependency
-    // twice (Gem::InvalidSpecificationException at `gem build`), so the
-    // unconstrained json fallback is only emitted when the model's own
-    // dependency list doesn't already declare json.
+    // `gem build` rejects a duplicate runtime dependency, so the json
+    // fallback is emitted only when the model does not declare json.
     const deps = collectDeps(model, target.name, target.deps, ctx$.log)
     const hasJson = deps.some((d: any) => 'json' === d.name)
 
@@ -91,7 +71,8 @@ ${hasJson ? '' : `
 `}`)
 
     for (const d of deps) {
-      Content(`  spec.add_dependency "${d.name}", "~> ${versionOf(d)}"
+      const req = gemRequirement(d.version)
+      Content(`  spec.add_dependency "${d.name}"${null == req ? '' : `, "${req}"`}
 `)
     }
 
@@ -102,6 +83,17 @@ end
 `)
   })
 })
+
+
+// `~> 0` admits only 0.x releases, so an absent, `*` or all-zero version is
+// no constraint at all.
+function gemRequirement(version?: string): string | null {
+  const v = String(version ?? '').trim()
+  if ('' === v || '*' === v || /^0(\.0)*$/.test(v)) {
+    return null
+  }
+  return /^(>=|<=|~>|!=|=|>|<)/.test(v) ? v : '~> ' + v
+}
 
 
 export {

@@ -1,13 +1,6 @@
 // VENDORED: @voxgig/omni 0.1.4 (typescript/src/Runner.ts)
-// Source: https://github.com/voxgig/omni @ b9e6085d185e174be84f9e6123be807ccd9fcb4e  [tag: sdk-20260917-1242-0]
+// Source: https://github.com/voxgig/omni @ b909ff51fc644e4955c850e30cc65e74be076df2  [tag: sdk-20260925-1316-0]
 // License: MIT (c) voxgig - see repository LICENSE. Do not edit: resync from upstream.
-// Omni: the shared multi-language test runner.
-//
-// A test spec is plain JSON. The same spec file drives the same tests in
-// every language that ships an omni port, so behaviour is defined once and
-// verified everywhere.
-//
-// This file is CANONICAL. Every other port is a translation of it.
 
 import { readFileSync } from 'node:fs'
 
@@ -27,14 +20,11 @@ import {
   walk,
 } from './Util'
 
-// A test subject: the function under test.
 export type Subject = (...args: Json[]) => any
 
-// Run-time options for a set of test entries.
 export type Flags = {
   // Convert JSON nulls to the NULLMARK sentinel (default: true).
   null?: boolean
-  // Label used in failure messages (default: the runner name).
   name?: string
   [flag: string]: any
 }
@@ -42,13 +32,9 @@ export type Flags = {
 // The host of the system under test. Every hook is optional: a spec that
 // resolves its subjects explicitly needs no provider at all.
 export type Provider = {
-  // Resolve a test subject by name.
   subject?: (name: string) => Subject | undefined | null
-  // Build a sub-provider from a spec DEF.client entry's options.
   client?: (options: Json) => Provider | Promise<Provider>
-  // Wrap a map argument as a call context before it is passed in.
   contextify?: (val: Json) => Json
-  // Resolve references in client options against the runner store.
   inject?: (options: Json, store: Json) => Json
   // Build the `match.err` base from the raised error. See `errify`.
   errify?: (err: any) => Json
@@ -63,23 +49,15 @@ export type RunSetFlags = (
 ) => Promise<void>
 
 export type RunPack = {
-  // The resolved spec (the named section, or the whole file).
   spec: Json
-  // Run one set of test entries.
   runset: RunSet
-  // Run one set of test entries with flags.
   runsetflags: RunSetFlags
-  // The default subject, if the provider could resolve one.
   subject?: Subject
-  // The root provider.
   client?: Provider
 }
 
 export type Runner = (name?: string, store?: Json) => Promise<RunPack>
 
-// The newest spec format version this runner understands. A spec with no
-// OMNI block is version 0: the original, lenient format, frozen forever.
-// Version 1 turns on strict entry validation (see checkentry).
 export const SPECVERSION = 1
 
 // Capability strings this runner supports beyond the version baseline. A
@@ -261,7 +239,6 @@ function resolveflags(flags?: Flags): Flags {
   return out
 }
 
-// An entry with no `out` expects a null (or absent) result.
 function resolveentry(entry: Json, flags: Flags): Json {
   if (null == entry.out && flags.null) {
     entry.out = NULLMARK
@@ -353,26 +330,6 @@ function fixjsonval(val: Json, donull: boolean): Json {
   return val
 }
 
-// The JSON form of an error: always at least {name,message}.
-//
-// A thrown value need not be an Error. Ports commonly rethrow an
-// error-SHAPED map ({name, message, ...}) - voxgig/sdkgen's generated
-// makeError rethrows the fixture's own error object verbatim - and
-// collapsing that to String(err) yields '[object Object]', which fails both
-// the `err` check and every `match.err.*` leaf. The struct repository's
-// original runner read `.message` regardless of the thrown value's class.
-// THE SPREAD IS THE CONTRACT, not an accident of JavaScript. An error's
-// OWN enumerable properties survive into the base, so a library whose
-// errors carry a `code` (or a `status`, or a `path`) can assert on it
-// with `match: {err: {code: 'x'}}` rather than pattern-matching prose.
-//
-// Only JavaScript gets that for free. A port whose subject reports
-// failure as a message string - rust, cpp, zig, ocaml, haskell - has
-// nothing to spread, and a port that builds `{name, message}` by hand
-// drops the fields even when it has them. `Provider.errify` is how those
-// ports reach the same place: it overrides this function entirely, so a
-// library supplies its own structured base and omni needs to know
-// nothing about the shape of it.
 function errify(err: any): Json {
   if (err instanceof Error) {
     return { ...err, name: err.name, message: err.message }
@@ -398,7 +355,6 @@ function errmessage(err: any): string {
       : String(err)
 }
 
-// The label of one entry, for failure messages.
 function entryref(flags: Flags, index: number, entry: Json): string {
   const label = flags.name || 'set'
   const id = null != entry && null != entry.id ? ' (' + entry.id + ')' : ''
@@ -424,7 +380,6 @@ function fail(
   return new OmniError(msg, entry)
 }
 
-// The spec-defined part of an entry (drop runner bookkeeping).
 function entrysummary(entry: Json): Json {
   if (!ismap(entry)) {
     return entry
@@ -528,14 +483,6 @@ function match(flags: Flags, index: number, entry: Json, check: Json, base: Json
     if (!isnode(val)) {
       const baseval = getpath(cbase, path)
 
-      // The sentinels are tested BEFORE the identity check below. Otherwise
-      // a subject returning the literal string "__UNDEF__" satisfies an
-      // assertion that the key is absent - two mutually exclusive states
-      // passing one check. A sentinel that accepts its own literal is not a
-      // sentinel. (NULLMARK still accepts NULLMARK: under the default null
-      // flag a real null has already been normalised to it, so the two are
-      // genuinely indistinguishable here - that one needs a raw-value
-      // escape, not an ordering change.)
 
       // Explicitly absent: satisfied only by a genuinely missing key, never
       // by a present null (the distinction the sentinels exist to keep).
@@ -546,7 +493,6 @@ function match(flags: Flags, index: number, entry: Json, check: Json, base: Json
         throw fail(flags, index, entry, 'expected absent at ' + at(path), 'absent', stringify(baseval))
       }
 
-      // Explicitly null: satisfied only by a present null.
       if (NULLMARK === val) {
         if (null === baseval || NULLMARK === baseval) {
           return val
@@ -554,7 +500,6 @@ function match(flags: Flags, index: number, entry: Json, check: Json, base: Json
         throw fail(flags, index, entry, 'expected null at ' + at(path), 'null', stringify(baseval))
       }
 
-      // Explicitly present: any present value, including null.
       if (EXISTSMARK === val) {
         if (undefined !== baseval) {
           return val
@@ -562,8 +507,6 @@ function match(flags: Flags, index: number, entry: Json, check: Json, base: Json
         throw fail(flags, index, entry, 'expected present at ' + at(path), 'present', 'absent')
       }
 
-      // Identical values match. This sits below the sentinel branches on
-      // purpose - see the note above.
       if (baseval === val) {
         return val
       }
@@ -634,7 +577,6 @@ function nullmodifier(val: Json, key: any, parent: Json) {
   }
 }
 
-// Make a runner for a spec file (or spec object) and a provider.
 async function makeRunner(specref: string | Json, provider?: Provider): Promise<Runner> {
   const alltests = loadspec(specref)
   const specversion = resolveversion(alltests)

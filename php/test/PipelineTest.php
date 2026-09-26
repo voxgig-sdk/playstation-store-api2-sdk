@@ -700,10 +700,15 @@ class PipelineTest extends TestCase
         $cred = self::auth_credential();
         $spec = self::auth_bags();
         if (null !== $cred && null !== $seed) {
+            // Seed what prepare_auth would have written: pair is the
+            // "<scheme>=" lead-in for a cookie and '' for a header or query,
+            // so a clearing case removes a credential this SDK owns rather
+            // than a cookie the caller put there.
+            $seeded = $cred['pair'] . $seed;
             if ('query' === $cred['where']) {
-                $spec->query[$cred['name']] = $seed;
+                $spec->query[$cred['name']] = $seeded;
             } else {
-                $spec->headers[$cred['name']] = $seed;
+                $spec->headers[$cred['name']] = $seeded;
             }
         }
         $ctx = self::auth_ctx($options, $spec);

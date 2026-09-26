@@ -2617,7 +2617,6 @@ class Struct
             $inj->setval($inj->dparent, 2);
 
             $inj->path = self::slice($inj->path, 0, -1);
-            $inj->key = self::getelem($inj->path, -1);
 
             $tvals = self::slice($parent, 1);
             if (0 === count($tvals)) {

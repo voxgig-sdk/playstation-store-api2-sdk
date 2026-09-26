@@ -609,7 +609,9 @@ describe("pipeline", function()
       local cred = auth_credential()
       local spec = auth_bags()
       if nil ~= cred and nil ~= seed then
-        auth_bag(spec, cred.where)[cred.name] = seed
+        -- Seed what prepare_auth would have written: cred.pair is the
+        -- "<scheme>=" lead-in for a cookie and "" for a header or query.
+        auth_bag(spec, cred.where)[cred.name] = cred.pair .. seed
       end
       local ctx = auth_ctx(options, spec)
       ctx.utility.prepare_auth(ctx)

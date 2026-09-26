@@ -173,17 +173,24 @@ try {
       }
 
       const dataFields: any[] = exampleEntity.fields ? each(exampleEntity.fields) : []
-      const dataIdType = dataIdF
-        ? (dataFields.find((f: any) => f && f.n === dataIdF) || {}).type
+
+      // A model field spells its type `t`; `type` is the older model shape.
+      const dataIdField: any = dataIdF
+        ? dataFields.find((f: any) => f && f.n === dataIdF)
         : null
+      const dataIdType = dataIdField ? (dataIdField.t ?? dataIdField.type) : null
+
+      // An unknown type is not evidence of compatibility: chain only on a
+      // known match, since the literal example type-checks by construction.
       const usesCreatedId = (opname: string): boolean => {
         if (null == dataIdF || !opnames.includes('create')) {
           return false
         }
         const matchItem = opRequestShape(exampleEntity, opname).items
           .find((it: any) => it.name === idF)
+        // OpShapeItem spells it `type`; only the raw model field uses `t`.
         const matchType = matchItem ? matchItem.type : null
-        return null == matchType || null == dataIdType || matchType === dataIdType
+        return null != matchType && null != dataIdType && matchType === dataIdType
       }
       const idValueFor = (opname: string): string => usesCreatedId(opname)
         ? `created.data().${dataIdF}!`

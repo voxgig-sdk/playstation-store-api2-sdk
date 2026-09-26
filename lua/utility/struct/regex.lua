@@ -1,5 +1,5 @@
 -- VENDORED: @voxgig/struct 0.1.1 (lua/src/regex.lua)
--- Source: https://github.com/voxgig/struct @ 3110e839a3f35b2fbdb047bf0c24f29d144027ea  [tag: sdk-20260917-1242-0]
+-- Source: https://github.com/voxgig/struct @ 3a42881b1d26c75ebbed9f1897f0ba94cf3cf780  [tag: sdk-20260925-1316-0]
 -- License: MIT (c) voxgig - see repository LICENSE. Do not edit: resync from upstream.
 -- Copyright (c) 2025-2026 Voxgig Ltd. MIT LICENSE.
 --

@@ -1,6 +1,6 @@
 "use strict";
 // VENDORED: @voxgig/omni 0.1.4 (typescript/src/index.ts)
-// Source: https://github.com/voxgig/omni @ b9e6085d185e174be84f9e6123be807ccd9fcb4e  [tag: sdk-20260917-1242-0]
+// Source: https://github.com/voxgig/omni @ b909ff51fc644e4955c850e30cc65e74be076df2  [tag: sdk-20260925-1316-0]
 // License: MIT (c) voxgig - see repository LICENSE. Do not edit: resync from upstream.
 // @voxgig/omni - shared multi-language test runner.
 Object.defineProperty(exports, "__esModule", { value: true });

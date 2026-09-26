@@ -303,8 +303,10 @@ const COOKIE_PAIR = /^[^=;]+=K$/;
     const ANY = probe({ apikey: 'K', secret: 'S', auth: { prefix: 'Bearer', basic: true } });
     function placed(options, seed) {
         const spec = bags();
+        // Seed what prepareAuth would have written: CRED.pair is the `<scheme>=`
+        // lead-in for a cookie and '' for a header or query credential.
         if (null != CRED && null != seed)
-            spec[CRED.where][CRED.name] = seed;
+            spec[CRED.where][CRED.name] = CRED.pair + seed;
         const ctx = authCtx(options, spec);
         __1.stdutil.prepareAuth(ctx);
         return null == CRED ? undefined : ctx.spec[CRED.where][CRED.name];

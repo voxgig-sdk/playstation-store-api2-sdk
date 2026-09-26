@@ -1,14 +1,7 @@
 "use strict";
 // VENDORED: @voxgig/omni 0.1.4 (typescript/src/Runner.ts)
-// Source: https://github.com/voxgig/omni @ b9e6085d185e174be84f9e6123be807ccd9fcb4e  [tag: sdk-20260917-1242-0]
+// Source: https://github.com/voxgig/omni @ b909ff51fc644e4955c850e30cc65e74be076df2  [tag: sdk-20260925-1316-0]
 // License: MIT (c) voxgig - see repository LICENSE. Do not edit: resync from upstream.
-// Omni: the shared multi-language test runner.
-//
-// A test spec is plain JSON. The same spec file drives the same tests in
-// every language that ships an omni port, so behaviour is defined once and
-// verified everywhere.
-//
-// This file is CANONICAL. Every other port is a translation of it.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UNDEFMARK = exports.NULLMARK = exports.EXISTSMARK = exports.OmniError = exports.CAPABILITIES = exports.SPECVERSION = void 0;
 exports.errify = errify;
@@ -24,9 +17,6 @@ const Util_1 = require("./Util");
 Object.defineProperty(exports, "EXISTSMARK", { enumerable: true, get: function () { return Util_1.EXISTSMARK; } });
 Object.defineProperty(exports, "NULLMARK", { enumerable: true, get: function () { return Util_1.NULLMARK; } });
 Object.defineProperty(exports, "UNDEFMARK", { enumerable: true, get: function () { return Util_1.UNDEFMARK; } });
-// The newest spec format version this runner understands. A spec with no
-// OMNI block is version 0: the original, lenient format, frozen forever.
-// Version 1 turns on strict entry validation (see checkentry).
 exports.SPECVERSION = 1;
 // Capability strings this runner supports beyond the version baseline. A
 // spec's OMNI.requires list is checked against this: an unknown capability
@@ -172,7 +162,6 @@ function resolveflags(flags) {
     out.null = null == out.null ? true : !!out.null;
     return out;
 }
-// An entry with no `out` expects a null (or absent) result.
 function resolveentry(entry, flags) {
     if (null == entry.out && flags.null) {
         entry.out = Util_1.NULLMARK;
@@ -246,26 +235,6 @@ function fixjsonval(val, donull) {
     }
     return val;
 }
-// The JSON form of an error: always at least {name,message}.
-//
-// A thrown value need not be an Error. Ports commonly rethrow an
-// error-SHAPED map ({name, message, ...}) - voxgig/sdkgen's generated
-// makeError rethrows the fixture's own error object verbatim - and
-// collapsing that to String(err) yields '[object Object]', which fails both
-// the `err` check and every `match.err.*` leaf. The struct repository's
-// original runner read `.message` regardless of the thrown value's class.
-// THE SPREAD IS THE CONTRACT, not an accident of JavaScript. An error's
-// OWN enumerable properties survive into the base, so a library whose
-// errors carry a `code` (or a `status`, or a `path`) can assert on it
-// with `match: {err: {code: 'x'}}` rather than pattern-matching prose.
-//
-// Only JavaScript gets that for free. A port whose subject reports
-// failure as a message string - rust, cpp, zig, ocaml, haskell - has
-// nothing to spread, and a port that builds `{name, message}` by hand
-// drops the fields even when it has them. `Provider.errify` is how those
-// ports reach the same place: it overrides this function entirely, so a
-// library supplies its own structured base and omni needs to know
-// nothing about the shape of it.
 function errify(err) {
     if (err instanceof Error) {
         return { ...err, name: err.name, message: err.message };
@@ -286,7 +255,6 @@ function errmessage(err) {
         : null != err && 'string' === typeof err.message ? err.message
             : String(err);
 }
-// The label of one entry, for failure messages.
 function entryref(flags, index, entry) {
     const label = flags.name || 'set';
     const id = null != entry && null != entry.id ? ' (' + entry.id + ')' : '';
@@ -303,7 +271,6 @@ function fail(flags, index, entry, reason, expected, actual) {
     msg += '\n  entry:    ' + (0, Util_1.stringify)(entrysummary(entry));
     return new OmniError(msg, entry);
 }
-// The spec-defined part of an entry (drop runner bookkeeping).
 function entrysummary(entry) {
     if (!(0, Util_1.ismap)(entry)) {
         return entry;
@@ -378,14 +345,6 @@ function match(flags, index, entry, check, base) {
         // convention. The leaf checks below are where the strictness lives.
         if (!(0, Util_1.isnode)(val)) {
             const baseval = (0, Util_1.getpath)(cbase, path);
-            // The sentinels are tested BEFORE the identity check below. Otherwise
-            // a subject returning the literal string "__UNDEF__" satisfies an
-            // assertion that the key is absent - two mutually exclusive states
-            // passing one check. A sentinel that accepts its own literal is not a
-            // sentinel. (NULLMARK still accepts NULLMARK: under the default null
-            // flag a real null has already been normalised to it, so the two are
-            // genuinely indistinguishable here - that one needs a raw-value
-            // escape, not an ordering change.)
             // Explicitly absent: satisfied only by a genuinely missing key, never
             // by a present null (the distinction the sentinels exist to keep).
             if (Util_1.UNDEFMARK === val) {
@@ -394,22 +353,18 @@ function match(flags, index, entry, check, base) {
                 }
                 throw fail(flags, index, entry, 'expected absent at ' + at(path), 'absent', (0, Util_1.stringify)(baseval));
             }
-            // Explicitly null: satisfied only by a present null.
             if (Util_1.NULLMARK === val) {
                 if (null === baseval || Util_1.NULLMARK === baseval) {
                     return val;
                 }
                 throw fail(flags, index, entry, 'expected null at ' + at(path), 'null', (0, Util_1.stringify)(baseval));
             }
-            // Explicitly present: any present value, including null.
             if (Util_1.EXISTSMARK === val) {
                 if (undefined !== baseval) {
                     return val;
                 }
                 throw fail(flags, index, entry, 'expected present at ' + at(path), 'present', 'absent');
             }
-            // Identical values match. This sits below the sentinel branches on
-            // purpose - see the note above.
             if (baseval === val) {
                 return val;
             }
@@ -466,7 +421,6 @@ function nullmodifier(val, key, parent) {
         parent[key] = val.split(Util_1.NULLMARK).join('null');
     }
 }
-// Make a runner for a spec file (or spec object) and a provider.
 async function makeRunner(specref, provider) {
     const alltests = loadspec(specref);
     const specversion = resolveversion(alltests);

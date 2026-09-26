@@ -59,21 +59,30 @@ its token into the git config for the whole job.
 
 ## One-time set-up
 
-npm has to be told which repository and which workflow file may publish this
+npm has to be told which repository and which workflow file may publish each
 package. From a machine logged in to npm with publish rights (2FA is
-required):
+required), run
+`.sdk/admin/setup-npm-trust.sh`. It registers every workflow in the table
+above and leaves a package that is already set up alone; for the
+`ts` target it runs:
 
     npm trust github @voxgig-sdk/playstation-store-api2-sdk \
       --repository voxgig-sdk/playstation-store-api2-sdk \
       --file publish-ts.yml \
       --allow-publish
 
-Then `npm trust list @voxgig-sdk/playstation-store-api2-sdk` shows it, and
-`npm trust revoke @voxgig-sdk/playstation-store-api2-sdk --id=<id>` removes it.
+Run the script again with `--check` at any time. It compares what npm holds
+with what these workflows need, changes nothing, and exits non-zero on any
+difference, including a trusted publisher this repository did not ask for.
+`--replace` revokes those, `--dry-run` prints the commands without contacting
+npm, and `--otp <code>` hands npm a one-time password when it asks for one.
+An npm with no `npm trust` command is bypassed for `npx npm@latest`.
+
+`npm trust list @voxgig-sdk/playstation-store-api2-sdk` shows the configuration, and
+`npm trust revoke @voxgig-sdk/playstation-store-api2-sdk --id=<id>` removes one.
 
 **The workflow filename is part of the configuration.** Renaming
-`publish-ts.yml` breaks publishing until the npm side is
-updated to match.
+`publish-ts.yml` breaks publishing until the npm side is updated to match.
 
 **A brand-new package cannot be set up this way.** npm only offers the
 trusted-publisher settings once a version exists, so the FIRST release of a

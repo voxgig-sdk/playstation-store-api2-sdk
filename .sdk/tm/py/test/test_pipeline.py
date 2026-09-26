@@ -571,7 +571,9 @@ class TestPrepareAuth:
         cred = self._credential(client)
         spec = self._bags()
         if cred is not None and seed is not None:
-            self._bag(spec, cred["where"])[cred["name"]] = seed
+            # Seed what prepare_auth would have written: cred["pair"] is the
+            # "<scheme>=" lead-in for a cookie and "" for header or query.
+            self._bag(spec, cred["where"])[cred["name"]] = cred["pair"] + seed
         ctx = self._auth_ctx(client, options, spec)
         client._utility.prepare_auth(ctx)
         if cred is None:

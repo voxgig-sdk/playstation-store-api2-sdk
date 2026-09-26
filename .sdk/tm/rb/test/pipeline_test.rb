@@ -582,7 +582,9 @@ class PipelineTest < Minitest::Test
   def auth_placed(options, seed = nil)
     cred = auth_credential
     spec = auth_bags
-    auth_bag(spec, cred["where"])[cred["name"]] = seed if !cred.nil? && !seed.nil?
+    # Seed what prepare_auth would have written: cred["pair"] is the
+    # "<scheme>=" lead-in for a cookie and "" for a header or query.
+    auth_bag(spec, cred["where"])[cred["name"]] = cred["pair"] + seed if !cred.nil? && !seed.nil?
     ctx = auth_ctx(options, spec)
     @utility.prepare_auth.call(ctx)
     cred.nil? ? nil : auth_bag(ctx.spec, cred["where"])[cred["name"]]

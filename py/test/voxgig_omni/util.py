@@ -1,5 +1,5 @@
 # VENDORED: @voxgig/omni 0.1.0 (python/voxgig_omni/util.py)
-# Source: https://github.com/voxgig/omni @ b9e6085d185e174be84f9e6123be807ccd9fcb4e  [tag: sdk-20260917-1242-0]
+# Source: https://github.com/voxgig/omni @ b909ff51fc644e4955c850e30cc65e74be076df2  [tag: sdk-20260925-1316-0]
 # License: MIT (c) voxgig - see repository LICENSE. Do not edit: resync from upstream.
 """Omni internal JSON utilities.
 

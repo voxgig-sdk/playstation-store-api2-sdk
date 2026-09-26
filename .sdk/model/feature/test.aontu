@@ -2,7 +2,8 @@
 main: kit: feature: test: {
 
   name: key()
-  title: "In-memory mock transport for testing without a live server"
+  title: "Test transport"
+  description: "In-memory mock transport for testing without a live server"
   version: '0.0.1'
   active: true
   base: 'node_modules/@voxgig/sdkgen/project/.sdk'

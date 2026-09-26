@@ -554,7 +554,10 @@ func TestPipelinePrepareAuth(t *testing.T) {
 		ctx := plCtx(client, utility, nil)
 		ctx.Spec = sdk.NewSpec(map[string]any{"step": "s"})
 		if cred != nil && seed != nil {
-			plAuthBag(ctx.Spec, cred.where)[cred.name] = seed
+			// Seed what prepareAuth would have written: cred.pair is the
+			// `<scheme>=` lead-in for a cookie and "" for a header or query,
+			// so an opaque seed is never mistaken for a stranger's cookie.
+			plAuthBag(ctx.Spec, cred.where)[cred.name] = cred.pair + seed.(string)
 		}
 		if _, err := utility.PrepareAuth(ctx); err != nil {
 			t.Fatalf("unexpected error: %v", err)

@@ -2,7 +2,8 @@
 main: kit: feature: ratelimit: {
 
   name: key()
-  title: "Client-side rate limiting via a token bucket"
+  title: "Rate limiting"
+  description: "Client-side rate limiting via a token bucket"
   version: '0.0.1'
   active: true
   base: 'node_modules/@voxgig/sdkgen/project/.sdk'

@@ -23,7 +23,8 @@
   "types": "dist/PlaystationStoreApi2SDK.d.ts",
   "files": [
     "dist",
-    "src"
+    "src",
+    "README.md"
   ],
   "scripts": {
     "pretest": "npm run build",

@@ -52,16 +52,33 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 2
 fi
 
-targets="$(node -e '
-  const m = require("./.sdk/model/sdk.json")
-  const t = (m.main && m.main.kit && m.main.kit.target) || {}
-  console.log(Object.keys(t).sort().join("\n"))
-')"
+# Each target generated in a folder of its own, and the one, if any, that
+# declares `output: root: true`.
+list_targets() {
+  node -e '
+    const m = require("./.sdk/model/sdk.json")
+    const t = (m.main && m.main.kit && m.main.kit.target) || {}
+    const root = "root" === process.argv[1]
+    console.log(Object.keys(t).sort().filter((n) =>
+      root === (true === (t[n] && t[n].output && t[n].output.root))).join("\n"))
+  ' "$1"
+}
+targets="$(list_targets folder)"
+atroot="$(list_targets root)"
 
 echo 'check-drift: deleting and regenerating every target ...'
 while IFS= read -r t; do
   [[ -n "$t" && -d "$t" ]] && rm -rf -- "$t"
 done <<< "$targets"
+
+# A target generated at the root owns the repository outside .sdk/, as the
+# others own their folders. Only tracked files go: what git ignores there,
+# such as installed dependencies, is not output.
+if [[ -n "$atroot" ]]; then
+  git ls-files -z -- . ':(exclude).sdk' | while IFS= read -r -d '' f; do
+    rm -f -- "$f"
+  done
+fi
 
 log="$(mktemp)"
 trap 'rm -f "$log"' EXIT

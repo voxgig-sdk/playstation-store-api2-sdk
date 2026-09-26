@@ -27,8 +27,7 @@ main: kit: target: rb: {
   }
 
   deps: {
-    'voxgig-struct': { active: true, version: '0.0.10' }
-    'json': { active: true, version: '0' }
+    'json': { active: true }
   }
 }
 

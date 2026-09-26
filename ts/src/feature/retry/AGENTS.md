@@ -1,6 +1,6 @@
 # RetryFeature — Agent Guide
 
-Automatic retry of transient failures with exponential backoff (v0.0.1).
+Retry (v0.0.1).
 
 A **feature** is a pipeline extension: an object of hooks that fire at named
 stages of every entity operation (load, list, create, update, remove) and of

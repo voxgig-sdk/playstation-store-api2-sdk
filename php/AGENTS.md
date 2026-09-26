@@ -43,10 +43,10 @@ the runtime under `.sdk/tm/php/feature/` and regenerate.
 
 | Feature | Runtime file | Active hooks |
 | --- | --- | --- |
-| **ratelimit** — Client-side rate limiting via a token bucket | `feature/RatelimitFeature.php` | — |
-| **retry** — Automatic retry of transient failures with exponential backoff | `feature/RetryFeature.php` | — |
-| **test** — In-memory mock transport for testing without a live server | `feature/TestFeature.php` | `GetData`, `GetMatch`, `PostConstruct`, `PostConstructEntity`, `PrePoint`, `PreRequest`, `PreResponse`, `PreResult`, `PreSpec`, `SetData`, `SetMatch` |
-| **timeout** — Per-request timeout with transport abort | `feature/TimeoutFeature.php` | — |
+| **ratelimit** — Rate limiting | `feature/RatelimitFeature.php` | — |
+| **retry** — Retry | `feature/RetryFeature.php` | — |
+| **test** — Test transport | `feature/TestFeature.php` | `GetData`, `GetMatch`, `PostConstruct`, `PostConstructEntity`, `PrePoint`, `PreRequest`, `PreResponse`, `PreResult`, `PreSpec`, `SetData`, `SetMatch` |
+| **timeout** — Timeout | `feature/TimeoutFeature.php` | — |
 
 ---
 

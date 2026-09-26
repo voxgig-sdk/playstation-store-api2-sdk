@@ -371,7 +371,9 @@ describe('pipeline:prepareAuth', () => {
 
   function placed(options: any, seed?: any) {
     const spec: any = bags()
-    if (null != CRED && null != seed) spec[CRED.where][CRED.name] = seed
+    // Seed what prepareAuth would have written: CRED.pair is the `<scheme>=`
+    // lead-in for a cookie and '' for a header or query credential.
+    if (null != CRED && null != seed) spec[CRED.where][CRED.name] = CRED.pair + seed
     const ctx = authCtx(options, spec)
     ;(stdutil as any).prepareAuth(ctx)
     return null == CRED ? undefined : ctx.spec[CRED.where][CRED.name]
